@@ -4,8 +4,27 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { calculateNatalChart } from './src/astro.js';
 import { generatePortrait, answerConsultation } from './src/ai.js';
-import { initStore, saveChart, getChart, claimChart } from './src/store.js';
-import { attachUser, completeTelegramLogin, setSessionCookie, clearSessionCookie, requireUser } from './src/auth.js';
+import {
+  initStore,
+  saveChart,
+  getChart,
+  claimChart,
+  saveConsultationMessage,
+  getConsultationMessages,
+  trackEvent,
+  getAdminOverview,
+  listAdminCharts,
+  getAdminChartDetails,
+} from './src/store.js';
+import {
+  attachUser,
+  completeTelegramLogin,
+  setSessionCookie,
+  clearSessionCookie,
+  requireUser,
+  requireAdmin,
+  isAdminUser,
+} from './src/auth.js';
 import { createPayment, processWebhook } from './src/payments.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
 
@@ -13,6 +32,97 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const freeCardCount = Math.max(1, Number(process.env.FREE_CARD_COUNT || 3));
 const demoMode = String(process.env.DEMO_MODE || 'true').toLowerCase() === 'true';
+
+function telegramBotUsername() {
+  return String(process.env.TELEGRAM_BOT_USERNAME || '')
+    .trim()
+    .replace(/^@/, '');
+}
+
+let telegramConfigCache = { expiresAt: 0, value: null };
+
+async function telegramConfiguration() {
+  if (telegramConfigCache.value && telegramConfigCache.expiresAt > Date.now()) {
+    return telegramConfigCache.value;
+  }
+
+  const envUsername = telegramBotUsername();
+  const token = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+  const validEnvUsername = /^[A-Za-z0-9_]{5,32}$/.test(envUsername) && /bot$/i.test(envUsername);
+
+  if (!token) {
+    const value = { username: envUsername, configured: false, issue: 'Не задан TELEGRAM_BOT_TOKEN.' };
+    telegramConfigCache = { value, expiresAt: Date.now() + 60_000 };
+    return value;
+  }
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok || !payload.result?.username) {
+      const value = {
+        username: envUsername,
+        configured: false,
+        issue: 'TELEGRAM_BOT_TOKEN не принят Telegram. Проверьте токен из BotFather.',
+      };
+      telegramConfigCache = { value, expiresAt: Date.now() + 60_000 };
+      return value;
+    }
+
+    const actualUsername = String(payload.result.username).replace(/^@/, '');
+    const warning = envUsername && actualUsername.toLowerCase() !== envUsername.toLowerCase()
+      ? `В Railway указан ${envUsername}, но токен принадлежит @${actualUsername}. HeroStar автоматически использует правильного бота.`
+      : null;
+    const value = {
+      username: actualUsername,
+      configured: true,
+      issue: warning,
+    };
+    telegramConfigCache = { value, expiresAt: Date.now() + 5 * 60_000 };
+    return value;
+  } catch (error) {
+    const value = {
+      username: envUsername,
+      configured: validEnvUsername,
+      issue: validEnvUsername
+        ? 'Telegram временно не подтвердил настройки, используется TELEGRAM_BOT_USERNAME из Railway.'
+        : 'TELEGRAM_BOT_USERNAME должен быть username бота без @ и оканчиваться на bot.',
+    };
+    telegramConfigCache = { value, expiresAt: Date.now() + 60_000 };
+    return value;
+  }
+}
+
+function visitorIdFrom(req) {
+  return String(req.headers['x-visitor-id'] || req.body?.visitorId || '')
+    .trim()
+    .slice(0, 120) || null;
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+}
+
+function cleanMetadata(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  try {
+    const serialized = JSON.stringify(value);
+    if (serialized.length <= 6000) return JSON.parse(serialized);
+    return { truncated: true, preview: serialized.slice(0, 5600) };
+  } catch {
+    return null;
+  }
+}
+
+async function safeTrack(record) {
+  try {
+    await trackEvent(record);
+  } catch (error) {
+    console.error('Analytics event was not saved:', error);
+  }
+}
 
 app.set('trust proxy', 1);
 app.use(
@@ -47,6 +157,13 @@ const consultLimiter = rateLimit({
   limit: 25,
   standardHeaders: true,
   legacyHeaders: false,
+});
+const eventLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 180,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => Boolean(req.isAdmin),
 });
 
 function hasAnonymousAccess(record, token) {
@@ -111,25 +228,69 @@ function presentChart(record, req, { forceUnlocked = false } = {}) {
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'herostar' }));
 
-app.get('/api/config', (req, res) => {
-  res.json({
-    telegramBotUsername: process.env.TELEGRAM_BOT_USERNAME || '',
-    telegramConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_USERNAME),
-    paymentsConfigured: Boolean(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY),
-    openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
-    demoMode,
-    freeCardCount,
-    price: Number(process.env.FULL_MAP_PRICE || '990'),
-    user: req.user
-      ? {
-          id: req.user.telegram_id,
-          firstName: req.user.first_name,
-          username: req.user.username,
-          photoUrl: req.user.photo_url,
-          premium: req.user.premium,
-        }
-      : null,
-  });
+app.get('/api/config', async (req, res, next) => {
+  try {
+    const telegram = await telegramConfiguration();
+    res.json({
+      telegramBotUsername: telegram.username,
+      telegramConfigured: telegram.configured,
+      telegramConfigurationIssue: telegram.issue,
+      paymentsConfigured: Boolean(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY),
+      openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      adminConfigured: Boolean(process.env.TELEGRAM_ADMIN_IDS || process.env.TELEGRAM_ADMIN_ID),
+      demoMode,
+      freeCardCount,
+      price: Number(process.env.FULL_MAP_PRICE || '990'),
+      user: req.user
+        ? {
+            id: req.user.telegram_id,
+            firstName: req.user.first_name,
+            username: req.user.username,
+            photoUrl: req.user.photo_url,
+            premium: req.user.premium,
+            admin: isAdminUser(req.user),
+          }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const publicEventTypes = new Set([
+  'page_view',
+  'form_started',
+  'demo_opened',
+  'card_opened',
+  'filter_changed',
+  'paywall_opened',
+  'auth_opened',
+  'consultant_opened',
+  'share_clicked',
+  'new_chart_clicked',
+]);
+
+app.post('/api/events', eventLimiter, async (req, res, next) => {
+  try {
+    const eventType = String(req.body.eventType || '').trim();
+    if (!publicEventTypes.has(eventType)) throw publicError('Неизвестное событие.', 400, 'UNKNOWN_EVENT');
+    const chartId = String(req.body.chartId || '').trim() || null;
+    if (chartId) {
+      if (!isUuid(chartId)) throw publicError('Некорректный ID карты.', 400, 'INVALID_CHART_ID');
+      const record = await getChart(chartId);
+      if (!record || !canAccessRecord(record, req)) throw publicError('Нет доступа к карте.', 403);
+    }
+    await safeTrack({
+      eventType,
+      visitorId: visitorIdFrom(req),
+      userId: req.user?.telegram_id || null,
+      chartId,
+      metadata: cleanMetadata(req.body.metadata),
+    });
+    res.status(202).json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post('/api/charts', generationLimiter, async (req, res, next) => {
@@ -160,6 +321,13 @@ app.post('/api/charts', generationLimiter, async (req, res, next) => {
       source,
     };
     await saveChart(record);
+    await safeTrack({
+      eventType: 'chart_created',
+      visitorId: visitorIdFrom(req),
+      userId: req.user?.telegram_id || null,
+      chartId: id,
+      metadata: { demo: isDemo, source, unknownTime: Boolean(chart.birth?.unknownTime) },
+    });
 
     res.status(201).json({
       ...presentChart(record, req, { forceUnlocked: isDemo }),
@@ -176,7 +344,26 @@ app.get('/api/charts/:id', async (req, res, next) => {
     const record = await getChart(req.params.id);
     if (!record) throw publicError('Карта не найдена.', 404, 'CHART_NOT_FOUND');
     if (!canAccessRecord(record, req)) throw publicError('Нет доступа к этой карте.', 403, 'CHART_FORBIDDEN');
+    await safeTrack({
+      eventType: 'chart_viewed',
+      visitorId: visitorIdFrom(req),
+      userId: req.user?.telegram_id || null,
+      chartId: record.id,
+    });
     res.json(presentChart(record, req));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/charts/:id/messages', requireUser, async (req, res, next) => {
+  try {
+    const record = await getChart(req.params.id);
+    if (!record) throw publicError('Карта не найдена.', 404);
+    if (record.userId && String(record.userId) !== String(req.user.telegram_id)) throw publicError('Нет доступа к карте.', 403);
+    if (!record.userId && !hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ карты.', 403);
+    const messages = await getConsultationMessages(record.id, 200);
+    res.json({ messages });
   } catch (error) {
     next(error);
   }
@@ -189,6 +376,12 @@ app.post('/api/charts/:id/claim', requireUser, async (req, res, next) => {
     if (!canAccessRecord(record, req) && record.userId) throw publicError('Карта уже принадлежит другому пользователю.', 403);
     if (!record.userId && !hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ этой карты.', 403);
     await claimChart(record.id, req.user.telegram_id);
+    await safeTrack({
+      eventType: 'chart_claimed',
+      visitorId: visitorIdFrom(req),
+      userId: req.user.telegram_id,
+      chartId: record.id,
+    });
     const updated = await getChart(record.id);
     res.json(presentChart(updated, req));
   } catch (error) {
@@ -208,11 +401,36 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
       await claimChart(record.id, req.user.telegram_id);
     }
 
+    const storedHistory = await getConsultationMessages(record.id, 20);
+    await saveConsultationMessage({
+      chartId: record.id,
+      userId: req.user.telegram_id,
+      role: 'user',
+      content: question,
+    });
+
     const answer = await answerConsultation({
       chart: record.chartData,
       portrait: record.portraitData,
       question,
-      history: Array.isArray(req.body.history) ? req.body.history : [],
+      history: storedHistory.slice(-8).map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+    });
+
+    await saveConsultationMessage({
+      chartId: record.id,
+      userId: req.user.telegram_id,
+      role: 'assistant',
+      content: answer,
+    });
+    await safeTrack({
+      eventType: 'consultation_answered',
+      visitorId: visitorIdFrom(req),
+      userId: req.user.telegram_id,
+      chartId: record.id,
+      metadata: { questionLength: question.length, answerLength: answer.length },
     });
     res.json({ answer });
   } catch (error) {
@@ -224,8 +442,16 @@ app.get('/auth/telegram/callback', async (req, res, next) => {
   try {
     const { user, token } = await completeTelegramLogin(req.query);
     setSessionCookie(res, token);
-    const chartId = String(req.query.state || '').replace(/[^a-f0-9-]/gi, '');
-    res.redirect(`/?auth=ok${chartId ? `&chart=${encodeURIComponent(chartId)}` : ''}#map`);
+    await safeTrack({
+      eventType: 'telegram_login',
+      userId: user.telegram_id,
+      metadata: { username: user.username || null },
+    });
+
+    const rawState = String(req.query.state || '');
+    if (rawState === 'admin') return res.redirect('/admin');
+    const chartId = rawState.replace(/[^a-f0-9-]/gi, '');
+    return res.redirect(`/?auth=ok${chartId ? `&chart=${encodeURIComponent(chartId)}` : ''}#map`);
   } catch (error) {
     next(error);
   }
@@ -246,7 +472,11 @@ app.post('/api/payments/create', requireUser, async (req, res, next) => {
       if (!hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ карты.', 403);
       await claimChart(record.id, req.user.telegram_id);
     }
-    const payment = await createPayment({ user: req.user, chartId });
+    const payment = await createPayment({
+      user: req.user,
+      chartId,
+      visitorId: visitorIdFrom(req),
+    });
     res.json({ paymentId: payment.id, confirmationUrl: payment.confirmation?.confirmation_url });
   } catch (error) {
     next(error);
@@ -264,6 +494,41 @@ app.post('/api/payments/webhook', async (req, res, next) => {
 
 app.get('/payment/return', (_req, res) => {
   res.redirect('/?payment=return#map');
+});
+
+app.get('/admin', (_req, res) => {
+  res.redirect('/admin.html');
+});
+
+app.get('/api/admin/overview', requireAdmin, async (req, res, next) => {
+  try {
+    res.json(await getAdminOverview(req.query.days));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/admin/charts', requireAdmin, async (req, res, next) => {
+  try {
+    res.json(await listAdminCharts({
+      limit: req.query.limit,
+      offset: req.query.offset,
+      search: req.query.search,
+    }));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/admin/charts/:id', requireAdmin, async (req, res, next) => {
+  try {
+    if (!isUuid(req.params.id)) throw publicError('Некорректный ID разбора.', 400);
+    const details = await getAdminChartDetails(req.params.id);
+    if (!details) throw publicError('Разбор не найден.', 404);
+    res.json(details);
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use(express.static('public', { extensions: ['html'], maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0 }));
