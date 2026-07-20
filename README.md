@@ -2,6 +2,15 @@
 
 Интерактивная карта личности по данным рождения. Приложение считает астрономические положения отдельно, а GPT используется только для человеческого синтеза: уникальное проявление, контраст с противоположным типом, ловушка и практический ключ.
 
+## Production
+
+- Railway service: `herostar`
+- Публичный адрес: `https://herostar.up.railway.app`
+- PostgreSQL: подключён отдельным Railway service
+- Ветка автодеплоя: `main`
+- Healthcheck: `https://herostar.up.railway.app/health`
+- Подробная фиксация инфраструктуры: [`docs/railway-production.md`](docs/railway-production.md)
+
 ## Что уже реализовано
 
 - ввод имени, даты, времени и места рождения;
@@ -46,15 +55,17 @@ npm start
 
 ## Развёртывание на Railway
 
-1. Создайте новый Railway Project из GitHub-репозитория.
+Production уже создан. Для повторного развёртывания:
+
+1. Подключите GitHub-репозиторий к Railway service.
 2. Добавьте PostgreSQL service. `DATABASE_URL` появится автоматически.
 3. Добавьте переменные из `.env.example`.
-4. Railway определит Node.js и запустит `node server.js`. Также добавлен `railway.json` с healthcheck `/health`.
+4. Railway определит Node.js и запустит `node server.js`. В `railway.json` настроен healthcheck `/health`.
 
 ### Минимальные переменные
 
 ```text
-APP_URL=https://ваш-домен.up.railway.app
+APP_URL=https://herostar.up.railway.app
 SESSION_SECRET=длинная-случайная-строка
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5-mini
@@ -64,7 +75,7 @@ OPENAI_MODEL=gpt-5-mini
 
 Создайте бота через BotFather, затем:
 
-1. выполните `/setdomain` и укажите домен приложения без пути;
+1. выполните `/setdomain` и укажите `herostar.up.railway.app`;
 2. добавьте в Railway:
 
 ```text
@@ -72,7 +83,13 @@ TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_USERNAME=имя_бота_без_@
 ```
 
-Callback уже реализован: `/auth/telegram/callback`. Подпись, время авторизации и HMAC проверяются на сервере.
+Callback уже реализован:
+
+```text
+https://herostar.up.railway.app/auth/telegram/callback
+```
+
+Подпись, время авторизации и HMAC проверяются на сервере.
 
 ## YooKassa
 
@@ -87,7 +104,7 @@ FULL_MAP_PRICE=990.00
 Webhook для события `payment.succeeded`:
 
 ```text
-https://ваш-домен.up.railway.app/api/payments/webhook
+https://herostar.up.railway.app/api/payments/webhook
 ```
 
 Приложение не доверяет входящему телу webhook и повторно запрашивает объект платежа у ЮKassa. Доступ открывается только после статуса `succeeded` и `paid=true`.
