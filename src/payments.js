@@ -1,6 +1,20 @@
 import crypto from 'node:crypto';
 import { publicError } from './utils.js';
-import { grantPremium, savePayment, updatePayment, claimChart } from './store.js';
+import {
+  grantPremium,
+  savePayment,
+  updatePayment,
+  claimChart,
+  trackEvent,
+} from './store.js';
+
+async function safeTrack(record) {
+  try {
+    await trackEvent(record);
+  } catch (error) {
+    console.error('Payment analytics event was not saved:', error);
+  }
+}
 
 function credentials() {
   const shopId = process.env.YOOKASSA_SHOP_ID;
@@ -28,7 +42,7 @@ async function yookassaRequest(path, options = {}) {
   return payload;
 }
 
-export async function createPayment({ user, chartId }) {
+export async function createPayment({ user, chartId, visitorId = null }) {
   const amount = Number(process.env.FULL_MAP_PRICE || '990').toFixed(2);
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
   const body = {
@@ -55,6 +69,13 @@ export async function createPayment({ user, chartId }) {
   });
 
   if (chartId) await claimChart(chartId, user.telegram_id);
+  await safeTrack({
+    eventType: 'payment_created',
+    visitorId,
+    userId: user.telegram_id,
+    chartId: chartId || null,
+    metadata: { paymentId: payment.id, amount: Number(amount), status: payment.status },
+  });
   return payment;
 }
 
@@ -71,6 +92,16 @@ export async function processWebhook(notification) {
     const chartId = payment.metadata?.chart_id;
     if (userId) await grantPremium(userId);
     if (userId && chartId) await claimChart(chartId, userId);
+    await safeTrack({
+      eventType: 'payment_succeeded',
+      userId: userId || null,
+      chartId: chartId || null,
+      metadata: {
+        paymentId: payment.id,
+        amount: Number(payment.amount?.value || 0),
+        currency: payment.amount?.currency || 'RUB',
+      },
+    });
   }
 
   return payment;
