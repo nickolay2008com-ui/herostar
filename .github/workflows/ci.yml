@@ -1,0 +1,27 @@
+name: HeroStar CI
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - name: Syntax check
+        run: |
+          node --check server.js
+          node --check public/app.js
+          for file in src/*.js; do node --check "$file"; done

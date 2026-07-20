@@ -1,0 +1,25 @@
+{
+  "name": "herostar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Интерактивная карта личности по данным рождения с AI-консультантом",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "astronomy-engine": "2.1.19",
+    "express": "5.1.0",
+    "express-rate-limit": "7.5.1",
+    "helmet": "8.1.0",
+    "luxon": "3.7.1",
+    "openai": "6.48.0",
+    "pg": "8.16.3",
+    "tz-lookup": "6.1.25"
+  }
+}
