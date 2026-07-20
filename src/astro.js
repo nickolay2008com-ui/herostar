@@ -101,9 +101,10 @@ function equalHouse(longitude, ascendant) {
 }
 
 function formatDegree(degree) {
-  const whole = Math.floor(degree);
-  const minutes = Math.round((degree - whole) * 60);
-  return `${whole}°${String(minutes === 60 ? 0 : minutes).padStart(2, '0')}′`;
+  const totalMinutes = Math.round(degree * 60);
+  const whole = Math.floor(totalMinutes / 60) % 30;
+  const minutes = totalMinutes % 60;
+  return `${whole}°${String(minutes).padStart(2, '0')}′`;
 }
 
 function calculateRetrograde(body, date) {
@@ -201,8 +202,8 @@ export async function calculateNatalChart(input) {
     location = await geocodePlace(input.place);
   }
 
-  if (Math.abs(location.latitude) > 66) {
-    throw publicError('Для широт выше 66° текущая версия пока не строит дома надёжно. Планетарный портрет будет добавлен позже.');
+  if (!unknownTime && Math.abs(location.latitude) > 66) {
+    throw publicError('Для широт выше 66° текущая версия пока не строит дома надёжно. Укажите, что время неизвестно, чтобы получить планетарный портрет без домов.');
   }
 
   const zone = tzlookup(location.latitude, location.longitude);
