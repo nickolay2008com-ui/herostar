@@ -27,13 +27,26 @@ function decodeSession(token) {
   return payload;
 }
 
+function configuredAdminIds() {
+  return new Set(
+    String(process.env.TELEGRAM_ADMIN_IDS || process.env.TELEGRAM_ADMIN_ID || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+}
+
+export function isAdminUser(user) {
+  if (!user?.telegram_id) return false;
+  return configuredAdminIds().has(String(user.telegram_id));
+}
+
 export function verifyTelegramPayload(payload) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) throw publicError('Telegram-авторизация ещё не настроена.', 503, 'TELEGRAM_NOT_CONFIGURED');
 
   const { hash, state: _state, ...fields } = payload;
   if (!hash) throw publicError('Telegram не передал подпись.', 401);
-
   const authDate = Number(fields.auth_date);
   if (!authDate || Date.now() / 1000 - authDate > 86400) throw publicError('Ссылка авторизации устарела. Войдите ещё раз.', 401);
 
@@ -74,6 +87,7 @@ export async function attachUser(req, _res, next) {
     const cookies = parseCookies(req.headers.cookie || '');
     const session = decodeSession(cookies[COOKIE_NAME]);
     req.user = session?.sub ? await getUser(session.sub) : null;
+    req.isAdmin = isAdminUser(req.user);
     next();
   } catch (error) {
     next(error);
@@ -82,5 +96,11 @@ export async function attachUser(req, _res, next) {
 
 export function requireUser(req, _res, next) {
   if (!req.user) return next(publicError('Войдите через Telegram, чтобы продолжить.', 401, 'AUTH_REQUIRED'));
+  return next();
+}
+
+export function requireAdmin(req, _res, next) {
+  if (!req.user) return next(publicError('Войдите через Telegram под аккаунтом администратора.', 401, 'AUTH_REQUIRED'));
+  if (!isAdminUser(req.user)) return next(publicError('У этого Telegram-аккаунта нет доступа к панели.', 403, 'ADMIN_REQUIRED'));
   return next();
 }
