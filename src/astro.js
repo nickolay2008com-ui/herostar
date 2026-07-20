@@ -107,11 +107,15 @@ function formatDegree(degree) {
   return `${whole}°${String(minutes).padStart(2, '0')}′`;
 }
 
+function geocentricLongitude(body, date) {
+  return normalizeDegrees(Astronomy.Ecliptic(Astronomy.GeoVector(body, date, true)).elon);
+}
+
 function calculateRetrograde(body, date) {
   const before = new Date(date.getTime() - 12 * 60 * 60 * 1000);
   const after = new Date(date.getTime() + 12 * 60 * 60 * 1000);
-  const previous = Astronomy.EclipticLongitude(body, before);
-  const next = Astronomy.EclipticLongitude(body, after);
+  const previous = geocentricLongitude(body, before);
+  const next = geocentricLongitude(body, after);
   return signedAngularDelta(previous, next) < 0;
 }
 
@@ -215,7 +219,7 @@ export async function calculateNatalChart(input) {
   const angles = unknownTime ? null : anglesFor(utcDate, location.latitude, location.longitude);
 
   const planets = BODIES.map(([key, nameRu, symbol, body]) => {
-    const longitude = normalizeDegrees(Astronomy.EclipticLongitude(body, utcDate));
+    const longitude = geocentricLongitude(body, utcDate);
     const sign = signData(longitude);
     const house = angles ? equalHouse(longitude, angles.ascendant) : null;
     return {
