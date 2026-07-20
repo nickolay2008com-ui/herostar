@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { calculateNatalChart } from '../src/astro.js';
 import { buildFallbackPortrait } from '../src/narrative.js';
 
-test('строит карту Николая с ожидаемыми углами', async () => {
+test('строит контрольную карту с ожидаемыми углами', async () => {
   const chart = await calculateNatalChart({
-    name: 'Николай',
+    name: 'Контрольный профиль',
     date: '1987-11-06',
     time: '01:15',
-    place: 'Донецк',
+    place: 'Контрольная локация',
     latitude: 48.0159,
     longitude: 37.8029,
   });
@@ -22,10 +22,10 @@ test('строит карту Николая с ожидаемыми углам�
 
 test('fallback-портрет всегда содержит 11 доказуемых карточек', async () => {
   const chart = await calculateNatalChart({
-    name: 'Тест',
+    name: 'Тестовый профиль',
     date: '1990-01-01',
     time: '12:00',
-    place: 'Москва',
+    place: 'Тестовая локация',
     latitude: 55.7558,
     longitude: 37.6173,
   });
