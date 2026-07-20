@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080a12">
+  <meta name="description" content="HeroStar превращает данные рождения в интерактивную карту личности: сильные стороны, контрасты, ловушки и практический маршрут.">
+  <title>HeroStar — секретная карта личности</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="noise"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="HeroStar">
+      <span class="brand-mark">✦</span>
+      <span>HeroStar</span>
+    </a>
+    <div class="top-actions">
+      <span class="status-pill" id="engineStatus"><i></i> механизм готов</span>
+      <button class="ghost-button hidden" id="userButton" type="button"></button>
+      <button class="ghost-button" id="loginButton" type="button">Войти через Telegram</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero section-shell">
+      <div class="hero-copy">
+        <div class="eyebrow">Интерактивный образ вместо гороскопа</div>
+        <h1>Найдите механику,<br><span>по которой вы устроены</span></h1>
+        <p class="hero-lead">Не «вы чувствительный и иногда сомневаетесь». HeroStar показывает точное положение, уникальное проявление, противоположный тип, личную ловушку и действие, которое возвращает силу.</p>
+
+        <div class="proof-row">
+          <div><strong>11</strong><span>ключей личности</span></div>
+          <div><strong>5</strong><span>жизненных режимов</span></div>
+          <div><strong>1</strong><span>собранный маршрут</span></div>
+        </div>
+
+        <button class="text-button" id="demoButton" type="button">Открыть живой пример Николая <span>→</span></button>
+      </div>
+
+      <div class="birth-panel glass-panel">
+        <div class="panel-kicker">Создать мою карту</div>
+        <h2>Три факта. Остальное соберём сами.</h2>
+        <form id="birthForm" autocomplete="on">
+          <label class="field">
+            <span>Как вас называть</span>
+            <input name="name" maxlength="80" placeholder="Николай" required>
+          </label>
+          <div class="field-grid">
+            <label class="field">
+              <span>Дата рождения</span>
+              <input name="date" type="date" required>
+            </label>
+            <label class="field" id="timeField">
+              <span>Точное время</span>
+              <input name="time" type="time" required>
+            </label>
+          </div>
+          <label class="switch-row">
+            <input id="unknownTime" name="unknownTime" type="checkbox">
+            <span class="switch"><i></i></span>
+            <span>Время рождения неизвестно</span>
+          </label>
+          <label class="field">
+            <span>Место рождения</span>
+            <input name="place" placeholder="Донецк, Украина" required>
+            <small>Город и страна. Координаты и исторический часовой пояс определятся автоматически.</small>
+          </label>
+          <button class="primary-button" type="submit">
+            <span>Собрать секретную карту</span>
+            <b>✦</b>
+          </button>
+          <p class="microcopy">Астрология используется как язык саморефлексии, а не как научный диагноз или обещание будущего.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="loading-stage hidden" id="loadingStage" aria-live="polite">
+      <div class="orbit-loader">
+        <div class="orbit orbit-one"><i></i></div>
+        <div class="orbit orbit-two"><i></i></div>
+        <span>✦</span>
+      </div>
+      <h2 id="loadingTitle">Определяем небесную схему</h2>
+      <p id="loadingText">Планеты считаются отдельно. ИИ не получает права сочинять космос, к счастью.</p>
+      <div class="loading-track"><i id="loadingProgress"></i></div>
+      <div class="loading-steps" id="loadingSteps"></div>
+    </section>
+
+    <section class="map-section hidden" id="map">
+      <div class="section-shell map-shell">
+        <div class="map-head">
+          <div>
+            <div class="eyebrow">Ваша личная механика</div>
+            <h2 id="mapTitle">Секретная карта</h2>
+            <p id="mapSubtitle"></p>
+          </div>
+          <div class="map-actions">
+            <button class="ghost-button" id="shareButton" type="button">Поделиться</button>
+            <button class="ghost-button" id="newMapButton" type="button">Новая карта</button>
+          </div>
+        </div>
+
+        <div class="map-dashboard">
+          <aside class="identity-panel glass-panel">
+            <div class="wheel-wrap" id="wheelWrap"></div>
+            <div class="identity-name" id="identityName"></div>
+            <div class="identity-meta" id="identityMeta"></div>
+            <div class="archetype-box">
+              <span>Собранный образ</span>
+              <p id="archetypeText"></p>
+            </div>
+            <div class="accuracy-note" id="accuracyNote"></div>
+          </aside>
+
+          <div class="treasure-panel">
+            <nav class="mode-tabs" id="modeTabs" aria-label="Разделы карты">
+              <button class="active" data-category="all">Вся карта</button>
+              <button data-category="core">Ядро</button>
+              <button data-category="energy">Энергия</button>
+              <button data-category="love">Любовь</button>
+              <button data-category="money">Действие</button>
+              <button data-category="growth">Рост</button>
+              <button data-category="route">Маршрут</button>
+            </nav>
+            <div class="card-stack" id="cardStack"></div>
+          </div>
+        </div>
+
+        <section class="synthesis glass-panel" id="synthesis"></section>
+      </div>
+    </section>
+  </main>
+
+  <button class="consult-fab hidden" id="consultFab" type="button">
+    <span>✦</span><b>Спросить карту</b>
+  </button>
+
+  <aside class="consult-panel" id="consultPanel" aria-hidden="true">
+    <div class="consult-head">
+      <div>
+        <span>Личный проводник</span>
+        <h3>Разберите вопрос через вашу карту</h3>
+      </div>
+      <button id="closeConsult" aria-label="Закрыть">×</button>
+    </div>
+    <div class="question-chips" id="questionChips">
+      <button>Почему я откладываю важное?</button>
+      <button>Как мне лучше зарабатывать?</button>
+      <button>Какие отношения мне подходят?</button>
+      <button>Где сейчас мой главный рычаг?</button>
+    </div>
+    <div class="chat" id="chat"></div>
+    <form class="consult-form" id="consultForm">
+      <textarea name="question" rows="2" placeholder="Опишите ситуацию обычными словами…" required></textarea>
+      <button type="submit" aria-label="Отправить">↑</button>
+    </form>
+    <p class="consult-note">Ответ опирается на карту, но не заменяет врача, юриста, финансового специалиста или вашу волю. Удивительно, но планеты не подписывают договоры.</p>
+  </aside>
+
+  <div class="modal-backdrop hidden" id="authModal">
+    <div class="modal glass-panel">
+      <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
+      <div class="modal-icon">✦</div>
+      <h2>Сохранить карту через Telegram</h2>
+      <p>Один вход без пароля. Карта привяжется к вашему профилю, а консультант сможет продолжать разговор.</p>
+      <div class="telegram-slot" id="telegramSlot"></div>
+      <p class="microcopy">HeroStar получает только данные, которые Telegram передаёт при входе: имя, username и фото, если они доступны.</p>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="payModal">
+    <div class="modal purchase-modal glass-panel">
+      <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
+      <div class="modal-icon">🗝</div>
+      <div class="panel-kicker">Полная карта</div>
+      <h2>Открыть всю механику</h2>
+      <p>Все 11 ключей, внутренние противоречия, личная формула, маршрут и консультации по вашей ситуации.</p>
+      <ul>
+        <li>Уникальные сравнения с противоположными типами</li>
+        <li>Ловушки и практические действия по каждому показателю</li>
+        <li>Собранный образ вместо разрозненных трактовок</li>
+      </ul>
+      <button class="primary-button" id="payButton" type="button">Открыть за <span id="priceLabel">990 ₽</span></button>
+      <p class="microcopy">Переход на защищённую страницу ЮKassa. Доступ открывается после подтверждения оплаты.</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
