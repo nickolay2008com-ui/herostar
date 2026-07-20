@@ -137,12 +137,12 @@ app.post('/api/charts', generationLimiter, async (req, res, next) => {
     const isDemo = Boolean(req.body.demo) && demoMode;
     const birthInput = isDemo
       ? {
-          name: 'Николай',
-          date: '1987-11-06',
-          time: '01:15',
-          place: 'Донецк, Украина',
-          latitude: 48.0159,
-          longitude: 37.8029,
+          name: 'Демо-профиль',
+          date: '1990-01-01',
+          time: '12:00',
+          place: 'Тестовая локация',
+          latitude: 55.7558,
+          longitude: 37.6173,
         }
       : req.body;
 
