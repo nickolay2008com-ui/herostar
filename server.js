@@ -26,6 +26,7 @@ import {
   isAdminUser,
 } from './src/auth.js';
 import { createPayment, processWebhook } from './src/payments.js';
+import { searchPlaces, unpackSelectedPlace } from './src/places.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
 
 const app = express();
@@ -165,6 +166,13 @@ const eventLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => Boolean(req.isAdmin),
 });
+const placeSearchLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 80,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Слишком много запросов к поиску городов. Сделайте короткую паузу.', code: 'PLACE_RATE_LIMIT' },
+});
 
 function hasAnonymousAccess(record, token) {
   return Boolean(token && record?.accessTokenHash && sha256(token) === record.accessTokenHash);
@@ -257,6 +265,18 @@ app.get('/api/config', async (req, res, next) => {
   }
 });
 
+app.get('/api/places', placeSearchLimiter, async (req, res, next) => {
+  try {
+    const query = String(req.query.q || '').trim().slice(0, 120);
+    if (query.length < 2) return res.json({ items: [] });
+    const items = await searchPlaces(query);
+    res.set('Cache-Control', 'private, max-age=300');
+    return res.json({ items });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 const publicEventTypes = new Set([
   'page_view',
   'form_started',
@@ -305,7 +325,7 @@ app.post('/api/charts', generationLimiter, async (req, res, next) => {
           latitude: 55.7558,
           longitude: 37.6173,
         }
-      : req.body;
+      : { ...req.body, ...unpackSelectedPlace(req.body.place) };
 
     const chart = await calculateNatalChart(birthInput);
     const { portrait, source } = await generatePortrait(chart);
@@ -552,5 +572,6 @@ function shutdown(signal) {
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10000).unref();
 }
+
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
