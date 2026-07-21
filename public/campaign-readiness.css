@@ -87,3 +87,10 @@ html, body {
   .site-footer { width: min(100% - 28px, 1240px); flex-direction: column; margin-top: 50px; }
   .site-footer nav { justify-content: flex-start; }
 }
+
+
+.payment-contact { margin: 0 0 14px; }
+.payment-contact input { width: 100%; min-height: 48px; box-sizing: border-box; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(7,8,17,.76); color: #f2eef7; padding: 0 14px; outline: none; }
+.payment-contact input:focus { border-color: rgba(190,171,255,.55); box-shadow: 0 0 0 3px rgba(190,171,255,.08); }
+.payment-contact small { display: block; margin-top: 7px; color: #777281; font-size: 11px; line-height: 1.45; }
+.payment-contact small.field-error { color: #e6a0a0; }
