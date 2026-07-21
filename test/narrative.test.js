@@ -9,7 +9,7 @@ function makePoint(key, name, sign, house = null) {
     Стрелец: 'Близнецы', Козерог: 'Рак', Водолей: 'Лев', Рыбы: 'Дева',
   };
   return {
-    key, name, sign, oppositeSign: opposites[sign], degreeLabel: '10°00′',
+    key, name, sign, oppositeSign: opposites[sign], degree: 10, degreeLabel: '10°00′',
     house, houseArea: house ? `тестовая сфера ${house} дома` : null,
     retrograde: false,
   };
@@ -50,11 +50,39 @@ test('каждая карточка содержит полную редакци
   }
 });
 
+test('каждая карточка содержит глубокий практический разбор', () => {
+  const portrait = buildFallbackPortrait(chart());
+  for (const card of portrait.cards) {
+    const guide = card.deepDive;
+    assert.ok(guide.headline.length > 40, `${card.id}: нужен практический вопрос`);
+    assert.ok(guide.purpose.length > 60, `${card.id}: нужна задача функции`);
+    assert.deepEqual(Object.keys(guide.formula), ['planet', 'element', 'sign', 'house', 'mode', 'degree', 'motion']);
+    assert.equal(guide.lifeExamples.length, 3);
+    assert.ok(guide.lifeExamples.every((example) => example.title && example.text.length > 40));
+    assert.ok(guide.states.resource.length > 40);
+    assert.ok(guide.states.stress.length > 40);
+    assert.ok(guide.states.return.length > 40);
+    assert.equal(guide.elementComparison.length, 4);
+    assert.equal(guide.elementComparison.filter((item) => item.current).length, 1);
+    assert.equal(guide.distinguish.length, 3);
+    assert.equal(guide.practice.steps.length, 3);
+  }
+});
+
+test('марс в воздухе объясняет действие через слово, но не отменяет движение', () => {
+  const portrait = buildFallbackPortrait(chart());
+  const mars = portrait.cards.find((card) => card.id === 'mars');
+  assert.match(mars.deepDive.formula.element.text, /мысль, слово|слово, сравнение/);
+  assert.match(mars.deepDive.lifeExamples.map((item) => item.text).join(' '), /активность|выход|движение/i);
+  assert.match(mars.deepDive.distinguish.find((item) => item.name === 'Меркурий').text, /решением и движением/);
+});
+
 test('неизвестное время не создаёт вымышленные дома', () => {
   const portrait = buildFallbackPortrait(chart({ unknownTime: true }));
   for (const card of portrait.cards) {
     assert.match(card.manifestation, /не указано/i);
     assert.equal(card.evidence[1], 'Дома не рассчитаны');
+    assert.match(card.deepDive.formula.house.text, /не приписывает/i);
   }
 });
 
