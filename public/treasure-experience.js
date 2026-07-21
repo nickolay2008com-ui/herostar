@@ -4,24 +4,33 @@ let lastUnlocked = 0;
 let scheduled = false;
 
 const loadingCopy = new Map([
-  ['Определяем небесную схему', 'Наносим координаты на карту'],
-  ['Планеты считаются отдельно. ИИ не получает права сочинять космос, к счастью.', 'Сначала отмечаем точные положения — без догадок и случайных обещаний.'],
-  ['Строим оси и дома', 'Отмечаем жизненные тайники'],
-  ['Место и исторический часовой пояс превращаются в конкретную геометрию карты.', 'Каждая сфера жизни получает своё место на вашей карте сокровищ.'],
-  ['Ищем контрасты', 'Проверяем, что запирает ресурсы'],
-  ['Каждое качество сравнивается с противоположным типом, чтобы убрать универсальную кашу.', 'Сравниваем противоположные проявления, чтобы отличить ваш ресурс от приятного общего текста.'],
-  ['Соединяем внутренние механизмы', 'Собираем найденное в один клад'],
-  ['Планеты перестают быть списком и начинают объяснять, как части личности работают вместе.', 'Отдельные находки соединяются в цельную картину вашей личности.'],
-  ['Собираем маршрут', 'Прокладываем маршрут применения'],
-  ['Ловушки переводятся в конкретные ключи и обратимые действия.', 'Для каждого замка находим ключ и первый проверяемый ход.'],
+  ['Определяем небесную схему', 'Рассчитываем положения'],
+  ['Планеты считаются отдельно. ИИ не получает права сочинять космос, к счастью.', 'Определяем точные координаты карты.'],
+  ['Строим оси и дома', 'Определяем сферы жизни'],
+  ['Место и исторический часовой пояс превращаются в конкретную геометрию карты.', 'Показываем, где проявляется каждый ресурс.'],
+  ['Ищем контрасты', 'Проверяем контрасты'],
+  ['Каждое качество сравнивается с противоположным типом, чтобы убрать универсальную кашу.', 'Сравниваем противоположные проявления, чтобы убрать общие формулировки.'],
+  ['Соединяем внутренние механизмы', 'Соединяем элементы'],
+  ['Планеты перестают быть списком и начинают объяснять, как части личности работают вместе.', 'Собираем ресурсы и противоречия в цельную картину.'],
+  ['Собираем маршрут', 'Формируем маршрут'],
+  ['Ловушки переводятся в конкретные ключи и обратимые действия.', 'Переводим выводы в конкретные действия.'],
 ]);
 
 const stepCopy = new Map([
-  ['Точные положения', 'Координаты'],
-  ['Сферы проявления', 'Тайники'],
-  ['Анти-Барнум', 'Проверка точности'],
-  ['Синтез', 'Сокровищница'],
+  ['Точные положения', 'Положения'],
+  ['Сферы проявления', 'Сферы'],
+  ['Анти-Барнум', 'Контрасты'],
+  ['Синтез', 'Синтез'],
   ['Практический путь', 'Маршрут'],
+]);
+
+const toastCopy = new Map([
+  ['Сначала привяжем карту к Telegram. Без паролей и почтового фольклора.', 'Сохраните карту через Telegram, чтобы открыть полный доступ.'],
+  ['Войдите через Telegram, чтобы консультант мог продолжать разговор.', 'Войдите через Telegram, чтобы продолжить разбор.'],
+  ['Профиль привязан. Осталось открыть полную карту.', 'Карта сохранена. Полный доступ пока закрыт.'],
+  ['Описание и ссылка скопированы.', 'Ссылка скопирована.'],
+  ['Telegram подключён. Карта сохранена.', 'Карта сохранена.'],
+  ['Платёж ещё подтверждается. Обновите карту чуть позже.', 'Оплата подтверждается. Обновите карту позже.'],
 ]);
 
 function setText(node, value) {
@@ -38,10 +47,10 @@ function decorateCards() {
 
     card.querySelectorAll('.insight span').forEach((label) => {
       const replacements = {
-        'Уникальный пример': 'Что хранится внутри',
-        'Как бывает иначе': 'Как устроено иначе',
-        'Главная ловушка': 'Замок: что прячет ресурс',
-        'Личный ключ': 'Ключ от тайника',
+        'Уникальный пример': 'Ваш ресурс',
+        'Как бывает иначе': 'Как проявляется иначе',
+        'Главная ловушка': 'Что блокирует',
+        'Личный ключ': 'Что помогает',
       };
       if (replacements[label.textContent]) setText(label, replacements[label.textContent]);
     });
@@ -52,9 +61,9 @@ function decorateCards() {
     const unlockTitle = card.querySelector('.unlock-box b');
     const unlockText = card.querySelector('.unlock-box p');
     const unlockButton = card.querySelector('.unlock-box button');
-    if (unlockTitle) setText(unlockTitle, 'Тайник закрыт');
-    if (unlockText) setText(unlockText, 'Внутри — ваш ресурс, замок, ключ и первый практический ход.');
-    if (unlockButton) setText(unlockButton, 'Открыть весь клад');
+    if (unlockTitle) setText(unlockTitle, 'Сокровище закрыто');
+    if (unlockText) setText(unlockText, 'Внутри — ресурс, блок, ключ и действие.');
+    if (unlockButton) setText(unlockButton, 'Открыть все 11');
   });
 
   const allModeActive = document.querySelector('.mode-tabs button[data-category="all"]')?.classList.contains('active');
@@ -68,7 +77,7 @@ function decorateCards() {
 
   if (progress && lastTotal) {
     const percentage = Math.round((lastUnlocked / lastTotal) * 100);
-    const markup = `<div class="treasure-progress-copy"><span>Ваш путь по карте</span><strong>${lastUnlocked} из ${lastTotal} сокровищ открыто</strong></div><div class="treasure-progress-track" aria-hidden="true"><i style="width:${percentage}%"></i></div><small>Каждая находка: ресурс → замок → ключ → действие в реальной жизни</small>`;
+    const markup = `<div class="treasure-progress-copy"><span>Прогресс</span><strong>Открыто ${lastUnlocked} из ${lastTotal}</strong></div><div class="treasure-progress-track" aria-hidden="true"><i style="width:${percentage}%"></i></div><small>Ресурс → блок → ключ → действие</small>`;
     if (progress.innerHTML !== markup) progress.innerHTML = markup;
   }
 }
@@ -78,19 +87,19 @@ function decorateSynthesis() {
   if (!synthesis?.children.length) return;
 
   const kicker = synthesis.querySelector('.panel-kicker');
-  if (kicker) setText(kicker, 'Весь найденный клад');
+  if (kicker) setText(kicker, 'Итог карты');
 
   synthesis.querySelectorAll('.synthesis-block h4').forEach((heading) => {
     const replacements = {
-      'Сильные опоры': 'Главные сокровища',
-      'Внутренние узлы': 'Замки и скрытые проходы',
-      'Маршрут': 'Маршрут применения',
+      'Сильные опоры': 'Ваши опоры',
+      'Внутренние узлы': 'Что мешает',
+      'Маршрут': 'Что делать',
     };
     if (replacements[heading.textContent]) setText(heading, replacements[heading.textContent]);
   });
 
   const button = synthesis.querySelector('.bingo [data-open-pay]');
-  if (button) setText(button, 'Открыть весь клад →');
+  if (button) setText(button, 'Открыть итог →');
 }
 
 function decorateLoading() {
@@ -106,10 +115,23 @@ function decorateLoading() {
 function decorateMessages() {
   document.querySelectorAll('.message.ai').forEach((message) => {
     if (message.textContent === 'Выберите готовый вопрос или опишите ситуацию. Я свяжу её с конкретными элементами вашей карты и предложу один проверяемый шаг.') {
-      setText(message, 'Выберите вопрос или опишите ситуацию. Я покажу, какое найденное сокровище здесь поможет, что его запирает и какой первый ход можно проверить.');
+      setText(message, 'Опишите ситуацию. Я покажу, на какой ресурс опереться и какой шаг сделать.');
     }
-    if (message.textContent === 'Собираю связи карты…') setText(message, 'Ищу нужный тайник и подходящий ключ…');
+    if (message.textContent === 'Собираю связи карты…') setText(message, 'Сверяю вопрос с картой…');
   });
+}
+
+function decorateSystemCopy() {
+  const toast = document.querySelector('#toast');
+  if (toast && toastCopy.has(toast.textContent)) setText(toast, toastCopy.get(toast.textContent));
+
+  const accuracy = document.querySelector('#accuracyNote');
+  if (accuracy?.textContent) {
+    const refined = accuracy.textContent
+      .replace('Текст: персональный AI-синтез', 'Интерпретация: персональный разбор')
+      .replace('Текст: локальная интерпретация', 'Интерпретация: HeroStar');
+    setText(accuracy, refined);
+  }
 }
 
 function decorateInterface() {
@@ -117,6 +139,7 @@ function decorateInterface() {
   decorateSynthesis();
   decorateLoading();
   decorateMessages();
+  decorateSystemCopy();
 }
 
 function scheduleDecoration() {
