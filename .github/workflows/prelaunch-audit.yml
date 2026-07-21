@@ -1,0 +1,33 @@
+name: HeroStar Prelaunch Audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install project dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.54.1
+          npx playwright install --with-deps chromium
+      - name: Run production prelaunch audit
+        run: node .github/scripts/prelaunch-audit.mjs
+        env:
+          HEROSTAR_URL: https://herostar.up.railway.app
+      - name: Upload audit report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: herostar-prelaunch-audit
+          path: audit-artifacts
+          if-no-files-found: warn
