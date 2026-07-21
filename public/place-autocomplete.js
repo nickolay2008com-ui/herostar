@@ -8,16 +8,18 @@ if (placeInput && field && form) {
     .treasure-entry { overflow: visible; }
     .place-field-wrap { position: relative; z-index: 12; margin-bottom: 15px; }
     .place-field-wrap > .field { margin-bottom: 0; }
-    .place-autocomplete { position: absolute; z-index: 80; left: 0; right: 0; top: calc(100% + 7px); overflow: hidden; border: 1px solid rgba(196,176,255,.24); border-radius: 17px; background: rgba(10,11,21,.98); box-shadow: 0 24px 70px rgba(0,0,0,.55); backdrop-filter: blur(24px); }
+    .place-autocomplete { position: absolute; z-index: 80; left: 0; right: 0; top: calc(100% + 7px); max-height: 360px; overflow-y: auto; border: 1px solid rgba(196,176,255,.24); border-radius: 17px; background: rgba(10,11,21,.98); box-shadow: 0 24px 70px rgba(0,0,0,.55); backdrop-filter: blur(24px); scrollbar-width: thin; }
     .place-autocomplete[hidden] { display: none; }
     .place-option { width: 100%; display: grid; grid-template-columns: 31px minmax(0,1fr) 18px; align-items: center; gap: 10px; padding: 11px 13px; border: 0; border-bottom: 1px solid rgba(255,255,255,.055); text-align: left; background: transparent; cursor: pointer; }
     .place-option:last-of-type { border-bottom: 0; }
     .place-option:hover, .place-option.active { background: rgba(169,137,255,.11); }
     .place-option-icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 10px; color: #c4b0ff; background: rgba(169,137,255,.09); font-size: 14px; }
     .place-option-copy { min-width: 0; }
+    .place-option-title { display: flex; align-items: center; gap: 7px; min-width: 0; }
     .place-option-copy strong, .place-option-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .place-option-copy strong { color: #f4f1ff; font-size: 12px; }
-    .place-option-copy span { margin-top: 3px; color: #858191; font-size: 10px; }
+    .place-option-copy > span { margin-top: 3px; color: #858191; font-size: 10px; }
+    .place-option-badge { flex: 0 0 auto; padding: 2px 6px; border: 1px solid rgba(135,232,220,.22); border-radius: 999px; color: #8bdccb; background: rgba(135,232,220,.07); font-size: 8px; font-style: normal; letter-spacing: .02em; }
     .place-option-mark { color: #87e8dc; opacity: 0; }
     .place-option[aria-selected="true"] .place-option-mark { opacity: 1; }
     .place-attribution { padding: 8px 13px; color: #656170; font-size: 9px; border-top: 1px solid rgba(255,255,255,.055); }
@@ -30,7 +32,7 @@ if (placeInput && field && form) {
     .place-status.error { color: #ff9caa; }
     .place-field-wrap.recognized input { border-color: rgba(135,232,220,.44); box-shadow: 0 0 0 3px rgba(135,232,220,.055); }
     @media (max-width: 660px) {
-      .place-autocomplete { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; max-height: min(430px,70vh); overflow-y: auto; border-radius: 20px; }
+      .place-autocomplete { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; max-height: min(430px,70vh); border-radius: 20px; }
       .place-option { padding: 13px; }
     }
   `;
@@ -42,7 +44,7 @@ if (placeInput && field && form) {
   wrap.append(field);
 
   const helper = field.querySelector('small');
-  if (helper) helper.textContent = 'Начните вводить город и выберите точный вариант.';
+  if (helper) helper.textContent = 'Введите город — перед расчётом покажем регион и подтвердим координаты.';
 
   const status = document.createElement('div');
   status.className = 'place-status';
@@ -69,7 +71,6 @@ if (placeInput && field && form) {
   let activeIndex = -1;
   let timer = null;
   let controller = null;
-  let manualFallback = false;
   let requestVersion = 0;
 
   function setStatus(kind, text) {
@@ -99,12 +100,39 @@ if (placeInput && field && form) {
 
   function choose(item) {
     selected = item;
-    manualFallback = false;
     placeInput.value = item.label;
     placeInput.setCustomValidity('');
     wrap.classList.add('recognized');
-    setStatus('success', `✓ Распознано: ${item.label} · координаты подтверждены`);
+    const coordinates = `${Number(item.latitude).toFixed(3)}, ${Number(item.longitude).toFixed(3)}`;
+    setStatus('success', `✓ Выбрано: ${item.label} · координаты ${coordinates}`);
     closeList();
+  }
+
+  function appendAttribution() {
+    const attribution = document.createElement('div');
+    attribution.className = 'place-attribution';
+    attribution.append('Проверка HeroStar · ');
+
+    const photon = document.createElement('a');
+    photon.href = 'https://github.com/komoot/photon';
+    photon.target = '_blank';
+    photon.rel = 'noreferrer';
+    photon.textContent = 'Photon';
+
+    const osm = document.createElement('a');
+    osm.href = 'https://www.openstreetmap.org/copyright';
+    osm.target = '_blank';
+    osm.rel = 'noreferrer';
+    osm.textContent = 'OpenStreetMap';
+
+    const geonames = document.createElement('a');
+    geonames.href = 'https://www.geonames.org/';
+    geonames.target = '_blank';
+    geonames.rel = 'noreferrer';
+    geonames.textContent = 'GeoNames';
+
+    attribution.append(photon, ' / ', osm, ' / ', geonames);
+    list.append(attribution);
   }
 
   function renderOptions() {
@@ -124,11 +152,20 @@ if (placeInput && field && form) {
 
       const copy = document.createElement('span');
       copy.className = 'place-option-copy';
+      const title = document.createElement('span');
+      title.className = 'place-option-title';
       const primary = document.createElement('strong');
       primary.textContent = item.primary;
+      title.append(primary);
+      if (String(item.id).startsWith('verified-')) {
+        const badge = document.createElement('em');
+        badge.className = 'place-option-badge';
+        badge.textContent = 'проверено';
+        title.append(badge);
+      }
       const secondary = document.createElement('span');
-      secondary.textContent = item.secondary || 'Город';
-      copy.append(primary, secondary);
+      secondary.textContent = item.secondary || 'Населённый пункт';
+      copy.append(title, secondary);
 
       const mark = document.createElement('span');
       mark.className = 'place-option-mark';
@@ -141,17 +178,7 @@ if (placeInput && field && form) {
       list.append(option);
     });
 
-    const attribution = document.createElement('div');
-    attribution.className = 'place-attribution';
-    attribution.append('Поиск Photon · данные ');
-    const link = document.createElement('a');
-    link.href = 'https://www.openstreetmap.org/copyright';
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    link.textContent = '© OpenStreetMap';
-    attribution.append(link);
-    list.append(attribution);
-
+    appendAttribution();
     list.hidden = !items.length;
     placeInput.setAttribute('aria-expanded', String(Boolean(items.length)));
   }
@@ -160,7 +187,7 @@ if (placeInput && field && form) {
     const version = ++requestVersion;
     controller?.abort();
     controller = new AbortController();
-    setStatus('searching', 'Ищем точный город…');
+    setStatus('searching', 'Сверяем города и регионы…');
     placeInput.setAttribute('aria-busy', 'true');
 
     try {
@@ -175,22 +202,19 @@ if (placeInput && field && form) {
       items = Array.isArray(payload.items) ? payload.items : [];
       activeIndex = -1;
       if (!items.length) {
-        manualFallback = true;
         closeList();
-        setStatus('warning', 'Не нашли вариант. Добавьте страну или продолжите — место проверим при расчёте.');
+        setStatus('warning', 'Точного совпадения нет. Добавьте регион или страну — мы не будем угадывать координаты.');
         return;
       }
 
-      manualFallback = false;
-      setStatus('searching', 'Выберите точный город из списка.');
+      setStatus('searching', 'Выберите город и проверьте регион.');
       renderOptions();
     } catch (error) {
       if (error.name === 'AbortError') return;
       if (version !== requestVersion) return;
       items = [];
-      manualFallback = true;
       closeList();
-      setStatus('warning', 'Подсказки временно недоступны — место проверим при расчёте.');
+      setStatus('error', 'Поиск временно недоступен. Расчёт не запустится с непроверенным городом — повторите через несколько секунд.');
     } finally {
       if (version === requestVersion) placeInput.removeAttribute('aria-busy');
     }
@@ -208,13 +232,12 @@ if (placeInput && field && form) {
     closeList();
 
     if (query.length < 2) {
-      manualFallback = false;
       setStatus('', query ? 'Введите ещё хотя бы один символ.' : '');
       return;
     }
 
     setStatus('searching', 'Ищем варианты…');
-    timer = setTimeout(() => loadOptions(query), 380);
+    timer = setTimeout(() => loadOptions(query), 320);
   }
 
   placeInput.addEventListener('input', scheduleSearch);
@@ -249,13 +272,11 @@ if (placeInput && field && form) {
       return;
     }
 
-    if (manualFallback) return;
-
     event.preventDefault();
     event.stopImmediatePropagation();
     placeInput.setCustomValidity('Выберите точный город из списка.');
     placeInput.reportValidity();
-    setStatus('error', 'Выберите город из списка — так координаты и часовой пояс будут точными.');
+    setStatus('error', 'Нужно выбрать город из списка. HeroStar не будет рассчитывать карту по догадке.');
     if (items.length) renderOptions();
     else if (value.length >= 2) loadOptions(value);
     placeInput.focus();
