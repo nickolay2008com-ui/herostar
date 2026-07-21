@@ -1,5 +1,7 @@
 import { deepDiveButtonMarkup, openDeepDive } from './deep-dive-ui.js';
 
+const CURRENT_CHART_VERSION = '0.2-placidus';
+
 const state = {
   config: null,
   current: null,
@@ -51,7 +53,7 @@ const els = {
 
 const loadingSequence = [
   ['Определяем небесную схему', 'Планеты считаются отдельно. ИИ не получает права сочинять космос, к счастью.', 18, 'Точные положения'],
-  ['Строим оси и дома', 'Место и исторический часовой пояс превращаются в конкретную геометрию карты.', 36, 'Сферы проявления'],
+  ['Строим дома Плацидуса', 'Точное время, место и исторический часовой пояс превращаются в реальные куспиды домов.', 36, 'Плацидус'],
   ['Ищем контрасты', 'Каждое качество сравнивается с противоположным типом, чтобы убрать универсальную кашу.', 58, 'Анти-Барнум'],
   ['Соединяем внутренние механизмы', 'Планеты перестают быть списком и начинают объяснять, как части личности работают вместе.', 78, 'Синтез'],
   ['Собираем маршрут', 'Ловушки переводятся в конкретные ключи и обратимые действия.', 92, 'Практический путь'],
@@ -94,6 +96,15 @@ function chartToken() {
 function chartHeaders() {
   const token = chartToken();
   return token ? { 'X-Chart-Token': token } : {};
+}
+
+function clearStoredChart() {
+  localStorage.removeItem('herostar_chart_id');
+  localStorage.removeItem('herostar_chart_token');
+  state.current = null;
+  els.map.classList.add('hidden');
+  els.consultFab.classList.add('hidden');
+  document.querySelector('.hero').classList.remove('hidden');
 }
 
 async function loadConfig() {
@@ -167,14 +178,25 @@ function polarPoint(angle, radius, center = 160) {
   return { x: center + Math.cos(radians) * radius, y: center + Math.sin(radians) * radius };
 }
 
+function normalizedArc(from, to) {
+  return ((to - from) % 360 + 360) % 360;
+}
+
 function renderWheel(chart) {
   const signs = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
   const points = [...chart.planets, chart.northNode];
-  const axes = Array.from({ length: 12 }, (_, index) => {
-    const end = polarPoint(index * 30, 136);
-    return `<line class="axis" x1="160" y1="160" x2="${end.x}" y2="${end.y}"/>`;
+  const cusps = chart.houses?.cusps?.length === 12 ? chart.houses.cusps : [];
+  const houseAxes = cusps.map((cusp) => {
+    const end = polarPoint(cusp.longitude, 136);
+    return `<line class="house-axis" x1="160" y1="160" x2="${end.x}" y2="${end.y}"/>`;
   }).join('');
-  const labels = signs.map((sign, index) => {
+  const houseLabels = cusps.map((cusp, index) => {
+    const next = cusps[(index + 1) % 12];
+    const middle = cusp.longitude + normalizedArc(cusp.longitude, next.longitude) / 2;
+    const p = polarPoint(middle, 104);
+    return `<text class="house-label" x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle">${cusp.house}</text>`;
+  }).join('');
+  const signLabels = signs.map((sign, index) => {
     const p = polarPoint(index * 30 + 15, 146);
     return `<text class="sign-label" x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle">${sign}</text>`;
   }).join('');
@@ -186,14 +208,21 @@ function renderWheel(chart) {
       <text class="planet-label" x="${p.x}" y="${p.y - 9}" text-anchor="middle">${escapeHtml(point.symbol)}</text>
     </g>`;
   }).join('');
-  const asc = chart.angles ? polarPoint(chart.angles.ascendant.longitude, 135) : null;
-  const ascLine = asc ? `<line x1="160" y1="160" x2="${asc.x}" y2="${asc.y}" stroke="#e7c782" stroke-width="1.5"/><text x="${asc.x}" y="${asc.y}" fill="#e7c782" font-size="8">ASC</text>` : '';
 
-  els.wheelWrap.innerHTML = `<svg class="wheel" viewBox="0 0 320 320" aria-label="Схема натальной карты">
+  const angleMark = (angle, label, stroke, radius = 137) => {
+    if (!Number.isFinite(angle)) return '';
+    const p = polarPoint(angle, radius);
+    return `<line class="angle-axis" x1="160" y1="160" x2="${p.x}" y2="${p.y}" stroke="${stroke}"/>
+      <text class="angle-label" x="${p.x}" y="${p.y}" fill="${stroke}" text-anchor="middle">${label}</text>`;
+  };
+  const ascMark = angleMark(chart.angles?.ascendant?.longitude, 'ASC', '#e7c782');
+  const mcMark = angleMark(chart.angles?.mc?.longitude, 'MC', '#87e8dc', 132);
+
+  els.wheelWrap.innerHTML = `<svg class="wheel" viewBox="0 0 320 320" aria-label="Натальная карта: ${escapeHtml(chart.system)}">
     <circle class="ring" cx="160" cy="160" r="139"/>
     <circle class="ring" cx="160" cy="160" r="116"/>
     <circle class="ring" cx="160" cy="160" r="72"/>
-    ${axes}${labels}${ascLine}${dots}
+    ${houseAxes}${signLabels}${houseLabels}${ascMark}${mcMark}${dots}
     <circle cx="160" cy="160" r="23" fill="rgba(169,137,255,.12)" stroke="rgba(169,137,255,.25)"/>
     <text x="160" y="165" text-anchor="middle" fill="#c4b0ff" font-size="16">✦</text>
   </svg>`;
@@ -291,6 +320,11 @@ function renderSynthesis() {
 
 function renderMap() {
   const { chart, portrait, source } = state.current;
+  if (chart.version !== CURRENT_CHART_VERSION) {
+    clearStoredChart();
+    toast('Эта карта была рассчитана в прежней системе домов. Постройте её заново по Плацидусу.');
+    return;
+  }
   els.mapTitle.textContent = portrait.title;
   els.mapSubtitle.textContent = portrait.subtitle;
   els.identityName.textContent = chart.person.name;
@@ -355,12 +389,22 @@ async function refreshCurrentChart() {
   if (!id) return;
   try {
     const result = await api(`/api/charts/${id}`, { headers: chartHeaders() });
+    if (result.chart?.version !== CURRENT_CHART_VERSION) {
+      clearStoredChart();
+      toast('Прежняя карта удалена из устройства. Постройте новую карту по Плацидусу.');
+      return;
+    }
     state.current = { ...state.current, ...result, accessToken: chartToken() };
     renderMap();
     els.map.classList.remove('hidden');
     els.consultFab.classList.remove('hidden');
   } catch (error) {
-    if (error.status !== 403 && error.status !== 404) toast(error.message);
+    if (error.status === 404 || error.code === 'CHART_REBUILD_REQUIRED') {
+      clearStoredChart();
+      toast('Постройте новую карту по Плацидусу.');
+      return;
+    }
+    if (error.status !== 403) toast(error.message);
   }
 }
 
@@ -371,6 +415,7 @@ async function claimCurrentChart() {
     await api(`/api/charts/${id}/claim`, { method: 'POST', headers: chartHeaders(), body: '{}' });
     await refreshCurrentChart();
   } catch (error) {
+    if (error.code === 'CHART_REBUILD_REQUIRED') clearStoredChart();
     if (error.status !== 403) toast(error.message);
   }
 }
@@ -477,9 +522,7 @@ els.questionChips.addEventListener('click', (event) => {
   if (button) askQuestion(button.textContent);
 });
 els.newMapButton.addEventListener('click', () => {
-  els.map.classList.add('hidden');
-  els.consultFab.classList.add('hidden');
-  document.querySelector('.hero').classList.remove('hidden');
+  clearStoredChart();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 els.shareButton.addEventListener('click', async () => {
