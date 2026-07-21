@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizePhotonFeature, searchPlaces, unpackSelectedPlace } from '../src/places.js';
+import { normalizePhotonFeature, rankPlaces, searchPlaces, unpackSelectedPlace } from '../src/places.js';
 
 test('Photon result becomes a concise city option', () => {
   const option = normalizePhotonFeature({
@@ -36,7 +36,36 @@ test('Invalid Photon coordinates are ignored', () => {
   assert.equal(option, null);
 });
 
-test('Photon request leaves language negotiation to Accept-Language', async () => {
+test('exact large city outranks similarly named localities', () => {
+  const results = rankPlaces([
+    {
+      id: 'N1', label: 'Донецкое, Северо-Казахстанская область, Казахстан', primary: 'Донецкое',
+      secondary: 'Северо-Казахстанская область, Казахстан', latitude: 54.1, longitude: 69.2, countryCode: 'KZ', layer: 'village',
+    },
+    {
+      id: 'N2', label: 'Донецк, Ростовская область, Россия', primary: 'Донецк',
+      secondary: 'Ростовская область, Россия', latitude: 48.33, longitude: 39.95, countryCode: 'RU', layer: 'town',
+    },
+    {
+      id: 'verified-geonames-709717', label: 'Донецк, Донецкая область', primary: 'Донецк',
+      secondary: 'Донецкая область', latitude: 48.023, longitude: 37.80224, countryCode: '', layer: 'city',
+    },
+  ], 'донецк');
+
+  assert.equal(results[0].id, 'verified-geonames-709717');
+  assert.equal(results[0].label, 'Донецк, Донецкая область');
+});
+
+test('near-identical Photon duplicates collapse into one option', () => {
+  const results = rankPlaces([
+    { id: 'N1', label: 'Donetsk, Rostov Oblast, Russia', primary: 'Donetsk', secondary: 'Rostov Oblast, Russia', latitude: 48.332, longitude: 39.944, countryCode: 'RU', layer: 'town' },
+    { id: 'R2', label: 'Донецк, Ростовская область, Россия', primary: 'Донецк', secondary: 'Ростовская область, Россия', latitude: 48.333, longitude: 39.945, countryCode: 'RU', layer: 'town' },
+  ], 'донецк');
+
+  assert.equal(results.length, 1);
+});
+
+test('Photon request uses a broad result set and explicit Russian language', async () => {
   const originalFetch = globalThis.fetch;
   let capturedUrl;
   let capturedHeaders;
@@ -61,7 +90,9 @@ test('Photon request leaves language negotiation to Accept-Language', async () =
 
   try {
     const items = await searchPlaces(`Сан-${Date.now()}`);
-    assert.equal(capturedUrl.searchParams.has('lang'), false);
+    assert.equal(capturedUrl.searchParams.get('limit'), '40');
+    assert.equal(capturedUrl.searchParams.get('lang'), 'ru');
+    assert.equal(capturedUrl.searchParams.get('dedupe'), '0');
     assert.equal(capturedHeaders['Accept-Language'], 'ru,en;q=0.8');
     assert.equal(items.length, 1);
   } finally {
