@@ -17,3 +17,21 @@ html, body {
 @supports not (overflow: clip) {
   html, body { overflow-x: hidden; }
 }
+
+@media (max-width: 660px) {
+  .field small,
+  .microcopy,
+  .eyebrow,
+  .panel-kicker,
+  .proof-row span,
+  .top-actions .ghost-button,
+  .treasure-legend small {
+    font-size: 12px;
+  }
+
+  .field small,
+  .microcopy,
+  .treasure-legend small {
+    line-height: 1.55;
+  }
+}
