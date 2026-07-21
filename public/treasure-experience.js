@@ -41,24 +41,26 @@ function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
 }
 
-function rotatePoint(x, y, angle) {
+function orientPoint(x, y, ascAngle) {
   const dx = x - WHEEL_CENTER;
   const dy = y - WHEEL_CENTER;
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
+  const radius = Math.hypot(dx, dy);
+  if (!radius) return { x, y };
+  const pointAngle = Math.atan2(dy, dx);
+  const orientedAngle = ascAngle + Math.PI - pointAngle;
   return {
-    x: WHEEL_CENTER + dx * cos - dy * sin,
-    y: WHEEL_CENTER + dx * sin + dy * cos,
+    x: WHEEL_CENTER + Math.cos(orientedAngle) * radius,
+    y: WHEEL_CENTER + Math.sin(orientedAngle) * radius,
   };
 }
 
-function rotateAttributePair(node, xAttribute, yAttribute, angle) {
+function orientAttributePair(node, xAttribute, yAttribute, ascAngle) {
   const x = Number(node.getAttribute(xAttribute));
   const y = Number(node.getAttribute(yAttribute));
   if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-  const rotated = rotatePoint(x, y, angle);
-  node.setAttribute(xAttribute, rotated.x.toFixed(3));
-  node.setAttribute(yAttribute, rotated.y.toFixed(3));
+  const oriented = orientPoint(x, y, ascAngle);
+  node.setAttribute(xAttribute, oriented.x.toFixed(3));
+  node.setAttribute(yAttribute, oriented.y.toFixed(3));
 }
 
 function addOppositeAngle(svg, sourceLabel, label) {
@@ -108,15 +110,14 @@ function orientWheel() {
   if (!Number.isFinite(ascX) || !Number.isFinite(ascY)) return;
 
   svg.dataset.ascLeft = 'true';
-  const currentAngle = Math.atan2(ascY - WHEEL_CENTER, ascX - WHEEL_CENTER);
-  const rotation = Math.PI - currentAngle;
+  const ascAngle = Math.atan2(ascY - WHEEL_CENTER, ascX - WHEEL_CENTER);
 
   svg.querySelectorAll('line').forEach((line) => {
-    rotateAttributePair(line, 'x1', 'y1', rotation);
-    rotateAttributePair(line, 'x2', 'y2', rotation);
+    orientAttributePair(line, 'x1', 'y1', ascAngle);
+    orientAttributePair(line, 'x2', 'y2', ascAngle);
   });
-  svg.querySelectorAll('circle').forEach((circle) => rotateAttributePair(circle, 'cx', 'cy', rotation));
-  svg.querySelectorAll('text').forEach((text) => rotateAttributePair(text, 'x', 'y', rotation));
+  svg.querySelectorAll('circle').forEach((circle) => orientAttributePair(circle, 'cx', 'cy', ascAngle));
+  svg.querySelectorAll('text').forEach((text) => orientAttributePair(text, 'x', 'y', ascAngle));
 
   const orientedLabels = [...svg.querySelectorAll('.angle-label')];
   addOppositeAngle(svg, orientedLabels.find((node) => node.textContent.trim() === 'ASC'), 'DSC');
