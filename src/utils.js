@@ -46,5 +46,6 @@ export function publicError(message, status = 400, code = 'BAD_REQUEST') {
   const error = new Error(message);
   error.status = status;
   error.code = code;
+  error.expose = true;
   return error;
 }
