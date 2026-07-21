@@ -505,6 +505,7 @@ app.post('/api/payments/create', requireUser, async (req, res, next) => {
       user: req.user,
       chartId,
       visitorId: visitorIdFrom(req),
+      receiptContact: req.body.receiptContact,
     });
     res.json({ paymentId: payment.id, confirmationUrl: payment.confirmation?.confirmation_url });
   } catch (error) {
@@ -572,7 +573,7 @@ app.use((error, _req, res, _next) => {
   const status = Number(error.status || 500);
   if (status >= 500) console.error(error);
   res.status(status).json({
-    error: status >= 500 ? 'Сервис столкнулся с ошибкой. Повторите действие.' : error.message,
+    error: error.expose ? error.message : status >= 500 ? 'Сервис столкнулся с ошибкой. Повторите действие.' : error.message,
     code: error.code || 'INTERNAL_ERROR',
   });
 });

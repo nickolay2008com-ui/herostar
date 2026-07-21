@@ -40,6 +40,8 @@ const els = {
   telegramSlot: $('#telegramSlot'),
   payButton: $('#payButton'),
   priceLabel: $('#priceLabel'),
+  receiptContact: $('#receiptContact'),
+  receiptContactHint: $('#receiptContactHint'),
   toast: $('#toast'),
   consultFab: $('#consultFab'),
   consultPanel: $('#consultPanel'),
@@ -429,17 +431,39 @@ async function claimCurrentChart() {
   }
 }
 
+function normalizedReceiptContact() {
+  const raw = String(els.receiptContact?.value || '').trim();
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(raw);
+  const phoneDigits = raw.replace(/\D/g, '');
+  const phoneOk = phoneDigits.length >= 10 && phoneDigits.length <= 15;
+  if (!emailOk && !phoneOk) {
+    if (els.receiptContactHint) {
+      els.receiptContactHint.textContent = 'Укажите действующий телефон или email — он нужен ЮKassa для чека.';
+      els.receiptContactHint.classList.add('field-error');
+    }
+    els.receiptContact?.focus();
+    return '';
+  }
+  if (els.receiptContactHint) {
+    els.receiptContactHint.textContent = 'ЮKassa использует контакт только для отправки чека.';
+    els.receiptContactHint.classList.remove('field-error');
+  }
+  return emailOk ? raw.toLowerCase() : `+${phoneDigits}`;
+}
+
 async function startPayment() {
   if (!state.config?.paymentsConfigured) {
     toast('Оплата временно недоступна. Связаться можно в Telegram @ainicki.');
     return;
   }
+  const receiptContact = normalizedReceiptContact();
+  if (!receiptContact) return;
   els.payButton.disabled = true;
   try {
     const result = await api('/api/payments/create', {
       method: 'POST',
       headers: chartHeaders(),
-      body: JSON.stringify({ chartId: state.current?.id }),
+      body: JSON.stringify({ chartId: state.current?.id, receiptContact }),
     });
     if (!result.confirmationUrl) throw new Error('ЮKassa не вернула ссылку оплаты.');
     location.href = result.confirmationUrl;
