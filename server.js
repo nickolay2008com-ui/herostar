@@ -134,7 +134,7 @@ app.use(
         scriptSrc: ["'self'", 'https://telegram.org', 'https://oauth.telegram.org', 'https://mc.yandex.ru'],
         frameSrc: ["'self'", 'https://oauth.telegram.org', 'https://telegram.org'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://mc.yandex.ru', 'https://mc.yandex.com'],
+        connectSrc: ["'self'", 'https://mc.yandex.ru', 'https://mc.yandex.com', 'wss://mc.yandex.com'],
         styleSrc: ["'self'", "'unsafe-inline'"],
         fontSrc: ["'self'", 'data:'],
       },
