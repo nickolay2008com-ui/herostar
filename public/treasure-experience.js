@@ -1,6 +1,8 @@
 import './place-autocomplete.js';
 
 const progress = document.querySelector('#treasureProgress');
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const WHEEL_CENTER = 160;
 let lastTotal = 0;
 let lastUnlocked = 0;
 let scheduled = false;
@@ -37,6 +39,89 @@ const toastCopy = new Map([
 
 function setText(node, value) {
   if (node && node.textContent !== value) node.textContent = value;
+}
+
+function rotatePoint(x, y, angle) {
+  const dx = x - WHEEL_CENTER;
+  const dy = y - WHEEL_CENTER;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    x: WHEEL_CENTER + dx * cos - dy * sin,
+    y: WHEEL_CENTER + dx * sin + dy * cos,
+  };
+}
+
+function rotateAttributePair(node, xAttribute, yAttribute, angle) {
+  const x = Number(node.getAttribute(xAttribute));
+  const y = Number(node.getAttribute(yAttribute));
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  const rotated = rotatePoint(x, y, angle);
+  node.setAttribute(xAttribute, rotated.x.toFixed(3));
+  node.setAttribute(yAttribute, rotated.y.toFixed(3));
+}
+
+function addOppositeAngle(svg, sourceLabel, label) {
+  if (!sourceLabel || [...svg.querySelectorAll('.angle-label')].some((node) => node.textContent.trim() === label)) return;
+  const sourceX = Number(sourceLabel.getAttribute('x'));
+  const sourceY = Number(sourceLabel.getAttribute('y'));
+  if (!Number.isFinite(sourceX) || !Number.isFinite(sourceY)) return;
+
+  const x = WHEEL_CENTER * 2 - sourceX;
+  const y = WHEEL_CENTER * 2 - sourceY;
+  const stroke = sourceLabel.getAttribute('fill') || 'currentColor';
+  const group = document.createElementNS(SVG_NS, 'g');
+  group.classList.add('opposite-angle');
+
+  const axis = document.createElementNS(SVG_NS, 'line');
+  axis.classList.add('angle-axis');
+  axis.setAttribute('x1', String(WHEEL_CENTER));
+  axis.setAttribute('y1', String(WHEEL_CENTER));
+  axis.setAttribute('x2', x.toFixed(3));
+  axis.setAttribute('y2', y.toFixed(3));
+  axis.setAttribute('stroke', stroke);
+
+  const text = document.createElementNS(SVG_NS, 'text');
+  text.classList.add('angle-label');
+  text.setAttribute('x', x.toFixed(3));
+  text.setAttribute('y', y.toFixed(3));
+  text.setAttribute('fill', stroke);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dominant-baseline', 'middle');
+  text.textContent = label;
+
+  group.append(axis, text);
+  const firstPlanet = svg.querySelector('[data-card-id]');
+  svg.insertBefore(group, firstPlanet || null);
+}
+
+function orientWheel() {
+  const svg = document.querySelector('#wheelWrap svg.wheel:not([data-asc-left])');
+  if (!svg) return;
+
+  const labels = [...svg.querySelectorAll('.angle-label')];
+  const ascLabel = labels.find((node) => node.textContent.trim() === 'ASC');
+  if (!ascLabel) return;
+
+  const ascX = Number(ascLabel.getAttribute('x'));
+  const ascY = Number(ascLabel.getAttribute('y'));
+  if (!Number.isFinite(ascX) || !Number.isFinite(ascY)) return;
+
+  svg.dataset.ascLeft = 'true';
+  const currentAngle = Math.atan2(ascY - WHEEL_CENTER, ascX - WHEEL_CENTER);
+  const rotation = Math.PI - currentAngle;
+
+  svg.querySelectorAll('line').forEach((line) => {
+    rotateAttributePair(line, 'x1', 'y1', rotation);
+    rotateAttributePair(line, 'x2', 'y2', rotation);
+  });
+  svg.querySelectorAll('circle').forEach((circle) => rotateAttributePair(circle, 'cx', 'cy', rotation));
+  svg.querySelectorAll('text').forEach((text) => rotateAttributePair(text, 'x', 'y', rotation));
+
+  const orientedLabels = [...svg.querySelectorAll('.angle-label')];
+  addOppositeAngle(svg, orientedLabels.find((node) => node.textContent.trim() === 'ASC'), 'DSC');
+  addOppositeAngle(svg, orientedLabels.find((node) => node.textContent.trim() === 'MC'), 'IC');
+  svg.setAttribute('aria-label', `${svg.getAttribute('aria-label') || 'Натальная карта'}. Асцендент расположен слева, десцендент справа.`);
 }
 
 function decorateCards() {
@@ -137,6 +222,7 @@ function decorateSystemCopy() {
 }
 
 function decorateInterface() {
+  orientWheel();
   decorateCards();
   decorateSynthesis();
   decorateLoading();
