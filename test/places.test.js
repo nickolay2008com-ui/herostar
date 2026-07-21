@@ -65,7 +65,7 @@ test('near-identical Photon duplicates collapse into one option', () => {
   assert.equal(results.length, 1);
 });
 
-test('Photon request uses a broad result set and explicit Russian language', async () => {
+test('Photon request uses a broad result set and Russian Accept-Language without unsupported lang parameter', async () => {
   const originalFetch = globalThis.fetch;
   let capturedUrl;
   let capturedHeaders;
@@ -91,7 +91,7 @@ test('Photon request uses a broad result set and explicit Russian language', asy
   try {
     const items = await searchPlaces(`Сан-${Date.now()}`);
     assert.equal(capturedUrl.searchParams.get('limit'), '40');
-    assert.equal(capturedUrl.searchParams.get('lang'), 'ru');
+    assert.equal(capturedUrl.searchParams.get('lang'), null);
     assert.equal(capturedUrl.searchParams.get('dedupe'), '0');
     assert.equal(capturedHeaders['Accept-Language'], 'ru,en;q=0.8');
     assert.equal(items.length, 1);
@@ -101,7 +101,7 @@ test('Photon request uses a broad result set and explicit Russian language', asy
 });
 
 test('Selected city carries exact coordinates into chart input', () => {
-  const packed = `Сан-Диего, Калифорния, США\u001f32.7157\u001f-117.1611`;
+  const packed = `Сан-Диего, Калифорния, США32.7157-117.1611`;
   assert.deepEqual(unpackSelectedPlace(packed), {
     place: 'Сан-Диего, Калифорния, США',
     latitude: 32.7157,
