@@ -1,0 +1,30 @@
+.wheel .house-axis {
+  stroke: rgba(231,199,130,.17);
+  stroke-width: .8;
+}
+
+.wheel .house-label {
+  fill: rgba(231,199,130,.72);
+  font-size: 8px;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.wheel .angle-axis {
+  stroke-width: 1.55;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.wheel .angle-label {
+  font-size: 7px;
+  font-weight: 850;
+  paint-order: stroke;
+  stroke: rgba(7,8,16,.88);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+.accuracy-note::first-line {
+  color: #aaa4b8;
+}
