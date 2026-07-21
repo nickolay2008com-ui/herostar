@@ -562,7 +562,13 @@ async function bootstrap() {
       setTimeout(async () => {
         await loadConfig();
         await refreshCurrentChart();
-        toast(state.config.user?.premium ? 'Полная карта открыта.' : 'Платёж ещё подтверждается. Обновите карту чуть позже.');
+        const paymentSucceeded = Boolean(state.config.user?.premium);
+        toast(paymentSucceeded ? 'Полная карта открыта.' : 'Платёж ещё подтверждается. Обновите карту чуть позже.');
+        if (paymentSucceeded) {
+          window.dispatchEvent(new CustomEvent('herostar:purchase-success', {
+            detail: { price: Number(state.config.price || 990), currency: 'RUB' },
+          }));
+        }
       }, 1800);
     } else {
       await refreshCurrentChart();

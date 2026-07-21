@@ -181,7 +181,6 @@ function remember(key, items) {
 async function requestPhoton(endpoint, configure) {
   configure(endpoint.searchParams);
   endpoint.searchParams.set('limit', '40');
-  endpoint.searchParams.set('lang', 'ru');
   endpoint.searchParams.set('dedupe', '0');
   endpoint.searchParams.append('layer', 'city');
   endpoint.searchParams.append('layer', 'locality');
