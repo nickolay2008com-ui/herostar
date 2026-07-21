@@ -9,6 +9,7 @@
   <title>HeroStar — карта ваших ресурсов и сильных сторон</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/hero-conversion.css">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -34,12 +35,53 @@
         <h1>Откройте сокровища,<br><span>которые уже в вас</span></h1>
         <p class="hero-lead">HeroStar показывает 11 ваших природных ресурсов: где каждый проявляется, что его блокирует и какое действие помогает включить его в жизни.</p>
 
+        <div class="hero-social-proof" aria-label="Популярность персональных разборов">
+          <div class="social-proof-symbols" aria-hidden="true">
+            <span>☉</span><span>☽</span><span>♀</span><span>♂</span><span>♃</span>
+          </div>
+          <div class="social-proof-copy">
+            <span class="social-proof-kicker">Формат, который выбирают тысячи людей</span>
+            <strong>Персональный разбор становится полезным, когда заканчивается общая мистика и начинается ясная карта действий.</strong>
+            <span class="social-proof-live"><i></i><span id="heroActivity">В карте: эмоциональная опора по Луне</span></span>
+          </div>
+        </div>
+
         <div class="treasure-legend" aria-label="Как читать карту сокровищ">
           <div><span>✦</span><b>Сокровище</b><small>ваша сильная сторона</small></div>
           <div><span>◈</span><b>Замок</b><small>что её блокирует</small></div>
           <div><span>🗝</span><b>Ключ</b><small>как вернуть доступ</small></div>
           <div><span>→</span><b>Первый ход</b><small>что сделать на практике</small></div>
         </div>
+
+        <section class="value-carousel" data-value-carousel aria-label="Что делает карту полезной">
+          <div class="value-carousel-head">
+            <span>Живые впечатления от формата</span>
+            <div class="value-carousel-controls" aria-label="Переключить впечатление">
+              <button type="button" data-value-prev aria-label="Предыдущее впечатление">←</button>
+              <button type="button" data-value-next aria-label="Следующее впечатление">→</button>
+            </div>
+          </div>
+          <div class="value-carousel-viewport" aria-live="polite">
+            <article class="value-slide active" data-value-slide>
+              <span class="value-slide-icon">✦</span>
+              <p>Не набор красивых терминов, а понятное объяснение: что во мне работает, где я себя блокирую и какой шаг попробовать.</p>
+              <div><b>Ясность вместо тумана</b><small>главная ценность формата</small></div>
+            </article>
+            <article class="value-slide" data-value-slide>
+              <span class="value-slide-icon">🗝</span>
+              <p>Сильнее всего работает связка «ресурс → замок → ключ → действие»: после чтения остаётся не впечатление, а направление.</p>
+              <div><b>Разбор, который ведёт дальше</b><small>не просто описание характера</small></div>
+            </article>
+            <article class="value-slide" data-value-slide>
+              <span class="value-slide-icon">→</span>
+              <p>Карту можно открыть бесплатно, увидеть качество подхода и только потом решить, нужен ли полный маршрут из 11 ресурсов.</p>
+              <div><b>Без давления и слепой покупки</b><small>сначала ценность, потом решение</small></div>
+            </article>
+          </div>
+          <div class="value-carousel-dots" aria-hidden="true">
+            <i class="active"></i><i></i><i></i>
+          </div>
+        </section>
 
         <div class="proof-row">
           <div><strong>3</strong><span>сокровища бесплатно</span></div>
@@ -53,6 +95,22 @@
       <div class="birth-panel glass-panel treasure-entry">
         <div class="panel-kicker">3 сокровища бесплатно</div>
         <h2>Введите данные рождения — HeroStar соберёт вашу карту.</h2>
+
+        <section class="purchase-visual" data-purchase-visual aria-label="Как открывается полный разбор">
+          <div class="purchase-card-stack" aria-hidden="true">
+            <article class="purchase-card active" data-purchase-card="0"><span>01</span><b>3 открытия</b><small>сразу бесплатно</small></article>
+            <article class="purchase-card" data-purchase-card="1"><span>02</span><b>11 ресурсов</b><small>полная карта</small></article>
+            <article class="purchase-card" data-purchase-card="2"><span>03</span><b>Личный маршрут</b><small>ключи и действия</small></article>
+          </div>
+          <div class="purchase-flow" aria-hidden="true">
+            <i class="active"></i><span></span><i></i><span></span><i></i>
+          </div>
+          <div class="purchase-status">
+            <span id="purchaseStageLabel">Сначала</span>
+            <b id="purchaseStageValue">вы видите качество разбора бесплатно</b>
+          </div>
+        </section>
+
         <form id="birthForm" autocomplete="on">
           <label class="field">
             <span>Ваше имя</span>
@@ -236,6 +294,7 @@
   <script type="module" src="/marketing-analytics.js"></script>
   <script type="module" src="/form-guard.js"></script>
   <script type="module" src="/treasure-experience.js"></script>
+  <script type="module" src="/hero-conversion.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
