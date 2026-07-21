@@ -24,12 +24,16 @@ test('HeroStar production smoke test', { timeout: 90_000, skip: !runSmoke }, asy
     assert.deepEqual(body, { ok: true, service: 'herostar' });
   });
 
-  await t.test('main page and static assets', async () => {
+  await t.test('main page and precise copy', async () => {
     const home = await request('/');
     assert.equal(home.response.status, 200);
     assert.match(home.body, /id="birthForm"/);
     assert.match(home.body, /Где ваши мешки с сокровищами\?/);
-    assert.match(home.body, /Найти мои сокровища/);
+    assert.match(home.body, /Откройте сокровища,/);
+    assert.match(home.body, /которые уже в вас/);
+    assert.match(home.body, /11 ваших природных ресурсов/);
+    assert.match(home.body, /3 сокровища бесплатно/);
+    assert.match(home.body, /Открыть полную карту —/);
     assert.match(home.body, /src="\/treasure-experience\.js"/);
     assert.match(home.body, /src="\/app\.js"/);
 
@@ -42,7 +46,11 @@ test('HeroStar production smoke test', { timeout: 90_000, skip: !runSmoke }, asy
       const asset = await request(path);
       assert.equal(asset.response.status, 200, `${path} must be available`);
       assert.ok(String(asset.body).length > 100, `${path} must not be empty`);
-      if (path === '/treasure-experience.js') assert.match(asset.body, /MutationObserver/);
+      if (path === '/treasure-experience.js') {
+        assert.match(asset.body, /MutationObserver/);
+        assert.match(asset.body, /Ваш ресурс/);
+        assert.match(asset.body, /Открыто/);
+      }
     }
   });
 
