@@ -1,3 +1,4 @@
+import { buildDeepDive } from './deep-dive.js';
 import { houseKnowledge, planetKnowledge, signKnowledge } from './knowledge.js';
 
 function sentence(value) {
@@ -41,6 +42,7 @@ export function buildEditorialMatrix(item) {
     question: role.question,
     position: positionLabel(item),
     matrix,
+    deepDive: buildDeepDive(item),
     lead: `${matrix.function} ${matrix.sign}`,
     manifestation: matrix.house,
     uniqueExample: matrix.lifeScenario,
