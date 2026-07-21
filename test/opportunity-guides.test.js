@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDeepDive } from '../src/deep-dive-opportunities.js';
+import { buildDeepDive } from '../src/deep-dive-opportunities-ru.js';
 
 const PLANETS = {
   sun: 'Солнце',
@@ -16,11 +16,26 @@ const PLANETS = {
   northNode: 'Северный узел',
 };
 
-function itemFor(key) {
+const SIGN_LOCATIONS = {
+  Овен: 'в Овне',
+  Телец: 'в Тельце',
+  Близнецы: 'в Близнецах',
+  Рак: 'в Раке',
+  Лев: 'во Льве',
+  Дева: 'в Деве',
+  Весы: 'в Весах',
+  Скорпион: 'в Скорпионе',
+  Стрелец: 'в Стрельце',
+  Козерог: 'в Козероге',
+  Водолей: 'в Водолее',
+  Рыбы: 'в Рыбах',
+};
+
+function itemFor(key, sign = 'Весы') {
   return {
     key,
     name: PLANETS[key],
-    sign: 'Весы',
+    sign,
     oppositeSign: 'Овен',
     degree: 27.4,
     degreeLabel: '27°25′',
@@ -59,4 +74,12 @@ test('разбор сохраняет персонализацию знаком,
   assert.match(guide.formula.sign.title, /Весы: как применить силу/);
   assert.match(guide.formula.house.title, /3 дом: где открывается возможность/);
   assert.equal(guide.practice.steps.length, 3);
+});
+
+test('названия всех знаков стоят в правильном предложном падеже', () => {
+  for (const [sign, location] of Object.entries(SIGN_LOCATIONS)) {
+    const guide = buildDeepDive(itemFor('mercury', sign));
+    assert.ok(guide.headline.includes(`Меркурий ${location}`), `${sign}: неверный падеж в заголовке`);
+    assert.doesNotMatch(JSON.stringify(guide), new RegExp(`в ${sign}(?:[\s,.;!?]|$)`), `${sign}: осталась форма именительного падежа после «в»`);
+  }
 });
