@@ -1,0 +1,31 @@
+name: HeroStar Final Launch Audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: |
+          npm install --no-save playwright@1.54.1
+          npx playwright install --with-deps chromium
+      - name: Audit live production
+        run: node .github/scripts/final-launch-audit.mjs
+        env:
+          HEROSTAR_URL: https://herostar.up.railway.app
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: herostar-final-launch-audit
+          path: final-audit
+          if-no-files-found: warn
