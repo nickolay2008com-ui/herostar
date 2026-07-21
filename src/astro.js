@@ -1,7 +1,10 @@
 import * as Astronomy from 'astronomy-engine';
 import { DateTime } from 'luxon';
 import tzlookup from 'tz-lookup';
+import { calculatePlacidusCusps, houseForLongitude } from './placidus.js';
 import { normalizeDegrees, signedAngularDelta, clamp, publicError } from './utils.js';
+
+export const CHART_VERSION = '0.2-placidus';
 
 const SIGNS = [
   { name: 'Овен', symbol: '♈', element: 'Огонь', mode: 'кардинальный' },
@@ -77,27 +80,23 @@ function meanObliquity(date) {
 }
 
 function anglesFor(date, latitude, longitude) {
-  const gstHours = Astronomy.SiderealTime(date);
-  const theta = normalizeDegrees(gstHours * 15 + longitude) * (Math.PI / 180);
-  const epsilon = meanObliquity(date) * (Math.PI / 180);
+  const armc = normalizeDegrees(Astronomy.SiderealTime(date) * 15 + longitude);
+  const obliquity = meanObliquity(date);
+  const theta = armc * (Math.PI / 180);
+  const epsilon = obliquity * (Math.PI / 180);
   const phi = latitude * (Math.PI / 180);
 
   const mc = normalizeDegrees(
     Math.atan2(Math.sin(theta), Math.cos(theta) * Math.cos(epsilon)) * (180 / Math.PI),
   );
 
-  // Eastern intersection of ecliptic with the local horizon.
   const ascRaw = Math.atan2(
     -Math.cos(theta),
     Math.sin(theta) * Math.cos(epsilon) + Math.tan(phi) * Math.sin(epsilon),
   ) * (180 / Math.PI);
   const ascendant = normalizeDegrees(ascRaw + 180);
 
-  return { ascendant, mc };
-}
-
-function equalHouse(longitude, ascendant) {
-  return Math.floor(normalizeDegrees(longitude - ascendant) / 30) + 1;
+  return { ascendant, mc, armc, obliquity };
 }
 
 function formatDegree(degree) {
@@ -169,7 +168,7 @@ async function geocodePlace(place) {
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'HeroStar/0.1 (birth-place geocoding; contact via app domain)',
+      'User-Agent': 'HeroStar/0.2 (birth-place geocoding; contact via app domain)',
       Accept: 'application/json',
     },
     signal: AbortSignal.timeout(8000),
@@ -184,6 +183,21 @@ async function geocodePlace(place) {
     latitude: Number(results[0].lat),
     longitude: Number(results[0].lon),
   };
+}
+
+function cuspData(longitudes) {
+  return longitudes.map((longitude, index) => {
+    const sign = signData(longitude);
+    return {
+      house: index + 1,
+      longitude,
+      sign: sign.name,
+      signSymbol: sign.symbol,
+      degree: sign.degree,
+      degreeLabel: formatDegree(sign.degree),
+      area: HOUSE_AREAS[index],
+    };
+  });
 }
 
 export async function calculateNatalChart(input) {
@@ -207,7 +221,11 @@ export async function calculateNatalChart(input) {
   }
 
   if (!unknownTime && Math.abs(location.latitude) > 66) {
-    throw publicError('Для широт выше 66° текущая версия пока не строит дома надёжно. Укажите, что время неизвестно, чтобы получить планетарный портрет без домов.');
+    throw publicError(
+      'На широтах выше 66° дома Плацидуса не рассчитываются устойчиво. Укажите, что время неизвестно, чтобы получить карту без домов.',
+      400,
+      'PLACIDUS_UNAVAILABLE',
+    );
   }
 
   const zone = tzlookup(location.latitude, location.longitude);
@@ -217,11 +235,29 @@ export async function calculateNatalChart(input) {
   const utcDate = localDateTime.toUTC().toJSDate();
 
   const angles = unknownTime ? null : anglesFor(utcDate, location.latitude, location.longitude);
+  let houseLongitudes = null;
+  if (angles) {
+    try {
+      houseLongitudes = calculatePlacidusCusps({
+        armc: angles.armc,
+        latitude: location.latitude,
+        obliquity: angles.obliquity,
+        ascendant: angles.ascendant,
+        mc: angles.mc,
+      });
+    } catch {
+      throw publicError(
+        'Для этих координат дома Плацидуса не удалось рассчитать надёжно. Постройте карту без домов, отметив неизвестное время.',
+        400,
+        'PLACIDUS_UNAVAILABLE',
+      );
+    }
+  }
 
   const planets = BODIES.map(([key, nameRu, symbol, body]) => {
     const longitude = geocentricLongitude(body, utcDate);
     const sign = signData(longitude);
-    const house = angles ? equalHouse(longitude, angles.ascendant) : null;
+    const house = houseLongitudes ? houseForLongitude(longitude, houseLongitudes) : null;
     return {
       key,
       name: nameRu,
@@ -231,6 +267,8 @@ export async function calculateNatalChart(input) {
       signSymbol: sign.symbol,
       signIndex: sign.index,
       oppositeSign: sign.opposite,
+      element: sign.element,
+      mode: sign.mode,
       degree: sign.degree,
       degreeLabel: formatDegree(sign.degree),
       house,
@@ -241,6 +279,7 @@ export async function calculateNatalChart(input) {
 
   const nodeLongitude = meanNorthNodeLongitude(utcDate);
   const nodeSign = signData(nodeLongitude);
+  const nodeHouse = houseLongitudes ? houseForLongitude(nodeLongitude, houseLongitudes) : null;
   const northNode = {
     key: 'northNode',
     name: 'Северный узел',
@@ -250,10 +289,12 @@ export async function calculateNatalChart(input) {
     signSymbol: nodeSign.symbol,
     signIndex: nodeSign.index,
     oppositeSign: nodeSign.opposite,
+    element: nodeSign.element,
+    mode: nodeSign.mode,
     degree: nodeSign.degree,
     degreeLabel: formatDegree(nodeSign.degree),
-    house: angles ? equalHouse(nodeLongitude, angles.ascendant) : null,
-    houseArea: angles ? HOUSE_AREAS[equalHouse(nodeLongitude, angles.ascendant) - 1] : null,
+    house: nodeHouse,
+    houseArea: nodeHouse ? HOUSE_AREAS[nodeHouse - 1] : null,
     retrograde: true,
   };
 
@@ -261,9 +302,9 @@ export async function calculateNatalChart(input) {
   const ascSign = angles ? signData(angles.ascendant) : null;
   const mcSign = angles ? signData(angles.mc) : null;
 
-  const chart = {
-    version: '0.1-equal-house',
-    system: angles ? 'Равнодомная система' : 'Без домов: время рождения неизвестно',
+  return {
+    version: CHART_VERSION,
+    system: angles ? 'Система домов Плацидуса' : 'Без домов: время рождения неизвестно',
     person: { name },
     birth: {
       date,
@@ -275,6 +316,14 @@ export async function calculateNatalChart(input) {
       timezone: zone,
       utc: utcDate.toISOString(),
     },
+    houses: houseLongitudes
+      ? {
+          key: 'placidus',
+          name: 'Плацидус',
+          armc: angles.armc,
+          cusps: cuspData(houseLongitudes),
+        }
+      : null,
     angles: angles
       ? {
           ascendant: {
@@ -303,8 +352,6 @@ export async function calculateNatalChart(input) {
     northNode,
     aspects: aspectCandidates(allPoints),
   };
-
-  return chart;
 }
 
 export { SIGNS, HOUSE_AREAS };

@@ -3,12 +3,14 @@ import { buildFallbackPortrait } from './narrative.js';
 
 function compactChart(chart) {
   return {
+    version: chart.version,
     person: chart.person,
     birth: chart.birth,
     system: chart.system,
+    houses: chart.houses,
     angles: chart.angles,
-    planets: chart.planets.map(({ key, name, sign, oppositeSign, degreeLabel, house, houseArea, retrograde }) => ({
-      key, name, sign, oppositeSign, degreeLabel, house, houseArea, retrograde,
+    planets: chart.planets.map(({ key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde }) => ({
+      key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde,
     })),
     northNode: chart.northNode,
     aspects: chart.aspects,
@@ -39,7 +41,7 @@ export async function answerConsultation({ chart, portrait, question, history = 
       input: [
         {
           role: 'system',
-          content: `Ты консультант внутри HeroStar. Карта уже рассчитана и собрана локальным ядром; не меняй положения, дома, аспекты и тексты карточек. Отвечай на русском, опираясь только на карту, её редакционную матрицу и ситуацию пользователя. Разделяй: что следует из символической модели, что является практической гипотезой. Не предсказывай неизбежные события, не ставь медицинские или психологические диагнозы. Формат ответа: суть; связь 2–4 элементов карты; один ближайший обратимый шаг; условие, при котором рекомендацию стоит изменить.`,
+          content: `Ты консультант внутри HeroStar. Карта уже рассчитана и собрана локальным ядром; не меняй положения, куспиды Плацидуса, дома, аспекты и тексты карточек. Отвечай на русском, опираясь только на карту, её редакционную матрицу и ситуацию пользователя. Разделяй: что следует из символической модели, что является практической гипотезой. Не предсказывай неизбежные события, не ставь медицинские или психологические диагнозы. Формат ответа: суть; связь 2–4 элементов карты; один ближайший обратимый шаг; условие, при котором рекомендацию стоит изменить.`,
         },
         {
           role: 'user',
