@@ -4,8 +4,8 @@ import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('../public/treasure-experience.js', import.meta.url), 'utf8');
 
-test('карта поворачивается так, чтобы ASC оказался слева', () => {
-  assert.match(source, /const rotation = Math\.PI - currentAngle/);
+test('ASC ставится слева, а направление круга разворачивается по астрологическому стандарту', () => {
+  assert.match(source, /const orientedAngle = ascAngle \+ Math\.PI - pointAngle/);
   assert.match(source, /svg\.dataset\.ascLeft = 'true'/);
 });
 
