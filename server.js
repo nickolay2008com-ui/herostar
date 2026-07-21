@@ -490,8 +490,8 @@ app.post('/api/logout', (req, res) => {
 
 app.post('/api/payments/create', requireUser, async (req, res, next) => {
   try {
-    if (!getLegalConfig().configured) {
-      throw publicError('Оплата временно закрыта до публикации реквизитов исполнителя.', 503, 'LEGAL_DETAILS_REQUIRED');
+    if (!(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY)) {
+      throw publicError('Оплата временно недоступна. Попробуйте позже.', 503, 'PAYMENTS_NOT_CONFIGURED');
     }
     const chartId = String(req.body.chartId || '');
     const record = chartId ? await getChart(chartId) : null;
