@@ -27,6 +27,7 @@ import {
 } from './src/auth.js';
 import { createPayment, processWebhook } from './src/payments.js';
 import { searchPlaces, unpackSelectedPlace } from './src/places.js';
+import { getLegalConfig, renderLegalPage } from './src/legal.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
 
 const app = express();
@@ -251,6 +252,9 @@ app.get('/api/config', async (req, res, next) => {
       demoMode,
       freeCardCount,
       price: Number(process.env.FULL_MAP_PRICE || '990'),
+      legalConfigured: getLegalConfig().configured,
+      legalContactUrl: getLegalConfig().contactUrl,
+      legalContactLabel: getLegalConfig().contactLabel,
       user: req.user
         ? {
             id: req.user.telegram_id,
@@ -486,6 +490,9 @@ app.post('/api/logout', (req, res) => {
 
 app.post('/api/payments/create', requireUser, async (req, res, next) => {
   try {
+    if (!getLegalConfig().configured) {
+      throw publicError('Оплата временно закрыта до публикации реквизитов исполнителя.', 503, 'LEGAL_DETAILS_REQUIRED');
+    }
     const chartId = String(req.body.chartId || '');
     const record = chartId ? await getChart(chartId) : null;
     if (chartId && !record) throw publicError('Карта не найдена.', 404);
@@ -517,6 +524,12 @@ app.post('/api/payments/webhook', async (req, res, next) => {
 app.get('/payment/return', (_req, res) => {
   res.redirect('/?payment=return#map');
 });
+
+for (const kind of ['privacy', 'consent', 'terms', 'offer', 'refunds']) {
+  app.get(`/${kind}`, (_req, res) => {
+    res.type('html').send(renderLegalPage(kind));
+  });
+}
 
 app.get('/admin', (_req, res) => {
   res.redirect('/admin.html');

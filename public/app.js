@@ -110,6 +110,15 @@ function clearStoredChart() {
 async function loadConfig() {
   state.config = await api('/api/config');
   els.priceLabel.textContent = `${new Intl.NumberFormat('ru-RU').format(state.config.price)} ₽`;
+  const paymentReady = Boolean(state.config.legalConfigured);
+  els.payButton.disabled = !paymentReady;
+  els.payButton.dataset.legalReady = String(paymentReady);
+  const paymentStatus = document.querySelector('#paymentAvailability');
+  if (paymentStatus) {
+    paymentStatus.textContent = paymentReady
+      ? 'Нажимая кнопку, вы принимаете оферту и условия возврата.'
+      : 'Оплата временно закрыта до публикации регистрационных реквизитов исполнителя.';
+  }
   renderUser();
 }
 
@@ -421,6 +430,10 @@ async function claimCurrentChart() {
 }
 
 async function startPayment() {
+  if (!state.config?.legalConfigured) {
+    toast('Оплата временно закрыта. Связаться с владельцем можно в Telegram @ainicki.');
+    return;
+  }
   els.payButton.disabled = true;
   try {
     const result = await api('/api/payments/create', {
