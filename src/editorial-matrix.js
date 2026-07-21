@@ -1,4 +1,4 @@
-import { buildDeepDive } from './deep-dive.js';
+import { buildDeepDive } from './deep-dive-opportunities.js';
 import { houseKnowledge, planetKnowledge, signKnowledge } from './knowledge.js';
 
 function sentence(value) {
