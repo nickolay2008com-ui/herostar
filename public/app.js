@@ -1,3 +1,5 @@
+import { deepDiveButtonMarkup, openDeepDive } from './deep-dive-ui.js';
+
 const state = {
   config: null,
   current: null,
@@ -234,6 +236,7 @@ function cardTemplate(card, index) {
         </div>
         <div class="action-box"><b>→</b><p>${escapeHtml(card.action)}</p></div>
         <div class="evidence-row">${(card.evidence || []).map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div>
+        ${deepDiveButtonMarkup(card)}
       </div>`;
 
   return `<article class="treasure-card ${locked ? 'locked-card' : ''} ${index === 0 ? 'open' : ''}" data-treasure-id="${escapeHtml(card.id)}">
@@ -259,6 +262,11 @@ function renderCards() {
       button.setAttribute('aria-expanded', String(next));
     });
   });
+  els.cardStack.querySelectorAll('[data-open-deep]').forEach((button) => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const card = state.current.portrait.cards.find((item) => item.id === button.dataset.openDeep);
+    if (card) openDeepDive(card);
+  }));
   els.cardStack.querySelectorAll('[data-open-pay]').forEach((button) => button.addEventListener('click', (event) => {
     event.stopPropagation();
     openPurchase();
