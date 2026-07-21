@@ -73,8 +73,8 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
     metadata: { user_id: String(user.telegram_id), chart_id: chartId || '' },
     receipt: {
       customer,
-      items: [{ description: 'Доступ к полной интерактивной карте HeroStar', quantity: '1.000', amount: { value: amount, currency: 'RUB' }, vat_code: 1, payment_mode: 'full_payment', payment_subject: 'service', measure: 'piece' }],
-      internet: true,
+      items: [{ description: 'Доступ к полной интерактивной карте HeroStar', quantity: 1.000, amount: { value: amount, currency: 'RUB' }, vat_code: 1, payment_mode: 'full_payment', payment_subject: 'service', measure: 'piece' }],
+      internet: 'true',
     },
   };
   const payment = await yookassaRequest('/payments', { method: 'POST', headers: { 'Idempotence-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
