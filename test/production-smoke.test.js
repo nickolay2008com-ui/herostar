@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const baseUrl = 'https://herostar.up.railway.app';
 const timeout = 20_000;
+const runSmoke = process.env.RUN_PRODUCTION_SMOKE === '1';
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
@@ -16,7 +17,7 @@ async function request(path, options = {}) {
   return { response, body };
 }
 
-test('HeroStar production smoke test', { timeout: 90_000 }, async (t) => {
+test('HeroStar production smoke test', { timeout: 90_000, skip: !runSmoke }, async (t) => {
   await t.test('health endpoint', async () => {
     const { response, body } = await request('/health');
     assert.equal(response.status, 200);
