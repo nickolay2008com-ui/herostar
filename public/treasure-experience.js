@@ -1,3 +1,5 @@
+import './place-autocomplete.js';
+
 const progress = document.querySelector('#treasureProgress');
 let lastTotal = 0;
 let lastUnlocked = 0;

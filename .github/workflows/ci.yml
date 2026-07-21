@@ -23,5 +23,5 @@ jobs:
       - name: Syntax check
         run: |
           node --check server.js
-          node --check public/app.js
+          for file in public/*.js; do node --check "$file"; done
           for file in src/*.js; do node --check "$file"; done
