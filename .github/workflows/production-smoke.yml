@@ -1,0 +1,39 @@
+name: HeroStar Production Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - test/production-smoke.test.js
+      - .github/workflows/production-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run external production checks
+        id: smoke
+        continue-on-error: true
+        env:
+          RUN_PRODUCTION_SMOKE: '1'
+        run: |
+          set -o pipefail
+          node --test test/production-smoke.test.js 2>&1 | tee production-smoke.log
+      - name: Upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-log
+          path: production-smoke.log
+          retention-days: 1
+      - name: Fail when production is unhealthy
+        if: steps.smoke.outcome != 'success'
+        run: exit 1
