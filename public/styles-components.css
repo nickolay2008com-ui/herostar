@@ -60,6 +60,42 @@
 .purchase-modal ul { display: grid; gap: 10px; text-align: left; color: #b9b4c4; font-size: 13px; margin: 23px 0; padding-left: 22px; }
 .toast { position: fixed; z-index: 90; left: 50%; bottom: 28px; max-width: min(520px, calc(100% - 32px)); transform: translate(-50%, 30px); opacity: 0; pointer-events: none; border: 1px solid var(--line); border-radius: 14px; background: rgba(20,21,34,.96); padding: 12px 16px; color: #d6d1df; font-size: 12px; box-shadow: var(--shadow); transition: .25s; }
 .toast.show { opacity: 1; transform: translate(-50%,0); }
+
+/* Treasure experience: game language anchored in practical meaning. */
+.treasure-question { color: var(--gold); }
+.treasure-legend { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; max-width: 760px; margin-top: 26px; }
+.treasure-legend div { min-width: 0; padding: 13px 12px; border: 1px solid rgba(231,199,130,.13); border-radius: 17px; background: linear-gradient(145deg, rgba(231,199,130,.055), rgba(169,137,255,.035)); }
+.treasure-legend span { display: block; min-height: 22px; color: var(--gold); font-size: 16px; }
+.treasure-legend b { display: block; margin-top: 5px; font-size: 12px; }
+.treasure-legend small { display: block; margin-top: 4px; color: #7f7b8b; font-size: 9px; line-height: 1.4; }
+.treasure-entry { border-color: rgba(231,199,130,.16); }
+.treasure-entry::after { content: "✦"; position: absolute; right: 26px; bottom: 20px; color: rgba(231,199,130,.08); font-size: 82px; line-height: 1; pointer-events: none; }
+.treasure-entry form { position: relative; z-index: 1; }
+.treasure-loader > span { color: #241b0e; background: linear-gradient(135deg, #f2d69a, #c6b0ff); }
+.treasure-progress { width: min(620px,100%); margin-top: 21px; padding: 15px 17px; border: 1px solid rgba(231,199,130,.14); border-radius: 17px; background: linear-gradient(110deg, rgba(231,199,130,.055), rgba(169,137,255,.035)); }
+.treasure-progress-copy { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; }
+.treasure-progress-copy span { color: #8f8a98; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
+.treasure-progress-copy strong { font-size: 13px; color: #ece4d1; }
+.treasure-progress-track { height: 5px; margin: 11px 0 8px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.07); }
+.treasure-progress-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--gold), var(--violet-bright), var(--cyan)); box-shadow: 0 0 16px rgba(231,199,130,.3); transition: width .5s ease; }
+.treasure-progress small { color: #716d7a; font-size: 9px; line-height: 1.45; }
+.treasure-card { isolation: isolate; }
+.treasure-card::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; background: radial-gradient(circle at 9% 17%, rgba(231,199,130,.06), transparent 25%); opacity: .75; }
+.treasure-card:not(.locked-card) { border-color: rgba(231,199,130,.13); }
+.treasure-card:not(.locked-card) .card-icon { color: var(--gold); border-color: rgba(231,199,130,.18); background: rgba(231,199,130,.07); }
+.card-title small { color: var(--gold); }
+.insight span { color: #9d9585; }
+.insight.trap span { color: #bf8f98; }
+.action-box { align-items: flex-start; border-color: rgba(231,199,130,.16); background: linear-gradient(110deg, rgba(231,199,130,.08), rgba(135,232,220,.05)); }
+.action-box b { flex: 0 0 auto; margin-top: 1px; padding: 6px 8px; border: 1px solid rgba(231,199,130,.2); border-radius: 999px; background: rgba(231,199,130,.06); font-size: 8px; line-height: 1; text-transform: uppercase; letter-spacing: .1em; white-space: nowrap; }
+.unlock-overlay { background: radial-gradient(circle, rgba(14,13,20,.93), rgba(13,14,24,.68) 58%, transparent 100%); }
+.unlock-box b { color: #eee4ce; }
+.synthesis { border-color: rgba(231,199,130,.14); }
+.synthesis-block:first-child { border-color: rgba(231,199,130,.13); }
+.consult-fab { border-color: rgba(231,199,130,.24); }
+.consult-fab span { background: linear-gradient(135deg, #f1d79d, #bba7ff); }
+.modal-icon { border: 1px solid rgba(231,199,130,.17); background: rgba(231,199,130,.07); }
+
 @media (max-width: 950px) {
   .hero { grid-template-columns: 1fr; padding-top: 70px; }
   .hero-copy { text-align: center; }
@@ -71,6 +107,8 @@
   .wheel-wrap { grid-row: span 4; margin: 0; }
   .mode-tabs { top: 74px; }
   .synthesis-grid { grid-template-columns: 1fr; }
+  .treasure-legend { margin-inline: auto; text-align: left; }
+  .treasure-progress { margin-inline: auto; text-align: left; }
 }
 @media (max-width: 660px) {
   .topbar { padding: 13px 15px; }
@@ -102,6 +140,8 @@
   .consult-fab { right: 13px; bottom: 13px; }
   .consult-fab b { display: none; }
   .modal { padding: 30px 18px 23px; }
+  .treasure-legend { grid-template-columns: 1fr 1fr; }
+  .treasure-progress-copy { display: grid; gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
