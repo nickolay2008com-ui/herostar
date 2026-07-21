@@ -18,7 +18,7 @@ test('оферта и возвраты остаются рядом с оплат
 
 test('платёжный endpoint требует Telegram-пользователя и настройки ЮKassa', () => {
   const server = read('server.js');
-  assert.match(server, /app\.post\('/api/payments/create', requireUser/);
+  assert.match(server, /app\.post\('\/api\/payments\/create', requireUser/);
   assert.match(server, /YOOKASSA_SHOP_ID/);
   assert.match(server, /YOOKASSA_SECRET_KEY/);
 });
