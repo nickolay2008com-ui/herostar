@@ -32,27 +32,6 @@ test('HeroStar place autocomplete production smoke', { timeout: 90_000, skip: !r
     assert.match(autocomplete.body, /координаты подтверждены/);
   });
 
-  await t.test('diagnose Photon response', async () => {
-    const url = new URL('https://photon.komoot.io/api/');
-    url.searchParams.set('q', 'Сан');
-    url.searchParams.set('limit', '8');
-    url.searchParams.set('lang', 'ru');
-    url.searchParams.append('layer', 'city');
-    url.searchParams.append('layer', 'locality');
-    url.searchParams.append('layer', 'state');
-    url.searchParams.append('layer', 'country');
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/geo+json, application/json',
-        'Accept-Language': 'ru,en;q=0.8',
-        'User-Agent': 'HeroStar/0.1 (+https://herostar.up.railway.app; birth-place suggestions)',
-      },
-      signal: AbortSignal.timeout(20_000),
-    });
-    const text = await response.text();
-    console.log('PHOTON_RESPONSE', response.status, text.slice(0, 1000));
-  });
-
   await t.test('production returns recognized cities for Russian input', async () => {
     const result = await request(`/api/places?q=${encodeURIComponent('Сан')}`);
     assert.equal(result.response.status, 200, JSON.stringify(result.body));
