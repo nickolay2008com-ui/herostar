@@ -1,0 +1,19 @@
+name: HeroStar Placidus Production Smoke
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/placidus-production-smoke.mjs'
+      - '.github/workflows/placidus-production-smoke.yml'
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Placidus production checks
+        run: node scripts/placidus-production-smoke.mjs
