@@ -15,10 +15,13 @@ const SIGN_LOCATION = {
   Рыбы: 'в Рыбах',
 };
 
+export function signLocation(sign) {
+  return SIGN_LOCATION[sign] || `в ${sign}`;
+}
+
 function localizeSignCase(value, sign) {
   if (typeof value === 'string') {
-    const location = SIGN_LOCATION[sign];
-    return location ? value.replaceAll(`в ${sign}`, location) : value;
+    return value.replaceAll(`в ${sign}`, signLocation(sign));
   }
   if (Array.isArray(value)) return value.map((item) => localizeSignCase(item, sign));
   if (value && typeof value === 'object') {
@@ -30,5 +33,11 @@ function localizeSignCase(value, sign) {
 }
 
 export function buildDeepDive(item) {
-  return localizeSignCase(buildOpportunityDeepDive(item), item.sign);
+  const guide = localizeSignCase(buildOpportunityDeepDive(item), item.sign);
+
+  if (item.key === 'mars' && guide.lifeExamples?.[1]) {
+    guide.lifeExamples[1].text += ' Если напряжение уже накопилось, сначала дайте ему короткий физический выход или движение, а затем направьте освободившуюся энергию в конкретное действие.';
+  }
+
+  return guide;
 }
