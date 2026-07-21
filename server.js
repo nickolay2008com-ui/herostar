@@ -139,6 +139,8 @@ app.use(
         fontSrc: ["'self'", 'data:'],
       },
     },
+    // Telegram завершает вход через popup → window.opener. Строгий COOP разрывает эту связь.
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
     crossOriginEmbedderPolicy: false,
   }),
 );
