@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Run Lighthouse mobile
+      - name: Run Lighthouse mobile after final polish
         run: |
           npx --yes lighthouse@12.8.0 https://herostar.up.railway.app \
             --quiet \
