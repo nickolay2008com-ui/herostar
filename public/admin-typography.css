@@ -1,0 +1,126 @@
+:root {
+  --font-display: "Segoe UI Variable Display", "SF Pro Display", "Aptos Display", "Helvetica Neue", Arial, sans-serif;
+  --font-text: "Segoe UI Variable Text", "SF Pro Text", Aptos, Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-compact: "Segoe UI Variable Text", "SF Pro Text", Aptos, Inter, Arial, sans-serif;
+}
+
+html {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+button,
+input,
+select {
+  font-family: var(--font-text);
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures contextual;
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand,
+.metric strong,
+.drawer-head h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  text-wrap: balance;
+}
+
+p,
+li,
+td,
+.event-context,
+.portrait-card p {
+  text-wrap: pretty;
+}
+
+.brand {
+  font-weight: 760;
+  letter-spacing: -.03em;
+}
+
+h1 {
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+h2 {
+  font-weight: 680;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+}
+
+h3,
+h4 {
+  font-weight: 660;
+  letter-spacing: -.015em;
+}
+
+.eyebrow,
+th,
+.period,
+.badge,
+.status,
+.ghost-button,
+.open-button {
+  font-family: var(--font-compact);
+}
+
+.eyebrow {
+  font-weight: 760;
+  letter-spacing: .135em;
+}
+
+.ghost-button,
+.open-button {
+  font-weight: 650;
+}
+
+.heading p,
+.auth-card p,
+.config-note,
+.detail-content,
+.portrait-card p {
+  letter-spacing: -.004em;
+  line-height: 1.65;
+}
+
+.metric strong,
+.funnel-row strong,
+.day-column small,
+table,
+.status,
+.event-time,
+.birth {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.metric strong {
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+.search input,
+.period select {
+  font-weight: 440;
+  letter-spacing: -.005em;
+}
+
+th {
+  font-weight: 720;
+  letter-spacing: .075em;
+}
+
+.person strong,
+.detail-head h3 {
+  font-weight: 650;
+  letter-spacing: -.01em;
+}

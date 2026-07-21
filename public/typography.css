@@ -1,0 +1,197 @@
+:root {
+  --font-display: "Segoe UI Variable Display", "SF Pro Display", "Aptos Display", "Helvetica Neue", Arial, sans-serif;
+  --font-text: "Segoe UI Variable Text", "SF Pro Text", Aptos, Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-compact: "Segoe UI Variable Text", "SF Pro Text", Aptos, Inter, Arial, sans-serif;
+}
+
+html {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-text);
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures contextual;
+}
+
+h1,
+h2,
+h3,
+.brand,
+.card-title strong,
+.identity-name,
+.formula,
+.metric strong,
+.deep-dive-question,
+.deep-practice h3 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  text-wrap: balance;
+}
+
+p,
+li,
+.card-question,
+.message,
+.deep-dive-scroll {
+  text-wrap: pretty;
+}
+
+.hero h1 {
+  font-weight: 720;
+  line-height: .93;
+  letter-spacing: -.055em;
+}
+
+.hero-lead {
+  max-width: 690px;
+  font-weight: 430;
+  letter-spacing: -.012em;
+  line-height: 1.58;
+}
+
+.birth-panel h2,
+.map-head h2,
+.synthesis h3,
+.modal h2,
+.loading-stage h2 {
+  font-weight: 690;
+  line-height: 1.04;
+  letter-spacing: -.045em;
+}
+
+.brand {
+  font-weight: 760;
+  letter-spacing: -.035em;
+}
+
+.eyebrow,
+.panel-kicker,
+.card-title small,
+.insight span,
+.archetype-box span,
+.deep-purpose span,
+.deep-section-intro span,
+.deep-practice > div span {
+  font-family: var(--font-compact);
+  font-weight: 760;
+  letter-spacing: .135em;
+}
+
+.field > span,
+.switch-row,
+.status-pill,
+.ghost-button,
+.text-button,
+.primary-button,
+.mode-tabs button,
+.question-chips button,
+.deep-dive-tabs button {
+  font-family: var(--font-compact);
+}
+
+.field input,
+.consult-form textarea {
+  font-weight: 440;
+  letter-spacing: -.006em;
+}
+
+.primary-button {
+  font-weight: 720;
+  letter-spacing: -.012em;
+}
+
+.ghost-button,
+.text-button {
+  font-weight: 650;
+}
+
+.proof-row strong,
+.treasure-progress-copy strong,
+.metric strong,
+.day-column small,
+.funnel-row strong,
+table,
+.identity-meta,
+.accuracy-note {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.card-title strong {
+  font-weight: 680;
+  letter-spacing: -.025em;
+  line-height: 1.12;
+}
+
+.card-question {
+  font-weight: 580;
+  letter-spacing: -.012em;
+  line-height: 1.55;
+}
+
+.card-content p,
+.synthesis-block li,
+.message,
+.consult-note {
+  letter-spacing: -.004em;
+}
+
+.formula {
+  font-weight: 480;
+  letter-spacing: -.018em;
+}
+
+.deep-dive-head h2 {
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.038em;
+}
+
+.deep-dive-question {
+  font-weight: 590;
+  letter-spacing: -.018em;
+  line-height: 1.42;
+}
+
+.deep-purpose p,
+.deep-section-intro p,
+.deep-formula-card p,
+.deep-life-example p,
+.deep-state p,
+.element-option p,
+.function-difference p,
+.deep-practice ol {
+  font-size: clamp(13px, 1.2vw, 14px);
+  line-height: 1.72;
+  letter-spacing: -.006em;
+}
+
+.deep-life-example h3,
+.deep-practice h3 {
+  font-weight: 680;
+  letter-spacing: -.018em;
+}
+
+@media (max-width: 660px) {
+  .hero h1 {
+    font-size: clamp(44px, 13.2vw, 58px);
+    line-height: .94;
+    letter-spacing: -.05em;
+  }
+
+  .hero-lead {
+    line-height: 1.55;
+  }
+
+  .card-title strong {
+    letter-spacing: -.02em;
+  }
+}
