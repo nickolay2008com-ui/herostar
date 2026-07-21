@@ -12,11 +12,11 @@ jobs:
         with:
           node-version: 24
       - run: npm install --no-audit --no-fund
-      - name: Run focused tests
-        run: node --test test/opportunity-guides.test.js > opportunity-test-output.txt 2>&1
+      - name: Run full test suite
+        run: npm test > full-test-output.txt 2>&1
       - name: Upload test output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: opportunity-test-output
-          path: opportunity-test-output.txt
+          name: full-test-output
+          path: full-test-output.txt
