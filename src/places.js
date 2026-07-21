@@ -71,7 +71,6 @@ async function fetchPhoton(query) {
   const endpoint = new URL(process.env.PHOTON_API_URL || DEFAULT_PHOTON_URL);
   endpoint.searchParams.set('q', query);
   endpoint.searchParams.set('limit', '8');
-  endpoint.searchParams.set('lang', 'ru');
   endpoint.searchParams.append('layer', 'city');
   endpoint.searchParams.append('layer', 'locality');
   endpoint.searchParams.append('layer', 'state');
