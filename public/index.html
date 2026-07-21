@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#080a12">
-  <meta name="description" content="HeroStar собирает натальную карту в ясный портрет: сильные опоры, внутренние противоречия, личные ловушки и практический маршрут.">
-  <title>HeroStar — персональная карта личности и жизненного маршрута</title>
+  <meta name="description" content="HeroStar создаёт карту сокровищ вашей личности: природные ресурсы, внутренние замки, практические ключи и маршрут применения.">
+  <title>HeroStar — карта сокровищ вашей личности</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -19,7 +19,7 @@
       <span>HeroStar</span>
     </a>
     <div class="top-actions">
-      <span class="status-pill" id="engineStatus"><i></i> механизм готов</span>
+      <span class="status-pill" id="engineStatus"><i></i> карта готова к поиску</span>
       <button class="ghost-button hidden" id="userButton" type="button"></button>
       <button class="ghost-button" id="loginButton" type="button">Войти через Telegram</button>
     </div>
@@ -28,22 +28,29 @@
   <main id="top">
     <section class="hero section-shell">
       <div class="hero-copy">
-        <div class="eyebrow">Персональная карта, которая складывает вас целиком</div>
-        <h1>Соберите себя<br><span>в одну ясную картину</span></h1>
-        <p class="hero-lead">HeroStar соединяет 11 ключей вашей натальной карты в цельный портрет: показывает, на что в вас можно опереться, где возникает внутренний конфликт и какой маршрут действительно подходит именно вам.</p>
+        <div class="eyebrow treasure-question">Где ваши мешки с сокровищами?</div>
+        <h1>Найдите сокровища,<br><span>которые уже ваши</span></h1>
+        <p class="hero-lead">HeroStar превращает натальную карту в маршрут по вашим природным ресурсам. Вы увидите, где спрятана сила, что закрывает к ней доступ и каким действием открыть её в настоящей жизни.</p>
 
-        <div class="proof-row">
-          <div><strong>11</strong><span>личных ключей</span></div>
-          <div><strong>5</strong><span>важных сфер жизни</span></div>
-          <div><strong>1</strong><span>понятный маршрут</span></div>
+        <div class="treasure-legend" aria-label="Как читать карту сокровищ">
+          <div><span>✦</span><b>Сокровище</b><small>ваш природный ресурс</small></div>
+          <div><span>◈</span><b>Замок</b><small>что прячет или сдерживает его</small></div>
+          <div><span>🗝</span><b>Ключ</b><small>как вернуть ресурс в действие</small></div>
+          <div><span>→</span><b>Первый ход</b><small>что проверить в реальной жизни</small></div>
         </div>
 
-        <button class="text-button" id="demoButton" type="button">Посмотреть готовую карту <span>→</span></button>
+        <div class="proof-row">
+          <div><strong>3</strong><span>сокровища бесплатно</span></div>
+          <div><strong>11</strong><span>личных тайников</span></div>
+          <div><strong>1</strong><span>маршрут применения</span></div>
+        </div>
+
+        <button class="text-button" id="demoButton" type="button">Открыть пример поиска <span>→</span></button>
       </div>
 
-      <div class="birth-panel glass-panel">
-        <div class="panel-kicker">Первые 3 ключа бесплатно</div>
-        <h2>Введите данные рождения — остальное соберёт HeroStar.</h2>
+      <div class="birth-panel glass-panel treasure-entry">
+        <div class="panel-kicker">Первые 3 сокровища — подарок</div>
+        <h2>Оставьте координаты рождения. HeroStar отметит первые тайники.</h2>
         <form id="birthForm" autocomplete="on">
           <label class="field">
             <span>Как вас называть</span>
@@ -70,22 +77,22 @@
             <small>Город и страна. Координаты и исторический часовой пояс определятся автоматически.</small>
           </label>
           <button class="primary-button" type="submit">
-            <span>Получить мою карту</span>
-            <b>✦</b>
+            <span>Найти мои сокровища</span>
+            <b>🗝</b>
           </button>
-          <p class="microcopy">Без регистрации. Первые три ключа откроются сразу. Это инструмент саморефлексии, а не научный диагноз или обещание будущего.</p>
+          <p class="microcopy">Без регистрации. Три полноценные находки откроются сразу: ресурс, замок, ключ и первый ход. Это инструмент саморефлексии, а не обещание будущего.</p>
         </form>
       </div>
     </section>
 
     <section class="loading-stage hidden" id="loadingStage" aria-live="polite">
-      <div class="orbit-loader">
+      <div class="orbit-loader treasure-loader">
         <div class="orbit orbit-one"><i></i></div>
         <div class="orbit orbit-two"><i></i></div>
-        <span>✦</span>
+        <span>🗝</span>
       </div>
-      <h2 id="loadingTitle">Собираем вашу личную карту</h2>
-      <p id="loadingText">Сначала точный расчёт, затем — связи, контрасты, опоры и маршрут.</p>
+      <h2 id="loadingTitle">Ищем первые тайники</h2>
+      <p id="loadingText">Точный расчёт превращается в карту ресурсов, замков, ключей и действий.</p>
       <div class="loading-track"><i id="loadingProgress"></i></div>
       <div class="loading-steps" id="loadingSteps"></div>
     </section>
@@ -94,12 +101,13 @@
       <div class="section-shell map-shell">
         <div class="map-head">
           <div>
-            <div class="eyebrow">Цельная картина вместо разрозненных трактовок</div>
-            <h2 id="mapTitle">Ваша личная карта</h2>
+            <div class="eyebrow">Карта сокровищ вашей личности</div>
+            <h2 id="mapTitle">Ваши личные тайники</h2>
             <p id="mapSubtitle"></p>
+            <div class="treasure-progress" id="treasureProgress" aria-live="polite"></div>
           </div>
           <div class="map-actions">
-            <button class="ghost-button" id="shareButton" type="button">Поделиться</button>
+            <button class="ghost-button" id="shareButton" type="button">Поделиться находкой</button>
             <button class="ghost-button" id="newMapButton" type="button">Новая карта</button>
           </div>
         </div>
@@ -110,7 +118,7 @@
             <div class="identity-name" id="identityName"></div>
             <div class="identity-meta" id="identityMeta"></div>
             <div class="archetype-box">
-              <span>Главная формула</span>
+              <span>Главная формула клада</span>
               <p id="archetypeText"></p>
             </div>
             <div class="accuracy-note" id="accuracyNote"></div>
@@ -118,7 +126,7 @@
 
           <div class="treasure-panel">
             <nav class="mode-tabs" id="modeTabs" aria-label="Разделы карты">
-              <button class="active" data-category="all">Вся карта</button>
+              <button class="active" data-category="all">Все тайники</button>
               <button data-category="core">Ядро</button>
               <button data-category="energy">Энергия</button>
               <button data-category="love">Отношения</button>
@@ -136,37 +144,37 @@
   </main>
 
   <button class="consult-fab hidden" id="consultFab" type="button">
-    <span>✦</span><b>Спросить HeroStar</b>
+    <span>🗝</span><b>Спросить проводника</b>
   </button>
 
   <aside class="consult-panel" id="consultPanel" aria-hidden="true">
     <div class="consult-head">
       <div>
-        <span>Личный проводник по вашей карте</span>
-        <h3>Разберите свою ситуацию через карту</h3>
+        <span>Проводник по карте сокровищ</span>
+        <h3>Найдите нужный ресурс для вашей ситуации</h3>
       </div>
       <button id="closeConsult" aria-label="Закрыть">×</button>
     </div>
     <div class="question-chips" id="questionChips">
-      <button>Почему я застреваю перед важным?</button>
-      <button>На что мне опереться в работе и деньгах?</button>
-      <button>Какие отношения раскрывают меня?</button>
-      <button>Какой шаг сейчас даст больше всего?</button>
+      <button>Какое сокровище поможет мне перестать откладывать?</button>
+      <button>Где мой ресурс для работы и денег?</button>
+      <button>Что открывает мои лучшие отношения?</button>
+      <button>Какой ключ нужен мне прямо сейчас?</button>
     </div>
     <div class="chat" id="chat"></div>
     <form class="consult-form" id="consultForm">
       <textarea name="question" rows="2" placeholder="Опишите ситуацию обычными словами…" required></textarea>
       <button type="submit" aria-label="Отправить">↑</button>
     </form>
-    <p class="consult-note">Проводник связывает ваш вопрос с картой и помогает увидеть следующий проверяемый шаг. Ответ не заменяет врача, юриста или финансового специалиста.</p>
+    <p class="consult-note">Проводник связывает вопрос с конкретным сокровищем карты и предлагает проверяемый первый ход. Ответ не заменяет врача, юриста или финансового специалиста.</p>
   </aside>
 
   <div class="modal-backdrop hidden" id="authModal">
     <div class="modal glass-panel">
       <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
-      <div class="modal-icon">✦</div>
-      <h2>Сохранить карту и продолжить</h2>
-      <p>Войдите через Telegram без пароля. Карта не потеряется, а личный проводник сможет отвечать с учётом всей вашей картины.</p>
+      <div class="modal-icon">🗝</div>
+      <h2>Сохранить найденные сокровища</h2>
+      <p>Войдите через Telegram без пароля. Карта не потеряется, а проводник сможет продолжать поиск с учётом уже найденного.</p>
       <div class="telegram-slot" id="telegramSlot"></div>
       <p class="microcopy">HeroStar получает только данные, которые Telegram передаёт при входе: имя, username и фото, если они доступны.</p>
     </div>
@@ -176,15 +184,16 @@
     <div class="modal purchase-modal glass-panel">
       <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
       <div class="modal-icon">🗝</div>
-      <div class="panel-kicker">Вся картина</div>
-      <h2>Увидеть себя целиком</h2>
-      <p>Все 11 ключей соединятся в единый образ: ваши сильные опоры, внутренние противоречия, повторяющиеся ловушки и личный маршрут.</p>
+      <div class="panel-kicker">Весь клад</div>
+      <h2>Открыть все 11 сокровищ</h2>
+      <p>Получите полную карту: природные ресурсы, замки, практические ключи, внутренние связи и маршрут применения в отношениях, работе, деньгах и развитии.</p>
       <ul>
-        <li>Сильные стороны и точные отличия от противоположных типов</li>
-        <li>Ловушки, которые повторяются в отношениях, работе и выборе</li>
-        <li>Личная формула и пошаговый маршрут</li>
+        <li>Все личные сокровища и точные отличия от противоположных типов</li>
+        <li>Замки, из-за которых ресурс теряется или остаётся незамеченным</li>
+        <li>Ключ и первый ход для каждого тайника</li>
+        <li>Общий маршрут, который соединяет все находки</li>
       </ul>
-      <button class="primary-button" id="payButton" type="button">Открыть полную карту за <span id="priceLabel">990 ₽</span></button>
+      <button class="primary-button" id="payButton" type="button">Открыть весь клад за <span id="priceLabel">990 ₽</span></button>
       <p class="microcopy">Переход на защищённую страницу ЮKassa. Доступ открывается после подтверждения оплаты.</p>
     </div>
   </div>
@@ -192,6 +201,7 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script type="module" src="/analytics.js"></script>
+  <script type="module" src="/treasure-experience.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
