@@ -20,8 +20,8 @@ function ensureModal() {
         <div class="deep-dive-heading">
           <span class="deep-dive-icon" id="deepDiveIcon">✦</span>
           <div>
-            <div class="panel-kicker" id="deepDiveKicker">Внутренняя функция</div>
-            <h2 id="deepDiveTitle">Понять глубже</h2>
+            <div class="panel-kicker" id="deepDiveKicker">Открыть возможности</div>
+            <h2 id="deepDiveTitle">Открыть больше возможностей</h2>
             <p id="deepDivePosition"></p>
           </div>
         </div>
@@ -29,11 +29,11 @@ function ensureModal() {
       </header>
       <div class="deep-dive-question" id="deepDiveQuestion"></div>
       <nav class="deep-dive-tabs" aria-label="Разделы подробного разбора">
-        <button class="active" type="button" data-deep-tab="meaning">Смысл</button>
-        <button type="button" data-deep-tab="life">В жизни</button>
-        <button type="button" data-deep-tab="states">Ресурс и стресс</button>
+        <button class="active" type="button" data-deep-tab="meaning">Что открывает</button>
+        <button type="button" data-deep-tab="life">Как применить</button>
+        <button type="button" data-deep-tab="states">Что помогает и мешает</button>
         <button type="button" data-deep-tab="difference">Не путать</button>
-        <button type="button" data-deep-tab="practice">Практика</button>
+        <button type="button" data-deep-tab="practice">Первый шаг</button>
       </nav>
       <div class="deep-dive-scroll" id="deepDiveContent"></div>
     </section>`;
@@ -63,7 +63,7 @@ function renderMeaning(guide) {
   const nuance = ['mode', 'degree', 'motion'].map((key) => formulaCard(guide.formula[key], 'nuance')).join('');
   return `
     <section class="deep-purpose">
-      <span>Что даёт эта функция</span>
+      <span>Что это поможет вам открыть</span>
       <p>${escapeHtml(guide.purpose)}</p>
     </section>
     <div class="deep-formula-grid">${primary}</div>
@@ -71,7 +71,8 @@ function renderMeaning(guide) {
 }
 
 function renderLife(guide) {
-  return `<div class="deep-life-grid">${guide.lifeExamples.map((example, index) => `
+  return `<section class="deep-section-intro"><span>От знания — к дополнительным возможностям</span><p>Здесь показано, что именно можно получить, как применить это в реальной ситуации и что обычно закрывает доступ к преимуществу.</p></section>
+    <div class="deep-life-grid">${guide.lifeExamples.map((example, index) => `
     <article class="deep-life-example">
       <span>${String(index + 1).padStart(2, '0')}</span>
       <div><h3>${escapeHtml(example.title)}</h3><p>${escapeHtml(example.text)}</p></div>
@@ -80,15 +81,15 @@ function renderLife(guide) {
 
 function renderStates(guide) {
   return `<div class="deep-state-grid">
-    <article class="deep-state resource"><span>В ресурсе</span><p>${escapeHtml(guide.states.resource)}</p></article>
-    <article class="deep-state stress"><span>В стрессе</span><p>${escapeHtml(guide.states.stress)}</p></article>
-    <article class="deep-state return"><span>Вернуться в ресурс</span><p>${escapeHtml(guide.states.return)}</p></article>
+    <article class="deep-state resource"><span>Когда возможность открывается</span><p>${escapeHtml(guide.states.resource)}</p></article>
+    <article class="deep-state stress"><span>Что сужает возможности</span><p>${escapeHtml(guide.states.stress)}</p></article>
+    <article class="deep-state return"><span>Как вернуть доступ</span><p>${escapeHtml(guide.states.return)}</p></article>
   </div>`;
 }
 
 function renderDifference(guide) {
   return `
-    <section class="deep-section-intro"><span>Одна функция — четыре канала стихии</span><p>Стихия показывает общий способ включения. Текущий канал отмечен, остальные даны для ясного контраста.</p></section>
+    <section class="deep-section-intro"><span>Одна задача — разные способы её раскрыть</span><p>Стихия показывает общий канал. Ваш канал отмечен, остальные помогают увидеть, почему чужой способ может не давать вам такого же результата.</p></section>
     <div class="element-comparison">${guide.elementComparison.map((item) => `
       <article class="element-option ${item.current ? 'current' : ''}">
         <span>${escapeHtml(item.name)}${item.current ? ' · ваш канал' : ''}</span>
@@ -104,7 +105,7 @@ function renderPractice(guide) {
     <section class="deep-practice">
       <div class="deep-practice-mark">→</div>
       <div>
-        <span>Небольшой проверяемый опыт</span>
+        <span>Примените знание к одной реальной ситуации</span>
         <h3>${escapeHtml(guide.practice.title)}</h3>
       </div>
       <ol>${guide.practice.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
@@ -134,7 +135,7 @@ function activateTab(tab) {
 export function deepDiveButtonMarkup(card) {
   if (!card?.deepDive || card.locked) return '';
   return `<button class="deep-dive-button" type="button" data-open-deep="${escapeHtml(card.id)}">
-    <span><b>Понять глубже</b><small>Стихия, жизненные примеры и практика</small></span><i>→</i>
+    <span><b>Открыть возможности</b><small>Что это даёт и как применить в жизни</small></span><i>→</i>
   </button>`;
 }
 
