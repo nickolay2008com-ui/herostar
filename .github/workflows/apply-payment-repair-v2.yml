@@ -1,15 +1,16 @@
 name: Apply payment repair v2
 
 on:
-  push:
-    branches: [codex/herostar-payment-repair-v2]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'codex/herostar-payment-repair-v2' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
