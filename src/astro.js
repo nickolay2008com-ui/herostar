@@ -207,6 +207,11 @@ export async function calculateNatalChart(input) {
   const unknownTime = Boolean(input.unknownTime);
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw publicError('Укажите корректную дату рождения.');
+  const birthDate = DateTime.fromISO(date, { zone: 'UTC' });
+  if (!birthDate.isValid || birthDate.toISODate() !== date) throw publicError('Укажите корректную дату рождения.');
+  if (birthDate.startOf('day') > DateTime.utc().startOf('day')) {
+    throw publicError('Дата рождения не может быть в будущем.', 400, 'FUTURE_BIRTH_DATE');
+  }
   if (!unknownTime && !/^\d{2}:\d{2}$/.test(time)) throw publicError('Укажите время рождения или отметьте, что оно неизвестно.');
 
   let location;

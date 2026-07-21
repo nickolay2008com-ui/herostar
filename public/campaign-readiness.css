@@ -1,0 +1,19 @@
+/* Launch readiness: off-canvas panels must not enlarge the mobile document. */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.consult-panel {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.consult-panel.open {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+}
