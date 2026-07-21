@@ -11,9 +11,7 @@ async function replaceExact(path, from, to) {
 await replaceExact('src/utils.js', "  error.status = status;\n  error.code = code;\n  return error;", "  error.status = status;\n  error.code = code;\n  error.expose = true;\n  return error;");
 await replaceExact('server.js', "    error: status >= 500 ? 'Сервис столкнулся с ошибкой. Повторите действие.' : error.message,", "    error: error.expose ? error.message : status >= 500 ? 'Сервис столкнулся с ошибкой. Повторите действие.' : error.message,");
 await replaceExact('server.js', "    const payment = await createPayment({\n      user: req.user,\n      chartId,\n      visitorId: visitorIdFrom(req),\n    });", "    const payment = await createPayment({\n      user: req.user,\n      chartId,\n      visitorId: visitorIdFrom(req),\n      receiptContact: req.body.receiptContact,\n    });");
-
 await replaceExact('public/index.html', "      <button class=\"primary-button\" id=\"payButton\" type=\"button\" disabled>Открыть мои 11 сокровищ — <span id=\"priceLabel\">990 ₽</span></button>\n      <p class=\"microcopy\" id=\"paymentAvailability\">Проверяем готовность оплаты…</p>", "      <label class=\"field payment-contact\">\n        <span>Телефон или email для электронного чека</span>\n        <input id=\"receiptContact\" name=\"receiptContact\" inputmode=\"email\" autocomplete=\"email\" placeholder=\"+7 900 000-00-00 или name@example.com\" maxlength=\"120\">\n        <small id=\"receiptContactHint\">ЮKassa использует контакт только для отправки чека.</small>\n      </label>\n      <button class=\"primary-button\" id=\"payButton\" type=\"button\" disabled>Открыть мои 11 сокровищ — <span id=\"priceLabel\">990 ₽</span></button>\n      <p class=\"microcopy\" id=\"paymentAvailability\">Проверяем готовность оплаты…</p>");
-
 await replaceExact('public/app.js', "  payButton: $('#payButton'),\n  priceLabel: $('#priceLabel'),", "  payButton: $('#payButton'),\n  priceLabel: $('#priceLabel'),\n  receiptContact: $('#receiptContact'),\n  receiptContactHint: $('#receiptContactHint'),");
 await replaceExact('public/app.js', "async function startPayment() {\n  if (!state.config?.paymentsConfigured) {\n    toast('Оплата временно недоступна. Связаться можно в Telegram @ainicki.');\n    return;\n  }\n  els.payButton.disabled = true;", "function normalizedReceiptContact() {\n  const raw = String(els.receiptContact?.value || '').trim();\n  const emailOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(raw);\n  const phoneDigits = raw.replace(/\\D/g, '');\n  const phoneOk = phoneDigits.length >= 10 && phoneDigits.length <= 15;\n  if (!emailOk && !phoneOk) {\n    if (els.receiptContactHint) {\n      els.receiptContactHint.textContent = 'Укажите действующий телефон или email — он нужен ЮKassa для чека.';\n      els.receiptContactHint.classList.add('field-error');\n    }\n    els.receiptContact?.focus();\n    return '';\n  }\n  if (els.receiptContactHint) {\n    els.receiptContactHint.textContent = 'ЮKassa использует контакт только для отправки чека.';\n    els.receiptContactHint.classList.remove('field-error');\n  }\n  return emailOk ? raw.toLowerCase() : `+${phoneDigits}`;\n}\n\nasync function startPayment() {\n  if (!state.config?.paymentsConfigured) {\n    toast('Оплата временно недоступна. Связаться можно в Telegram @ainicki.');\n    return;\n  }\n  const receiptContact = normalizedReceiptContact();\n  if (!receiptContact) return;\n  els.payButton.disabled = true;");
 await replaceExact('public/app.js', "      body: JSON.stringify({ chartId: state.current?.id }),", "      body: JSON.stringify({ chartId: state.current?.id, receiptContact }),");
@@ -37,7 +35,7 @@ function providerError(response, payload) {
 }
 async function yookassaRequest(path, options = {}) {
   const { shopId, secretKey } = credentials(); let response;
-  try { response = await fetch(`https://api.yookassa.ru/v3${path}`, { ...options, headers: { Authorization: `Basic ${Buffer.from(`${shopId}:${secretKey}`).toString('base64')}`, 'Content-Type': 'application/json', ...(options.headers || {}) }, signal: AbortSignal.timeout(15000) }); }
+  try { response = await fetch(\`https://api.yookassa.ru/v3\${path}\`, { ...options, headers: { Authorization: \`Basic \${Buffer.from(\`\${shopId}:\${secretKey}\`).toString('base64')}\`, 'Content-Type': 'application/json', ...(options.headers || {}) }, signal: AbortSignal.timeout(15000) }); }
   catch (error) { console.error('YooKassa network error', error); throw publicError('Не удалось связаться с ЮKassa. Проверьте интернет и повторите.', 503, 'PAYMENT_NETWORK_ERROR'); }
   const payload = await response.json().catch(() => ({})); if (!response.ok) throw providerError(response, payload); return payload;
 }
@@ -54,7 +52,7 @@ function publicAppUrl() {
 }
 export async function createPayment({ user, chartId, visitorId = null, receiptContact }) {
   const amount = Number(process.env.FULL_MAP_PRICE || '990').toFixed(2); const customer = normalizeReceiptContact(receiptContact); const appUrl = publicAppUrl();
-  const body = { amount: { value: amount, currency: 'RUB' }, capture: true, confirmation: { type: 'redirect', return_url: `${appUrl}/payment/return?chart=${encodeURIComponent(chartId || '')}` }, description: 'HeroStar — полный доступ к интерактивной карте', metadata: { user_id: String(user.telegram_id), chart_id: chartId || '' }, receipt: { customer, items: [{ description: 'Доступ к полной интерактивной карте HeroStar', quantity: 1.000, amount: { value: amount, currency: 'RUB' }, vat_code: 1, payment_mode: 'full_payment', payment_subject: 'service', measure: 'piece' }], internet: 'true' } };
+  const body = { amount: { value: amount, currency: 'RUB' }, capture: true, confirmation: { type: 'redirect', return_url: \`\${appUrl}/payment/return?chart=\${encodeURIComponent(chartId || '')}\` }, description: 'HeroStar — полный доступ к интерактивной карте', metadata: { user_id: String(user.telegram_id), chart_id: chartId || '' }, receipt: { customer, items: [{ description: 'Доступ к полной интерактивной карте HeroStar', quantity: 1.000, amount: { value: amount, currency: 'RUB' }, vat_code: 1, payment_mode: 'full_payment', payment_subject: 'service', measure: 'piece' }], internet: 'true' } };
   const payment = await yookassaRequest('/payments', { method: 'POST', headers: { 'Idempotence-Key': crypto.randomUUID() }, body: JSON.stringify(body) });
   await savePayment({ id: payment.id, userId: String(user.telegram_id), chartId: chartId || null, status: payment.status, amount, payload: payment });
   if (chartId) await claimChart(chartId, user.telegram_id);
@@ -62,7 +60,7 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
 }
 export async function processWebhook(notification) {
   const paymentId = notification?.object?.id; if (!paymentId) throw publicError('Некорректное уведомление.', 400);
-  const payment = await yookassaRequest(`/payments/${encodeURIComponent(paymentId)}`, { method: 'GET' }); await updatePayment(payment.id, payment.status, payment);
+  const payment = await yookassaRequest(\`/payments/\${encodeURIComponent(paymentId)}\`, { method: 'GET' }); await updatePayment(payment.id, payment.status, payment);
   if (payment.status === 'succeeded' && payment.paid) { const userId = payment.metadata?.user_id; const chartId = payment.metadata?.chart_id; if (userId) await grantPremium(userId); if (userId && chartId) await claimChart(chartId, userId); await safeTrack({ eventType: 'payment_succeeded', userId: userId || null, chartId: chartId || null, metadata: { paymentId: payment.id, amount: Number(payment.amount?.value || 0), currency: payment.amount?.currency || 'RUB' } }); }
   return payment;
 }
@@ -71,7 +69,7 @@ export async function processWebhook(notification) {
 await write('test/payment-repair.test.js', `import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const read = (path) => fs.readFileSync(new URL(\`../\${path}\`, import.meta.url), 'utf8');
 test('платёж передаёт контакт и корректный чек ЮKassa', () => { const payment = read('src/payments.js'); assert.match(payment, /receipt:\\s*\\{/); assert.match(payment, /vat_code:\\s*1/); assert.match(payment, /payment_mode:\\s*'full_payment'/); assert.match(payment, /payment_subject:\\s*'service'/); assert.match(payment, /internet:\\s*'true'/); assert.match(payment, /normalizeReceiptContact/); });
 test('клиент требует телефон или email для чека', () => { const html = read('public/index.html'); const app = read('public/app.js'); assert.match(html, /id=\"receiptContact\"/); assert.match(app, /normalizedReceiptContact/); assert.match(app, /receiptContact/); });
 test('публичные серверные ошибки больше не маскируются', () => { assert.match(read('src/utils.js'), /error\\.expose = true/); assert.match(read('server.js'), /error\\.expose \\? error\\.message/); });
