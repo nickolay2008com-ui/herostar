@@ -28,6 +28,9 @@ test('HeroStar production smoke test', { timeout: 90_000, skip: !runSmoke }, asy
     const home = await request('/');
     assert.equal(home.response.status, 200);
     assert.match(home.body, /id="birthForm"/);
+    assert.match(home.body, /Где ваши мешки с сокровищами\?/);
+    assert.match(home.body, /Найти мои сокровища/);
+    assert.match(home.body, /src="\/treasure-experience\.js"/);
     assert.match(home.body, /src="\/app\.js"/);
 
     const stylesheet = await request('/styles.css');
@@ -35,10 +38,11 @@ test('HeroStar production smoke test', { timeout: 90_000, skip: !runSmoke }, asy
     assert.match(stylesheet.body, /styles-base\.css/);
     assert.match(stylesheet.body, /styles-components\.css/);
 
-    for (const path of ['/app.js', '/analytics.js', '/styles-base.css', '/styles-components.css']) {
+    for (const path of ['/app.js', '/analytics.js', '/treasure-experience.js', '/styles-base.css', '/styles-components.css']) {
       const asset = await request(path);
       assert.equal(asset.response.status, 200, `${path} must be available`);
       assert.ok(String(asset.body).length > 100, `${path} must not be empty`);
+      if (path === '/treasure-experience.js') assert.match(asset.body, /MutationObserver/);
     }
   });
 
