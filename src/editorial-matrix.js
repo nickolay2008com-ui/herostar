@@ -1,4 +1,4 @@
-import { buildDeepDive } from './deep-dive-opportunities-ru.js';
+import { buildDeepDive, signLocation } from './deep-dive-opportunities-ru.js';
 import { houseKnowledge, planetKnowledge, signKnowledge } from './knowledge.js';
 
 function sentence(value) {
@@ -7,10 +7,14 @@ function sentence(value) {
   return /[.!?…]$/.test(text) ? text : `${text}.`;
 }
 
+function capitalize(value) {
+  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : '';
+}
+
 export function positionLabel(item) {
   const retro = item.retrograde && item.key !== 'northNode' ? ' R' : '';
   const house = item.house ? ` в ${item.house} доме` : '';
-  return `${item.name} в ${item.sign} ${item.degreeLabel}${retro}${house}`;
+  return `${item.name} ${signLocation(item.sign)} ${item.degreeLabel}${retro}${house}`;
 }
 
 export function buildEditorialMatrix(item) {
@@ -22,12 +26,12 @@ export function buildEditorialMatrix(item) {
 
   const matrix = {
     function: sentence(role.function),
-    sign: sentence(`В ${item.sign} эта функция работает ${sign.mechanism}; её сильная сторона — ${sign.strength}`),
+    sign: sentence(`${capitalize(signLocation(item.sign))} эта функция работает ${sign.mechanism}; её сильная сторона — ${sign.strength}`),
     house: item.house
       ? sentence(`${item.house} дом переносит эту механику в сферу «${area}»`)
       : 'Время рождения не указано, поэтому HeroStar не приписывает этой функции конкретный дом.',
     lifeScenario: sentence(`Жизненный сценарий: ${sign.scenario}${item.house ? ` — особенно в ситуациях, связанных со сферой «${area}»` : ''}`),
-    contrast: sentence(`В ${oppositeName} та же функция чаще действовала бы ${opposite.mechanism}; ваше отличие — ${sign.mechanism}`),
+    contrast: sentence(`${capitalize(signLocation(oppositeName))} та же функция чаще действовала бы ${opposite.mechanism}; ваше отличие — ${sign.mechanism}`),
     trap: sentence(`Ловушка: ${sign.shadow}`),
     key: sentence(role.key),
     action: sentence(role.action),
