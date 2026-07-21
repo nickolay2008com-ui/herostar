@@ -68,14 +68,8 @@ function decorateCards() {
 
   if (progress && lastTotal) {
     const percentage = Math.round((lastUnlocked / lastTotal) * 100);
-    progress.innerHTML = `
-      <div class="treasure-progress-copy">
-        <span>Ваш путь по карте</span>
-        <strong>${lastUnlocked} из ${lastTotal} сокровищ открыто</strong>
-      </div>
-      <div class="treasure-progress-track" aria-hidden="true"><i style="width:${percentage}%"></i></div>
-      <small>Каждая находка: ресурс → замок → ключ → действие в реальной жизни</small>
-    `;
+    const markup = `<div class="treasure-progress-copy"><span>Ваш путь по карте</span><strong>${lastUnlocked} из ${lastTotal} сокровищ открыто</strong></div><div class="treasure-progress-track" aria-hidden="true"><i style="width:${percentage}%"></i></div><small>Каждая находка: ресурс → замок → ключ → действие в реальной жизни</small>`;
+    if (progress.innerHTML !== markup) progress.innerHTML = markup;
   }
 }
 
