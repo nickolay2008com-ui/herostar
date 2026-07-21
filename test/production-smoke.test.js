@@ -30,7 +30,12 @@ test('HeroStar production smoke test', { timeout: 90_000, skip: !runSmoke }, asy
     assert.match(home.body, /id="birthForm"/);
     assert.match(home.body, /src="\/app\.js"/);
 
-    for (const path of ['/app.js', '/styles.css', '/analytics.js']) {
+    const stylesheet = await request('/styles.css');
+    assert.equal(stylesheet.response.status, 200);
+    assert.match(stylesheet.body, /styles-base\.css/);
+    assert.match(stylesheet.body, /styles-components\.css/);
+
+    for (const path of ['/app.js', '/analytics.js', '/styles-base.css', '/styles-components.css']) {
       const asset = await request(path);
       assert.equal(asset.response.status, 200, `${path} must be available`);
       assert.ok(String(asset.body).length > 100, `${path} must not be empty`);
