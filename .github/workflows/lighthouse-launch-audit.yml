@@ -1,0 +1,41 @@
+name: HeroStar Lighthouse Launch Audit
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Lighthouse mobile
+        run: |
+          npx --yes lighthouse@12.8.0 https://herostar.up.railway.app \
+            --quiet \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --form-factor=mobile \
+            --screenEmulation.mobile=true \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --output=json \
+            --output-path=lighthouse-mobile.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('lighthouse-mobile.json', 'utf8'));
+          const scores = Object.fromEntries(Object.entries(report.categories).map(([key, value]) => [key, Math.round(value.score * 100)]));
+          const metrics = Object.fromEntries(['first-contentful-paint','largest-contentful-paint','cumulative-layout-shift','total-blocking-time','speed-index'].map((id) => [id, report.audits[id]?.displayValue || null]));
+          fs.writeFileSync('lighthouse-summary.json', JSON.stringify({ scores, metrics }, null, 2));
+          console.log(JSON.stringify({ scores, metrics }, null, 2));
+          if (scores.performance < 70 || scores.accessibility < 90 || scores['best-practices'] < 90) process.exitCode = 1;
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: herostar-lighthouse
+          path: |
+            lighthouse-mobile.json
+            lighthouse-summary.json
