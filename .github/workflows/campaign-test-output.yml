@@ -1,8 +1,8 @@
 name: Campaign readiness test output
 
 on:
-  push:
-    branches: [codex/herostar-campaign-readiness]
+  pull_request:
+    branches: [main]
 
 jobs:
   test-output:
