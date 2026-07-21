@@ -25,6 +25,7 @@ jobs:
         env:
           RUN_PRODUCTION_SMOKE: '1'
         run: |
+          set -o pipefail
           node --test test/production-smoke.test.js 2>&1 | tee production-smoke.log
       - name: Upload smoke log
         if: always()
