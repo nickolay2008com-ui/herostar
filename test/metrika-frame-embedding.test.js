@@ -21,6 +21,7 @@ test('HTML-страницы разрешают официальный счётч
   assert.match(authSource, /mergeCspDirective\(nextPolicy, 'connect-src'/);
   assert.match(authSource, /mergeCspDirective\(nextPolicy, 'frame-src'/);
   assert.match(authSource, /removeHeader\('X-Frame-Options'\)/);
+  assert.match(authSource, /removeHeader\('Cross-Origin-Opener-Policy'\)/);
   assert.match(authSource, /isDocumentRequest/);
 
   const inlineScript = indexSource.match(/<script type="text\/javascript">([\s\S]*?)<\/script>/)?.[1];
