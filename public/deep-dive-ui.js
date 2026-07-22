@@ -15,78 +15,41 @@ const TAB_FLOW = [
   { id: 'practice', label: 'Попробовать' },
 ];
 
-function ensureComponentStyles() {
-  if (document.querySelector('#deepDiveClarityStyles')) return;
-  const style = document.createElement('style');
-  style.id = 'deepDiveClarityStyles';
-  style.textContent = `
-    .deep-dive-progress{display:grid;grid-template-columns:auto minmax(120px,1fr);gap:14px;align-items:center;padding:10px 20px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
-    .deep-dive-progress span{font-size:12px;font-weight:700;color:rgba(238,233,248,.66);white-space:nowrap}
-    .deep-dive-progress-track{height:4px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
-    .deep-dive-progress-track i{display:block;height:100%;width:20%;border-radius:inherit;background:linear-gradient(90deg,#f5d38c,#d8b8ff);transition:width .24s ease}
-    .deep-purpose.beginner{border-color:rgba(245,211,140,.22);background:linear-gradient(135deg,rgba(245,211,140,.08),rgba(216,184,255,.05))}
-    .deep-purpose.beginner>span,.deep-section-intro>span{letter-spacing:.045em}
-    .deep-reading-key{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
-    .deep-reading-key article{padding:14px 15px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
-    .deep-reading-key b{display:block;margin-bottom:6px;font-size:12px;color:#f3d79f}
-    .deep-reading-key p{margin:0;font-size:13px;line-height:1.55;color:rgba(238,233,248,.68)}
-    .deep-technical{margin-top:16px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.02);overflow:hidden}
-    .deep-technical summary{cursor:pointer;padding:15px 17px;font-size:13px;font-weight:700;color:rgba(238,233,248,.74);list-style:none}
-    .deep-technical summary::-webkit-details-marker{display:none}
-    .deep-technical summary::after{content:'+';float:right;color:#f3d79f}
-    .deep-technical[open] summary::after{content:'−'}
-    .deep-technical-inner{padding:0 15px 15px}
-    .deep-step-footer{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07)}
-    .deep-step-footer button{min-height:42px;border-radius:14px;padding:0 16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.035);color:#eee9f8;font:inherit;font-weight:700;cursor:pointer}
-    .deep-step-footer button.primary{margin-left:auto;border-color:rgba(245,211,140,.32);background:linear-gradient(135deg,#f4d28b,#d9baff);color:#17121c}
-    .deep-step-footer button:focus-visible,.deep-dive-tabs button:focus-visible{outline:2px solid #f4d28b;outline-offset:2px}
-    .deep-section-intro.compact{margin-bottom:14px}
-    .deep-section-intro.compact p{max-width:760px}
-    .deep-life-example>span{font-variant-numeric:tabular-nums}
-    .deep-difference-simple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-    .deep-difference-simple article{padding:15px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
-    .deep-difference-simple b{display:block;margin-bottom:7px;color:#f3d79f}
-    .deep-difference-simple p{margin:0;color:rgba(238,233,248,.72);line-height:1.55}
-    @media (max-width:760px){
-      .deep-reading-key,.deep-difference-simple{grid-template-columns:1fr}
-      .deep-dive-progress{grid-template-columns:1fr;gap:8px}
-      .deep-step-footer{align-items:stretch;flex-direction:column-reverse}
-      .deep-step-footer button,.deep-step-footer button.primary{width:100%;margin-left:0}
-    }
-  `;
-  document.head.append(style);
-}
+let activeCard = null;
+let activeTab = 'meaning';
+let lastFocusedElement = null;
+let previousBodyOverflow = '';
 
 function ensureModal() {
   let backdrop = document.querySelector('#deepDiveModal');
   if (backdrop) return backdrop;
 
-  ensureComponentStyles();
   backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop deep-dive-backdrop hidden';
   backdrop.id = 'deepDiveModal';
+  backdrop.setAttribute('aria-hidden', 'true');
   backdrop.innerHTML = `
-    <section class="deep-dive-modal glass-panel" role="dialog" aria-modal="true" aria-labelledby="deepDiveTitle">
+    <section class="deep-dive-modal glass-panel" role="dialog" aria-modal="true" aria-labelledby="deepDiveTitle" aria-describedby="deepDiveQuestion">
       <header class="deep-dive-head">
         <div class="deep-dive-heading">
-          <span class="deep-dive-icon" id="deepDiveIcon">✦</span>
+          <span class="deep-dive-icon" id="deepDiveIcon" aria-hidden="true">✦</span>
           <div>
             <div class="panel-kicker" id="deepDiveKicker">Разобраться в себе</div>
             <h2 id="deepDiveTitle">Полный разбор</h2>
             <p id="deepDivePosition"></p>
           </div>
         </div>
-        <button class="modal-close" type="button" data-close-deep aria-label="Закрыть">×</button>
+        <button class="modal-close" type="button" data-close-deep aria-label="Закрыть полный разбор">×</button>
       </header>
       <div class="deep-dive-question" id="deepDiveQuestion"></div>
-      <nav class="deep-dive-tabs" aria-label="Разделы подробного разбора">
-        ${TAB_FLOW.map((tab, index) => `<button class="${index === 0 ? 'active' : ''}" type="button" data-deep-tab="${tab.id}">${tab.label}</button>`).join('')}
+      <nav class="deep-dive-tabs" role="tablist" aria-label="Разделы подробного разбора">
+        ${TAB_FLOW.map((tab, index) => `<button class="${index === 0 ? 'active' : ''}" type="button" role="tab" id="deepDiveTab-${tab.id}" aria-controls="deepDiveContent" aria-selected="${index === 0 ? 'true' : 'false'}" tabindex="${index === 0 ? '0' : '-1'}" data-deep-tab="${tab.id}">${tab.label}</button>`).join('')}
       </nav>
       <div class="deep-dive-progress" aria-live="polite">
         <span id="deepDiveProgressLabel">Раздел 1 из 5 · Суть</span>
         <div class="deep-dive-progress-track" aria-hidden="true"><i id="deepDiveProgressBar"></i></div>
       </div>
-      <div class="deep-dive-scroll" id="deepDiveContent"></div>
+      <div class="deep-dive-scroll" id="deepDiveContent" role="tabpanel" aria-labelledby="deepDiveTab-meaning" tabindex="0"></div>
     </section>`;
   document.body.append(backdrop);
 
@@ -94,24 +57,43 @@ function ensureModal() {
   backdrop.addEventListener('click', (event) => {
     if (event.target === backdrop) closeDeepDive();
   });
-  backdrop.querySelector('.deep-dive-tabs').addEventListener('click', (event) => {
+
+  const tabs = backdrop.querySelector('.deep-dive-tabs');
+  tabs.addEventListener('click', (event) => {
     const button = event.target.closest('[data-deep-tab]');
     if (!button) return;
     activateTab(button.dataset.deepTab);
   });
+  tabs.addEventListener('keydown', (event) => {
+    const currentIndex = TAB_FLOW.findIndex((item) => item.id === activeTab);
+    let nextIndex = currentIndex;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % TAB_FLOW.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + TAB_FLOW.length) % TAB_FLOW.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = TAB_FLOW.length - 1;
+    else return;
+
+    event.preventDefault();
+    activateTab(TAB_FLOW[nextIndex].id);
+    backdrop.querySelector(`[data-deep-tab="${TAB_FLOW[nextIndex].id}"]`)?.focus();
+  });
+
   backdrop.querySelector('#deepDiveContent').addEventListener('click', (event) => {
     const next = event.target.closest('[data-deep-next]');
     const previous = event.target.closest('[data-deep-previous]');
     const done = event.target.closest('[data-deep-done]');
-    if (next) activateTab(next.dataset.deepNext);
-    if (previous) activateTab(previous.dataset.deepPrevious);
+    if (next) {
+      activateTab(next.dataset.deepNext);
+      requestAnimationFrame(() => backdrop.querySelector('#deepDiveContent')?.focus({ preventScroll: true }));
+    }
+    if (previous) {
+      activateTab(previous.dataset.deepPrevious);
+      requestAnimationFrame(() => backdrop.querySelector('#deepDiveContent')?.focus({ preventScroll: true }));
+    }
     if (done) closeDeepDive();
   });
   return backdrop;
 }
-
-let activeCard = null;
-let activeTab = 'meaning';
 
 function formulaCard(item, className = '', title = '') {
   return `<article class="deep-formula-card ${className}"><span>${escapeHtml(title || item.title)}</span><p>${escapeHtml(item.text)}</p></article>`;
@@ -132,7 +114,7 @@ function renderMeaning(guide) {
       <article><b>Знак</b><p>Как именно вы естественно решаете её.</p></article>
       <article><b>Дом</b><p>Где эта механика чаще встречается в жизни.</p></article>
     </div>
-    <div class="deep-formula-grid">
+    <div class="deep-formula-grid primary">
       ${formulaCard(guide.formula.planet, 'planet', 'Что это за внутренняя задача')}
       ${formulaCard(guide.formula.sign, 'sign', 'Как она работает именно у вас')}
       ${formulaCard(guide.formula.house, 'house', 'Где это особенно заметно')}
@@ -140,7 +122,7 @@ function renderMeaning(guide) {
     <details class="deep-technical">
       <summary>Астрологические детали для более глубокого изучения</summary>
       <div class="deep-technical-inner">
-        <div class="deep-formula-grid">${formulaCard(guide.formula.element, 'element', 'Через какой канал включается')}</div>
+        <div class="deep-formula-grid technical-grid">${formulaCard(guide.formula.element, 'element', 'Через какой канал включается')}</div>
         <div class="deep-nuance-grid">
           ${formulaCard(guide.formula.mode, 'nuance')}
           ${formulaCard(guide.formula.degree, 'nuance')}
@@ -231,9 +213,15 @@ function activateTab(tab) {
   if (!activeCard?.deepDive) return;
   activeTab = TAB_FLOW.some((item) => item.id === tab) ? tab : 'meaning';
   const backdrop = ensureModal();
+  const activeButton = backdrop.querySelector(`[data-deep-tab="${activeTab}"]`);
+
   backdrop.querySelectorAll('[data-deep-tab]').forEach((button) => {
-    button.classList.toggle('active', button.dataset.deepTab === activeTab);
+    const selected = button.dataset.deepTab === activeTab;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-selected', String(selected));
+    button.tabIndex = selected ? 0 : -1;
   });
+
   const guide = activeCard.deepDive;
   const renderers = {
     meaning: renderMeaning,
@@ -244,10 +232,34 @@ function activateTab(tab) {
   };
   const index = TAB_FLOW.findIndex((item) => item.id === activeTab);
   const current = TAB_FLOW[index];
+  const content = backdrop.querySelector('#deepDiveContent');
   backdrop.querySelector('#deepDiveProgressLabel').textContent = `Раздел ${index + 1} из ${TAB_FLOW.length} · ${current.label}`;
   backdrop.querySelector('#deepDiveProgressBar').style.width = `${((index + 1) / TAB_FLOW.length) * 100}%`;
-  backdrop.querySelector('#deepDiveContent').innerHTML = `${(renderers[activeTab] || renderMeaning)(guide)}${renderStepFooter(activeTab)}`;
-  backdrop.querySelector('#deepDiveContent').scrollTop = 0;
+  content.setAttribute('aria-labelledby', `deepDiveTab-${activeTab}`);
+  content.innerHTML = `<div class="deep-dive-content-inner">${(renderers[activeTab] || renderMeaning)(guide)}${renderStepFooter(activeTab)}</div>`;
+  content.scrollTop = 0;
+
+  const tabs = backdrop.querySelector('.deep-dive-tabs');
+  if (activeButton && tabs.scrollWidth > tabs.clientWidth) {
+    activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+function trapFocus(event, backdrop) {
+  if (event.key !== 'Tab') return;
+  const focusable = [...backdrop.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), details > summary, [tabindex]:not([tabindex="-1"])')]
+    .filter((element) => element.offsetParent !== null);
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 export function deepDiveButtonMarkup(card) {
@@ -261,26 +273,39 @@ export function openDeepDive(card) {
   if (!card?.deepDive) return;
   activeCard = card;
   activeTab = 'meaning';
+  lastFocusedElement = document.activeElement;
+  previousBodyOverflow = document.body.style.overflow;
+
   const backdrop = ensureModal();
   backdrop.querySelector('#deepDiveIcon').textContent = card.icon || '✦';
   backdrop.querySelector('#deepDiveKicker').textContent = card.deepDive.journeyRole;
   backdrop.querySelector('#deepDiveTitle').textContent = card.title;
   backdrop.querySelector('#deepDivePosition').textContent = card.position;
   backdrop.querySelector('#deepDiveQuestion').textContent = card.deepDive.headline;
-  activateTab('meaning');
   backdrop.classList.remove('hidden');
+  backdrop.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
-  requestAnimationFrame(() => backdrop.querySelector('[data-close-deep]').focus());
+  activateTab('meaning');
+  requestAnimationFrame(() => backdrop.querySelector('[data-close-deep]')?.focus());
 }
 
 export function closeDeepDive() {
   const backdrop = document.querySelector('#deepDiveModal');
   if (!backdrop || backdrop.classList.contains('hidden')) return;
   backdrop.classList.add('hidden');
-  document.body.style.overflow = '';
+  backdrop.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = previousBodyOverflow;
   activeCard = null;
+  requestAnimationFrame(() => lastFocusedElement?.focus?.());
 }
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeDeepDive();
+  const backdrop = document.querySelector('#deepDiveModal');
+  if (!backdrop || backdrop.classList.contains('hidden')) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeDeepDive();
+    return;
+  }
+  trapFocus(event, backdrop);
 });
