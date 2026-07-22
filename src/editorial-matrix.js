@@ -26,13 +26,13 @@ export function buildEditorialMatrix(item) {
 
   const matrix = {
     function: sentence(role.function),
-    sign: sentence(`${capitalize(signLocation(item.sign))} эта функция работает ${sign.mechanism}; её сильная сторона — ${sign.strength}`),
+    sign: sentence(`${capitalize(signLocation(item.sign))} эта внутренняя сила включается ${sign.mechanism}; её преимущество — ${sign.strength}`),
     house: item.house
-      ? sentence(`${item.house} дом переносит эту механику в сферу «${area}»`)
-      : 'Время рождения не указано, поэтому HeroStar не приписывает этой функции конкретный дом.',
-    lifeScenario: sentence(`Жизненный сценарий: ${sign.scenario}${item.house ? ` — особенно в ситуациях, связанных со сферой «${area}»` : ''}`),
-    contrast: sentence(`${capitalize(signLocation(oppositeName))} та же функция чаще действовала бы ${opposite.mechanism}; ваше отличие — ${sign.mechanism}`),
-    trap: sentence(`Ловушка: ${sign.shadow}`),
+      ? sentence(`Сильнее всего эта механика заметна в сфере «${area}», за которую отвечает ${item.house} дом`)
+      : 'Время рождения не указано, поэтому HeroStar не приписывает этой внутренней силе конкретную сферу жизни.',
+    lifeScenario: sentence(`${sign.scenario}${item.house ? ` — особенно когда ситуация касается сферы «${area}»` : ''}`),
+    contrast: sentence(`${capitalize(signLocation(oppositeName))} человек чаще действовал бы ${opposite.mechanism}; ваш естественный способ — ${sign.mechanism}`),
+    trap: sentence(`Эта сила начинает мешать, когда ${sign.shadow}`),
     key: sentence(role.key),
     action: sentence(role.action),
     button: role.button,
@@ -47,13 +47,13 @@ export function buildEditorialMatrix(item) {
     position: positionLabel(item),
     matrix,
     deepDive: buildDeepDive(item),
-    lead: `${matrix.function} ${matrix.sign}`,
-    manifestation: matrix.house,
-    uniqueExample: matrix.lifeScenario,
+    lead: `Что в вас работает. ${matrix.function} Как именно. ${matrix.sign}`,
+    manifestation: `Где это проявляется. ${matrix.house}`,
+    uniqueExample: `Знакомый жизненный сюжет: ${matrix.lifeScenario}`,
     contrast: matrix.contrast,
     trap: matrix.trap,
-    key: matrix.key,
-    action: matrix.action,
+    key: `Что возвращает силу: ${matrix.key}`,
+    action: `Попробуйте сейчас: ${matrix.action}`,
     buttonLabel: matrix.button,
     evidence: [
       positionLabel(item),
