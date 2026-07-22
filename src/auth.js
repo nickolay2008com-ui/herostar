@@ -3,7 +3,7 @@ import { parseCookies, publicError } from './utils.js';
 import { getUser, upsertUser } from './store.js';
 
 const COOKIE_NAME = 'herostar_session';
-const METRIKA_INLINE_SCRIPT_HASH = "'sha256-mPQUoBqeMnDqxGIrUwLYvjoTRI5IV+wTIvuTQeCpWBE='";
+const METRIKA_INLINE_SCRIPT_HASH = "'sha256-jp2EkOkNiGIs4JfVpE2oclfqqUq75ROwSo88kh7TP5k='";
 const METRIKA_GENERAL_SOURCES = [
   'https://mc.yandex.ru',
   'https://mc.yandex.com',
