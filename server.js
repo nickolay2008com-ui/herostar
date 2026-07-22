@@ -42,6 +42,7 @@ function telegramBotUsername() {
 }
 
 let telegramConfigCache = { expiresAt: 0, value: null };
+let publicStatsCache = { expiresAt: 0, value: null };
 
 async function telegramConfiguration() {
   if (telegramConfigCache.value && telegramConfigCache.expiresAt > Date.now()) {
@@ -124,6 +125,25 @@ async function safeTrack(record) {
   } catch (error) {
     console.error('Analytics event was not saved:', error);
   }
+}
+
+async function publicStats() {
+  if (publicStatsCache.value && publicStatsCache.expiresAt > Date.now()) {
+    return publicStatsCache.value;
+  }
+
+  const overview = await getAdminOverview(7);
+  const daily = Array.isArray(overview.daily) ? overview.daily : [];
+  const charts7d = daily.reduce((sum, item) => sum + Number(item.charts || 0), 0);
+  const value = {
+    totalCharts: Math.max(0, Number(overview.summary?.chartsTotal || 0)),
+    charts7d: Math.max(0, charts7d),
+    charts24h: Math.max(0, Number(overview.summary?.charts24h || 0)),
+    updatedAt: new Date().toISOString(),
+  };
+
+  publicStatsCache = { value, expiresAt: Date.now() + 5 * 60_000 };
+  return value;
 }
 
 app.set('trust proxy', 1);
@@ -238,6 +258,15 @@ function presentChart(record, req, { forceUnlocked = false } = {}) {
 }
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'herostar' }));
+
+app.get('/api/public/stats', async (_req, res, next) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.json(await publicStats());
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.get('/api/config', async (req, res, next) => {
   try {
