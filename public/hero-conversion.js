@@ -1,15 +1,11 @@
 const activityNode = document.querySelector('#heroActivity');
+const socialProofKicker = document.querySelector('.social-proof-kicker');
+const socialProofMessage = document.querySelector('.social-proof-copy strong');
 const carousel = document.querySelector('[data-value-carousel]');
 const purchaseVisual = document.querySelector('[data-purchase-visual]');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const activities = [
-  'В карте: эмоциональная опора по Луне',
-  'В карте: сильный способ действия по Марсу',
-  'В карте: ресурс отношений по Венере',
-  'В карте: маршрут роста по Северному узлу',
-  'Сначала 3 открытия бесплатно, затем полная карта',
-];
+const numberFormat = new Intl.NumberFormat('ru-RU');
 
 const purchaseStages = [
   { label: 'Сначала', value: 'вы видите качество разбора бесплатно' },
@@ -42,27 +38,53 @@ function createRotator({ interval, onStep }) {
   };
 }
 
-if (activityNode) {
-  let activityIndex = 0;
-  const activityRotator = createRotator({
-    interval: 3600,
-    onStep: () => {
-      activityIndex = (activityIndex + 1) % activities.length;
-      activityNode.animate(
-        [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-4px)' }],
-        { duration: 160, easing: 'ease', fill: 'forwards' },
-      ).finished.then(() => {
-        activityNode.textContent = activities[activityIndex];
-        activityNode.animate(
-          [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'translateY(0)' }],
-          { duration: 220, easing: 'ease', fill: 'forwards' },
-        );
-      }).catch(() => {});
-    },
-  });
-  activityRotator.start();
-  document.addEventListener('visibilitychange', activityRotator.start);
+function wordForm(value, forms) {
+  const number = Math.abs(Number(value)) % 100;
+  const last = number % 10;
+  if (number > 10 && number < 20) return forms[2];
+  if (last > 1 && last < 5) return forms[1];
+  if (last === 1) return forms[0];
+  return forms[2];
 }
+
+function renderSocialProof(stats) {
+  const totalCharts = Math.max(0, Number(stats?.totalCharts || 0));
+  const charts7d = Math.max(0, Number(stats?.charts7d || 0));
+  const charts24h = Math.max(0, Number(stats?.charts24h || 0));
+
+  if (socialProofKicker) {
+    socialProofKicker.textContent = totalCharts > 0
+      ? `${numberFormat.format(totalCharts)} ${wordForm(totalCharts, ['карта создана', 'карты созданы', 'карт создано'])}`
+      : 'Персональный формат без общих гороскопов';
+  }
+
+  if (socialProofMessage) {
+    socialProofMessage.textContent = 'Каждая карта рассчитывается отдельно по данным рождения и превращается в понятный маршрут: ресурс, блок, ключ и действие.';
+  }
+
+  if (!activityNode) return;
+
+  if (charts24h > 0) {
+    activityNode.textContent = `${numberFormat.format(charts24h)} ${wordForm(charts24h, ['новая карта', 'новые карты', 'новых карт'])} за последние 24 часа`;
+  } else if (charts7d > 0) {
+    activityNode.textContent = `${numberFormat.format(charts7d)} ${wordForm(charts7d, ['новая карта', 'новые карты', 'новых карт'])} за последние 7 дней`;
+  } else {
+    activityNode.textContent = 'Статистика обновляется автоматически по созданным картам';
+  }
+}
+
+async function loadSocialProof() {
+  try {
+    const response = await fetch('/api/public/stats', { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error('Public stats unavailable');
+    renderSocialProof(await response.json());
+  } catch {
+    renderSocialProof(null);
+  }
+}
+
+renderSocialProof(null);
+loadSocialProof();
 
 if (carousel) {
   const slides = [...carousel.querySelectorAll('[data-value-slide]')];
