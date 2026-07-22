@@ -3,6 +3,53 @@ import { parseCookies, publicError } from './utils.js';
 import { getUser, upsertUser } from './store.js';
 
 const COOKIE_NAME = 'herostar_session';
+const METRIKA_FRAME_ANCESTORS = [
+  "'self'",
+  'https://metrika.yandex.ru',
+  'https://metrica.yandex.ru',
+  'https://analytics.yandex.ru',
+  'https://metr.yandex.ru',
+  'https://metrika.ya.ru',
+  'https://metrika.yandex.by',
+  'https://metrika.yandex.com',
+  'https://metrika.yandex.com.tr',
+  'https://metrika.yandex.kz',
+  'https://analytics.yandex.by',
+  'https://analytics.yandex.com',
+  'https://analytics.yandex.com.tr',
+  'https://analytics.yandex.kz',
+  'https://metr.yandex.by',
+  'https://metr.yandex.com',
+  'https://metr.yandex.com.tr',
+  'https://metr.yandex.kz',
+  'https://metrica.yandex.by',
+  'https://metrica.yandex.com',
+  'https://metrica.yandex.com.tr',
+  'https://metrica.yandex.kz',
+  'https://metrika.yandex.uz',
+];
+
+function allowMetrikaDocumentEmbedding(req, res) {
+  const path = String(req.path || '/');
+  const lastSegment = path.split('/').filter(Boolean).at(-1) || '';
+  const isDocumentRequest = req.method === 'GET'
+    && (path === '/' || path.endsWith('.html') || !lastSegment.includes('.'));
+
+  if (!isDocumentRequest) return;
+
+  const policy = res.getHeader('Content-Security-Policy');
+  if (typeof policy === 'string') {
+    const directive = `frame-ancestors ${METRIKA_FRAME_ANCESTORS.join(' ')}`;
+    const nextPolicy = /frame-ancestors\s+[^;]*/i.test(policy)
+      ? policy.replace(/frame-ancestors\s+[^;]*/i, directive)
+      : `${policy.replace(/;?\s*$/, ';')} ${directive};`;
+    res.setHeader('Content-Security-Policy', nextPolicy);
+  }
+
+  // Старый X-Frame-Options не умеет точечно разрешать домены Метрики.
+  // Доступ ограничивает CSP frame-ancestors выше.
+  res.removeHeader('X-Frame-Options');
+}
 
 function secret() {
   return process.env.SESSION_SECRET || 'development-only-change-me';
@@ -82,8 +129,9 @@ export function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`);
 }
 
-export async function attachUser(req, _res, next) {
+export async function attachUser(req, res, next) {
   try {
+    allowMetrikaDocumentEmbedding(req, res);
     const cookies = parseCookies(req.headers.cookie || '');
     const session = decodeSession(cookies[COOKIE_NAME]);
     req.user = session?.sub ? await getUser(session.sub) : null;
