@@ -1,4 +1,5 @@
 import { buildDeepDive, signLocation } from './deep-dive-opportunities-ru.js';
+import { buildLifeApplication } from './life-application-ru.js';
 import { houseKnowledge, planetKnowledge, signKnowledge } from './knowledge.js';
 
 function sentence(value) {
@@ -28,7 +29,12 @@ export function buildEditorialMatrix(item) {
     function: sentence(role.function),
     sign: sentence(`${capitalize(signLocation(item.sign))} эта внутренняя сила включается ${sign.mechanism}; её преимущество — ${sign.strength}`),
     house: item.house
-      ? sentence(`Сильнее всего эта механика заметна в сфере «${area}», за которую отвечает ${item.house} дом`)
+      ? sentence(buildLifeApplication({
+        planetKey: item.key,
+        sign: item.sign,
+        house: item.house,
+        fallbackArea: area,
+      }))
       : 'Время рождения не указано, поэтому HeroStar не приписывает этой внутренней силе конкретную сферу жизни.',
     lifeScenario: sentence(`${sign.scenario}${item.house ? ` — особенно когда ситуация касается сферы «${area}»` : ''}`),
     contrast: sentence(`${capitalize(signLocation(oppositeName))} человек чаще действовал бы ${opposite.mechanism}; ваш естественный способ — ${sign.mechanism}`),
@@ -48,7 +54,7 @@ export function buildEditorialMatrix(item) {
     matrix,
     deepDive: buildDeepDive(item),
     lead: `Что в вас работает. ${matrix.function} Как именно. ${matrix.sign}`,
-    manifestation: `Где это проявляется. ${matrix.house}`,
+    manifestation: `Где это работает в жизни. ${matrix.house}`,
     uniqueExample: `Знакомый жизненный сюжет: ${matrix.lifeScenario}`,
     contrast: matrix.contrast,
     trap: matrix.trap,
