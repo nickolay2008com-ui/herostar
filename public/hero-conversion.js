@@ -54,7 +54,7 @@ function renderSocialProof(stats) {
 
   if (socialProofKicker) {
     socialProofKicker.textContent = totalCharts > 0
-      ? `${numberFormat.format(totalCharts)} ${wordForm(totalCharts, ['персональная карта создана', 'персональные карты созданы', 'персональных карт создано'])}`
+      ? `${numberFormat.format(totalCharts)} ${wordForm(totalCharts, ['карта создана', 'карты созданы', 'карт создано'])}`
       : 'Персональный формат без общих гороскопов';
   }
 
