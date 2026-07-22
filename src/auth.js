@@ -3,6 +3,19 @@ import { parseCookies, publicError } from './utils.js';
 import { getUser, upsertUser } from './store.js';
 
 const COOKIE_NAME = 'herostar_session';
+const METRIKA_GENERAL_SOURCES = [
+  'https://mc.yandex.ru',
+  'https://mc.yandex.com',
+  'https://mc.webvisor.com',
+  'https://mc.webvisor.org',
+  'https://yastatic.net',
+];
+const METRIKA_SOCKET_SOURCES = [
+  'wss://mc.yandex.ru',
+  'wss://mc.yandex.com',
+  'wss://mc.webvisor.com',
+  'wss://mc.webvisor.org',
+];
 const METRIKA_FRAME_ANCESTORS = [
   "'self'",
   'https://metrika.yandex.ru',
@@ -10,6 +23,7 @@ const METRIKA_FRAME_ANCESTORS = [
   'https://analytics.yandex.ru',
   'https://metr.yandex.ru',
   'https://metrika.ya.ru',
+  'https://metrica.ya.ru',
   'https://metrika.yandex.by',
   'https://metrika.yandex.com',
   'https://metrika.yandex.com.tr',
@@ -27,7 +41,21 @@ const METRIKA_FRAME_ANCESTORS = [
   'https://metrica.yandex.com.tr',
   'https://metrica.yandex.kz',
   'https://metrika.yandex.uz',
+  'https://webvisor.com',
+  'https://*.webvisor.com',
 ];
+
+function mergeCspDirective(policy, name, sources) {
+  const pattern = new RegExp(`${name}\\s+([^;]*)`, 'i');
+  const match = policy.match(pattern);
+  const existing = match?.[1]?.trim().split(/\s+/).filter(Boolean) || [];
+  const merged = [...new Set([...existing, ...sources])];
+  const directive = `${name} ${merged.join(' ')}`;
+
+  return match
+    ? policy.replace(pattern, directive)
+    : `${policy.replace(/;?\s*$/, ';')} ${directive};`;
+}
 
 function allowMetrikaDocumentEmbedding(req, res) {
   const path = String(req.path || '/');
@@ -39,14 +67,19 @@ function allowMetrikaDocumentEmbedding(req, res) {
 
   const policy = res.getHeader('Content-Security-Policy');
   if (typeof policy === 'string') {
-    const directive = `frame-ancestors ${METRIKA_FRAME_ANCESTORS.join(' ')}`;
-    const nextPolicy = /frame-ancestors\s+[^;]*/i.test(policy)
-      ? policy.replace(/frame-ancestors\s+[^;]*/i, directive)
-      : `${policy.replace(/;?\s*$/, ';')} ${directive};`;
+    let nextPolicy = policy;
+    nextPolicy = mergeCspDirective(nextPolicy, 'script-src', METRIKA_GENERAL_SOURCES);
+    nextPolicy = mergeCspDirective(nextPolicy, 'connect-src', [
+      ...METRIKA_GENERAL_SOURCES,
+      ...METRIKA_SOCKET_SOURCES,
+    ]);
+    nextPolicy = mergeCspDirective(nextPolicy, 'frame-src', ['blob:', ...METRIKA_GENERAL_SOURCES]);
+    nextPolicy = mergeCspDirective(nextPolicy, 'child-src', ['blob:', ...METRIKA_GENERAL_SOURCES]);
+    nextPolicy = mergeCspDirective(nextPolicy, 'frame-ancestors', METRIKA_FRAME_ANCESTORS);
     res.setHeader('Content-Security-Policy', nextPolicy);
   }
 
-  // Старый X-Frame-Options не умеет точечно разрешать домены Метрики.
+  // X-Frame-Options не умеет точечно разрешать домены Метрики.
   // Доступ ограничивает CSP frame-ancestors выше.
   res.removeHeader('X-Frame-Options');
 }
