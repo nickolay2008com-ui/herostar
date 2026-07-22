@@ -66,9 +66,9 @@ export function buildFallbackPortrait(chart) {
 
   return {
     version: '2.2-core',
-    title: `Секретная карта сокровищ ${chart.person.name}`,
-    subtitle: 'Не набор качеств, а ясная механика: функция → знак → дом → жизненный сценарий → контраст → ловушка → ключ → действие.',
-    archetype: `${planetKnowledge('sun').title}: ${sun.sign}. ${planetKnowledge('moon').title}: ${moon.sign}. ${planetKnowledge('mars').title}: ${mars.sign}. Направление роста: ${node.sign}.`,
+    title: `Карта внутренних ресурсов ${chart.person.name}`,
+    subtitle: 'Читайте её как понятный маршрут: что в вас работает → как именно → где это проявляется → какой сюжет повторяется → где вы теряете силу → что помогает → какой шаг сделать.',
+    archetype: `Ваш центр — Солнце в ${sun.sign}. Эмоциональная опора — Луна в ${moon.sign}. Способ действовать — Марс в ${mars.sign}. Новое направление роста — Северный узел в ${node.sign}.`,
     cards,
     synthesis: buildSynthesis(chart),
     disclaimer: 'Астрологическая интерпретация является инструментом саморефлексии, а не научной диагностикой, гарантией событий или заменой профессиональной помощи.',
