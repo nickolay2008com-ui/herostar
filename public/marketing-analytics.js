@@ -1,8 +1,4 @@
-const META_SELECTOR = 'meta[name="yandex-metrika-id"]';
 const HERO_STAR_COUNTER_ID = 110937602;
-const metrikaMeta = document.querySelector(META_SELECTOR);
-if (metrikaMeta) metrikaMeta.content = String(HERO_STAR_COUNTER_ID);
-const COUNTER_ID = HERO_STAR_COUNTER_ID;
 const ATTRIBUTION_KEY = 'herostar_first_touch';
 const GOALS = new Set([
   'landing_to_bot',
@@ -30,34 +26,12 @@ function readAttribution() {
 
 const attribution = readAttribution();
 
-function installMetrika() {
-  if (!COUNTER_ID || window.ym) return;
-  window.ym = function ymQueue(...args) {
-    (window.ym.a = window.ym.a || []).push(args);
-  };
-  window.ym.l = Date.now();
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = 'https://mc.yandex.ru/metrika/tag.js';
-  script.referrerPolicy = 'strict-origin-when-cross-origin';
-  document.head.append(script);
-  window.ym(COUNTER_ID, 'init', {
-    clickmap: true,
-    trackLinks: true,
-    accurateTrackBounce: true,
-    webvisor: false,
-    ecommerce: false,
-  });
-}
-
 export function reachHeroStarGoal(goal, params = {}) {
-  if (!COUNTER_ID || !GOALS.has(goal)) return;
-  installMetrika();
-  window.ym(COUNTER_ID, 'reachGoal', goal, { ...attribution, ...params });
+  if (!GOALS.has(goal) || typeof window.ym !== 'function') return;
+  window.ym(HERO_STAR_COUNTER_ID, 'reachGoal', goal, { ...attribution, ...params });
 }
 
 window.herostarReachGoal = reachHeroStarGoal;
-installMetrika();
 
 const previousFetch = window.fetch.bind(window);
 window.fetch = async (input, init = {}) => {

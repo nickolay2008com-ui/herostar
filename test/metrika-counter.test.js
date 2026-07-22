@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const analyticsUrl = new URL('../public/marketing-analytics.js', import.meta.url);
 const indexUrl = new URL('../public/index.html', import.meta.url);
 
-test('HeroStar использует только собственный счётчик Метрики во всех точках входа', async () => {
+test('HeroStar использует официальный код одного собственного счётчика Метрики', async () => {
   const [analyticsSource, indexSource] = await Promise.all([
     readFile(analyticsUrl, 'utf8'),
     readFile(indexUrl, 'utf8'),
@@ -13,7 +13,13 @@ test('HeroStar использует только собственный счёт
   const allSources = `${indexSource}\n${analyticsSource}`;
 
   assert.match(indexSource, /yandex-metrika-id" content="110937602"/);
+  assert.match(indexSource, /https:\/\/mc\.yandex\.ru\/metrika\/tag\.js\?id=110937602/);
+  assert.match(indexSource, /ym\(110937602, 'init', \{ssr:true, webvisor:true, clickmap:true/);
+  assert.match(indexSource, /https:\/\/mc\.yandex\.ru\/watch\/110937602/);
   assert.match(analyticsSource, /HERO_STAR_COUNTER_ID\s*=\s*110937602/);
+  assert.doesNotMatch(analyticsSource, /installMetrika/);
   assert.doesNotMatch(allSources, /110783019/);
-  assert.match(analyticsSource, /metrikaMeta\.content\s*=\s*String\(HERO_STAR_COUNTER_ID\)/);
+
+  const initCalls = indexSource.match(/ym\(110937602, 'init'/g) || [];
+  assert.equal(initCalls.length, 1);
 });
