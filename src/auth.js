@@ -86,6 +86,10 @@ function allowMetrikaDocumentEmbedding(req, res) {
   // X-Frame-Options не умеет точечно разрешать домены Метрики.
   // Доступ ограничивает CSP frame-ancestors выше.
   res.removeHeader('X-Frame-Options');
+
+  // Визуальный редактор открывает сайт из интерфейса Метрики и связывается
+  // с новой вкладкой через window.opener. COOP разрывает эту связь.
+  res.removeHeader('Cross-Origin-Opener-Policy');
 }
 
 function secret() {
