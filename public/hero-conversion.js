@@ -1,3 +1,5 @@
+import './practice-engagement.js';
+
 const activityNode = document.querySelector('#heroActivity');
 const socialProofKicker = document.querySelector('.social-proof-kicker');
 const socialProofMessage = document.querySelector('.social-proof-copy strong');
