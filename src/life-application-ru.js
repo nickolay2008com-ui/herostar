@@ -146,8 +146,8 @@ export function buildLifeApplication({ planetKey, sign, house, fallbackArea = nu
   const houseApplication = HOUSE_APPLICATIONS[house] || fallbackHouseApplication(house, fallbackArea);
 
   return [
-    `В жизни эта сила помогает ${planetApplication} ${houseApplication.context}.`,
-    `Ваш рабочий способ здесь — ${signApplication}.`,
+    `Здесь эта сила помогает ${planetApplication} ${houseApplication.context}.`,
+    `Ваш рабочий способ — ${signApplication}.`,
     `Например: ${houseApplication.examples.join('; ')}.`,
   ].join(' ');
 }
