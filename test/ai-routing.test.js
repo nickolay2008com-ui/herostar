@@ -67,3 +67,26 @@ test('продолжение разговора не повторяет полн
   assert.match(prompt, /одну главную мысль/i);
   assert.match(prompt, /нескольких точных предложений/i);
 });
+
+test('возможности показываются после пользы и без каталога функций', () => {
+  const prompt = consultationSystemPrompt('deep');
+  assert.match(prompt, /только после того, как текущий ответ уже дал человеку самостоятельную пользу/i);
+  assert.match(prompt, /не перечисляй каталог функций/i);
+  assert.match(prompt, /не больше двух ближайших направлений/i);
+  assert.match(prompt, /не создавай искусственную незавершённость/i);
+  assert.match(prompt, /не повторяй направление/i);
+});
+
+test('неопределившемуся человеку предлагаются три естественных входа', () => {
+  const prompt = consultationSystemPrompt('deep');
+  assert.match(prompt, /разобрать конкретную ситуацию/i);
+  assert.match(prompt, /открыть сильную сторону карты/i);
+  assert.match(prompt, /куда сейчас естественнее направить силы/i);
+});
+
+test('диалог не рекламирует возможности в каждом сообщении', () => {
+  const prompt = consultationSystemPrompt('dialog');
+  assert.match(prompt, /не показывай возможности в каждом сообщении/i);
+  assert.match(prompt, /естественной точке перехода/i);
+  assert.match(prompt, /не больше двух направлений/i);
+});
