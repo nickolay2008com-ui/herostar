@@ -1,4 +1,5 @@
 import { buildDeepDive, signLocation } from './deep-dive-opportunities-ru.js';
+import { describeHouseManifestation } from './house-manifestations-ru.js';
 import { houseKnowledge, planetKnowledge, signKnowledge } from './knowledge.js';
 
 function sentence(value) {
@@ -28,7 +29,7 @@ export function buildEditorialMatrix(item) {
     function: sentence(role.function),
     sign: sentence(`${capitalize(signLocation(item.sign))} эта внутренняя сила включается ${sign.mechanism}; её преимущество — ${sign.strength}`),
     house: item.house
-      ? sentence(`Сильнее всего эта механика заметна в сфере «${area}», за которую отвечает ${item.house} дом`)
+      ? sentence(describeHouseManifestation(item.house, area))
       : 'Время рождения не указано, поэтому HeroStar не приписывает этой внутренней силе конкретную сферу жизни.',
     lifeScenario: sentence(`${sign.scenario}${item.house ? ` — особенно когда ситуация касается сферы «${area}»` : ''}`),
     contrast: sentence(`${capitalize(signLocation(oppositeName))} человек чаще действовал бы ${opposite.mechanism}; ваш естественный способ — ${sign.mechanism}`),
