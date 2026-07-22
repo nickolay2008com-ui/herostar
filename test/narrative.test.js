@@ -41,6 +41,19 @@ test('v2.2 сохраняет контракт текущего интерфей
   }
 });
 
+test('карта ведёт новичка по понятным жизненным вопросам', () => {
+  const portrait = buildFallbackPortrait(chart());
+  const card = portrait.cards[0];
+  assert.match(portrait.subtitle, /что в вас работает/i);
+  assert.match(card.lead, /Что в вас работает/i);
+  assert.match(card.lead, /Как именно/i);
+  assert.match(card.manifestation, /Где это проявляется/i);
+  assert.match(card.uniqueExample, /жизненный сюжет/i);
+  assert.match(card.trap, /начинает мешать/i);
+  assert.match(card.key, /Что возвращает силу/i);
+  assert.match(card.action, /Попробуйте сейчас/i);
+});
+
 test('каждая карточка содержит полную редакционную матрицу', () => {
   const portrait = buildFallbackPortrait(chart());
   const required = ['function', 'sign', 'house', 'lifeScenario', 'contrast', 'trap', 'key', 'action', 'button'];
