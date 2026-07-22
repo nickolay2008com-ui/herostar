@@ -1,5 +1,8 @@
 const META_SELECTOR = 'meta[name="yandex-metrika-id"]';
-const COUNTER_ID = Number(document.querySelector(META_SELECTOR)?.content || 0);
+const HERO_STAR_COUNTER_ID = 110937602;
+const metrikaMeta = document.querySelector(META_SELECTOR);
+if (metrikaMeta) metrikaMeta.content = String(HERO_STAR_COUNTER_ID);
+const COUNTER_ID = HERO_STAR_COUNTER_ID;
 const ATTRIBUTION_KEY = 'herostar_first_touch';
 const GOALS = new Set([
   'landing_to_bot',
