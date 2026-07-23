@@ -1,0 +1,188 @@
+.clone-admin-page {
+  width: min(1480px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 42px 0 72px;
+}
+
+.clone-dialog-dashboard {
+  display: grid;
+  gap: 24px;
+}
+
+.clone-page-heading h1 {
+  max-width: 920px;
+  margin: 10px 0 10px;
+  font-size: clamp(34px, 5vw, 62px);
+  letter-spacing: -.045em;
+}
+
+.clone-page-heading p,
+.clone-current-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.clone-dialog-layout {
+  display: grid;
+  grid-template-columns: minmax(290px, .72fr) minmax(0, 1.7fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.clone-conversation-panel,
+.clone-current-dialog {
+  overflow: hidden;
+  border-color: rgba(182, 161, 255, .18);
+}
+
+.clone-conversation-panel {
+  position: sticky;
+  top: 86px;
+  max-height: calc(100vh - 110px);
+}
+
+.clone-conversation-list {
+  display: grid;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  padding: 0 12px 16px;
+}
+
+.clone-conversation-button {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  padding: 15px 14px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.clone-conversation-button:hover {
+  border-color: rgba(182, 161, 255, .16);
+  background: rgba(182, 161, 255, .055);
+}
+
+.clone-conversation-button.active {
+  border-color: rgba(130, 232, 223, .24);
+  background: linear-gradient(135deg, rgba(130, 232, 223, .09), rgba(182, 161, 255, .07));
+}
+
+.clone-conversation-button strong {
+  font-size: 15px;
+}
+
+.clone-conversation-button span,
+.clone-conversation-button small {
+  color: var(--muted);
+}
+
+.clone-conversation-button span {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clone-conversation-button small {
+  font-size: 11px;
+}
+
+.clone-current-dialog {
+  min-height: 560px;
+  padding-bottom: 24px;
+}
+
+.clone-current-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.clone-current-head h2 {
+  margin: 7px 0 6px;
+  font-size: clamp(25px, 3vw, 38px);
+}
+
+.clone-current-dialog .clone-detail-summary {
+  padding: 18px 24px 0;
+}
+
+.clone-current-dialog .clone-dialogue {
+  padding: 22px 24px 0;
+}
+
+.clone-current-dialog .clone-dialogue-message {
+  max-width: min(92%, 880px);
+}
+
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin-top: 16px;
+  padding: 0 18px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--violet), var(--cyan));
+  color: #090b12;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.clone-loading {
+  padding: 34px 24px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 920px) {
+  .clone-dialog-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .clone-conversation-panel {
+    position: static;
+    max-height: none;
+  }
+
+  .clone-conversation-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .clone-admin-page {
+    width: min(100% - 20px, 1480px);
+    padding-top: 24px;
+  }
+
+  .clone-conversation-list {
+    grid-template-columns: 1fr;
+  }
+
+  .clone-current-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .clone-current-head .ghost-button {
+    justify-content: center;
+  }
+
+  .clone-current-dialog .clone-detail-summary,
+  .clone-current-dialog .clone-dialogue {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
