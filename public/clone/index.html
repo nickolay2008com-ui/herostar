@@ -60,7 +60,7 @@
     <section class="workspace hidden" id="workspace">
       <aside class="side">
         <div class="side-head"><span class="avatar">✦</span><div><strong id="cloneName">Ваш звёздный клон</strong><small id="cloneStatus">ещё не создан</small></div></div>
-        <nav><button class="active" data-tab="dialog">Диалог</button><button data-tab="profile">Модель клона</button></nav>
+        <nav><button class="active" data-tab="dialog">Диалог</button><button data-tab="profile">Логика модели</button></nav>
         <div class="side-note"><strong>Как это работает</strong><p>Карта рассчитывается по системе домов Плацидуса. В ответе используются только параметры, относящиеся к текущей ситуации.</p></div>
       </aside>
 
@@ -88,7 +88,7 @@
             <p class="composer-note">Каждый отправленный вопрос считается одной бесплатной консультацией. Уточняйте важные детали сразу.</p>
             <p class="error" id="dialogError"></p>
           </div>
-          <aside class="logic"><p class="eyebrow">Логика решения</p><h3>Почему клон решил именно так</h3><div id="logicEmpty" class="logic-empty">После первого ответа здесь появятся главные элементы карты, повлиявшие на решение.</div><div id="logicFactors" class="factors hidden"></div><details><summary>Техническая основа</summary><p>Натальная карта, система домов Плацидуса, планеты, знаки, дома, стихии, аспекты, ретроградность, ASC/DSC и MC/IC.</p></details></aside>
+          <aside class="logic"><p class="eyebrow">Модель клона</p><h3>Базовые параметры решения</h3><div id="logicEmpty" class="logic-empty">После создания здесь появятся главные элементы карты, формирующие стиль решений клона.</div><div id="logicFactors" class="factors hidden"></div><details><summary>Техническая основа</summary><p>Натальная карта, система домов Плацидуса, планеты, знаки, дома, стихии, аспекты, ретроградность, ASC/DSC и MC/IC.</p></details></aside>
         </div>
       </section>
     </section>
@@ -110,6 +110,7 @@
 
   <div class="toast" id="cloneToast"></div>
   <script src="/clone-product-bridge.js"></script>
+  <script src="/clone-ui-gears.js"></script>
   <script src="/clone.js" defer></script>
 </body>
 </html>
