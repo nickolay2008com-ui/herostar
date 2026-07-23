@@ -19,7 +19,15 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - name: Run tests
+        shell: bash
+        run: |
+          if npm test > /tmp/herostar-tests.log 2>&1; then
+            tail -40 /tmp/herostar-tests.log
+          else
+            tail -180 /tmp/herostar-tests.log
+            exit 1
+          fi
       - name: Syntax check
         run: |
           node --check server.js
