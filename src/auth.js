@@ -13,6 +13,9 @@ import { runRequestContext } from './request-context.js';
 const COOKIE_NAME = 'herostar_session';
 const METRIKA_INLINE_SCRIPT_HASH = "'sha256-jp2EkOkNiGIs4JfVpE2oclfqqUq75ROwSo88kh7TP5k='";
 const CLONE_FREE_QUESTION_LIMIT = 3;
+// HeroStar — персональный проект. Публичный Telegram владельца используется как
+// безопасный резервный идентификатор, пока в Railway не закреплён числовой ID.
+const PROJECT_OWNER_TELEGRAM_USERNAMES = new Set(['ainicki']);
 const METRIKA_GENERAL_SOURCES = [
   'https://mc.yandex.ru',
   'https://mc.yandex.com',
@@ -124,13 +127,34 @@ function decodeSession(token) {
   return payload;
 }
 
-function configuredAdminIds() {
-  return new Set(
-    String(process.env.TELEGRAM_ADMIN_IDS || process.env.TELEGRAM_ADMIN_ID || '')
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean),
-  );
+function normalizeAdminIdentifier(value) {
+  let normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  normalized = normalized
+    .replace(/^https?:\/\/t\.me\//, '')
+    .replace(/^t\.me\//, '')
+    .replace(/^@/, '')
+    .replace(/[/?#].*$/, '')
+    .trim();
+
+  return normalized || null;
+}
+
+function configuredAdminIdentifiers() {
+  const raw = [
+    process.env.TELEGRAM_ADMIN_IDS,
+    process.env.TELEGRAM_ADMIN_ID,
+    process.env.TELEGRAM_ADMIN_USERNAMES,
+    process.env.TELEGRAM_ADMIN_USERNAME,
+  ].filter(Boolean).join(',');
+
+  const configured = raw
+    .split(/[\s,;]+/)
+    .map(normalizeAdminIdentifier)
+    .filter(Boolean);
+
+  return new Set([...PROJECT_OWNER_TELEGRAM_USERNAMES, ...configured]);
 }
 
 function explicitCloneProduct(req) {
@@ -209,7 +233,12 @@ async function prepareCloneQuota(req, res) {
 
 export function isAdminUser(user) {
   if (!user?.telegram_id) return false;
-  return configuredAdminIds().has(String(user.telegram_id));
+
+  const identifiers = configuredAdminIdentifiers();
+  if (identifiers.has(String(user.telegram_id).trim())) return true;
+
+  const username = normalizeAdminIdentifier(user.username);
+  return Boolean(username && identifiers.has(username));
 }
 
 export function verifyTelegramPayload(payload) {
