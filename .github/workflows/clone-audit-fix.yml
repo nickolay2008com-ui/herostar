@@ -2,20 +2,21 @@ name: Clone end-to-end audit fix
 
 on:
   push:
-    branches: ["audit/clone-end-to-end"]
+    branches: ["audit/clone-end-to-end", "codex/clone-end-to-end"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   apply-and-test:
-    if: ${{ !contains(github.event.head_commit.message, 'Связать весь сценарий Звёздного клона') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Связать весь сценарий Звёздного клона') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: audit/clone-end-to-end
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -37,4 +38,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Связать весь сценарий Звёздного клона"
-          git push origin HEAD:audit/clone-end-to-end
+          git push origin HEAD:${{ github.ref_name }}
