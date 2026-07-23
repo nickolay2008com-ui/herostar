@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -24,7 +25,11 @@ jobs:
         if: ${{ hashFiles('scripts/clone-audit-fix.py') != '' }}
         run: python3 scripts/clone-audit-fix.py
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - name: Run tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tail -260
       - name: Syntax check
         run: |
           node --check server.js
