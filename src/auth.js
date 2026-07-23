@@ -1,7 +1,13 @@
 import crypto from 'node:crypto';
 import { parseCookies, publicError, sha256 } from './utils.js';
 import { getChart, getUser, upsertUser } from './store.js';
-import { completeCloneQuestion, releaseCloneQuestion, reserveCloneQuestion } from './clone-quota.js';
+import {
+  completeCloneQuestion,
+  isCloneChart,
+  registerCloneChart,
+  releaseCloneQuestion,
+  reserveCloneQuestion,
+} from './clone-quota.js';
 import { runRequestContext } from './request-context.js';
 
 const COOKIE_NAME = 'herostar_session';
@@ -127,12 +133,13 @@ function configuredAdminIds() {
   );
 }
 
-function isCloneConsultRequest(req) {
-  if (req.method !== 'POST' || req.path !== '/api/consult') return false;
-  const product = String(req.body?.product || '').trim().toLowerCase();
+function explicitCloneProduct(req) {
+  return String(req.body?.product || '').trim().toLowerCase() === 'clone';
+}
+
+function clonePromptMarker(req) {
   const question = String(req.body?.question || '');
-  return product === 'clone'
-    || (question.includes('Звёздный клон') && question.includes('Ситуация:'));
+  return question.includes('Звёздный клон') && question.includes('Ситуация:');
 }
 
 function canUseChartForClone(record, req) {
@@ -142,12 +149,33 @@ function canUseChartForClone(record, req) {
   return Boolean(token && record.accessTokenHash && sha256(token) === record.accessTokenHash);
 }
 
+function markCloneChartCreation(req, res) {
+  if (req.method !== 'POST' || req.path !== '/api/charts' || !explicitCloneProduct(req)) return;
+  let settled = false;
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    if (settled) return originalJson(payload);
+    settled = true;
+    const chartId = res.statusCode < 400 ? payload?.id : null;
+    if (!chartId) return originalJson(payload);
+    Promise.resolve(registerCloneChart(chartId))
+      .catch((error) => console.error('Clone chart registration failed:', error))
+      .finally(() => originalJson(payload));
+    return res;
+  };
+}
+
 async function prepareCloneQuota(req, res) {
-  if (!isCloneConsultRequest(req) || !req.user || req.user.premium) return;
+  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user || req.user.premium) return;
   const chartId = String(req.body?.chartId || '').trim();
   if (!chartId) return;
   const record = await getChart(chartId);
   if (!canUseChartForClone(record, req)) return;
+
+  const explicitlyClone = explicitCloneProduct(req) || clonePromptMarker(req);
+  const registeredClone = await isCloneChart(chartId);
+  if (!explicitlyClone && !registeredClone) return;
+  if (explicitlyClone && !registeredClone) await registerCloneChart(chartId);
 
   const reservation = await reserveCloneQuestion({
     chartId,
@@ -232,6 +260,7 @@ export async function attachUser(req, res, next) {
     const session = decodeSession(cookies[COOKIE_NAME]);
     req.user = session?.sub ? await getUser(session.sub) : null;
     req.isAdmin = isAdminUser(req.user);
+    markCloneChartCreation(req, res);
     await prepareCloneQuota(req, res);
     const product = String(req.body?.product || '').trim().toLowerCase();
     return runRequestContext({ product, path: req.path }, next);
