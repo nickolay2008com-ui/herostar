@@ -31,7 +31,7 @@ jobs:
           for file in public/*.js; do node --check "$file"; done
           for file in src/*.js; do node --check "$file"; done
       - name: Commit verified fixes
-        if: ${{ hashFiles('src/consultation-history.js') != '' && github.event_name == 'push' }}
+        if: ${{ hashFiles('src/consultation-history.js') != '' }}
         run: |
           git config user.name "chatgpt-codex-connector"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -39,4 +39,4 @@ jobs:
           git checkout origin/main -- .github/workflows/ci.yml
           git add -A
           git commit -m "Связать весь сценарий Звёздного клона"
-          git push origin HEAD:codex/clone-end-to-end
+          git push origin HEAD:${GITHUB_HEAD_REF:-codex/clone-end-to-end}
