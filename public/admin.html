@@ -8,6 +8,7 @@
   <title>HeroStar · Панель администратора</title>
   <link rel="stylesheet" href="/admin.css">
   <link rel="stylesheet" href="/admin-typography.css">
+  <link rel="stylesheet" href="/admin-clone.css">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -22,7 +23,8 @@
     <div class="top-actions">
       <span class="status" id="status">Подключение…</span>
       <button class="ghost-button hidden" id="refreshButton" type="button">Обновить</button>
-      <a class="ghost-button" href="/">Открыть продукт</a>
+      <a class="ghost-button" href="/clone">Открыть клона</a>
+      <a class="ghost-button" href="/">Открыть HeroStar</a>
     </div>
   </header>
 
@@ -78,6 +80,73 @@
           </div>
           <div class="funnel" id="funnel"></div>
         </article>
+      </section>
+
+      <section class="clone-admin-shell" id="cloneAdmin">
+        <div class="clone-admin-heading">
+          <div>
+            <div class="clone-kicker"><span>✦</span> отдельный продукт</div>
+            <h2>Звёздный клон</h2>
+            <p>Созданные модели, прохождение трёх бесплатных вопросов и полная история консультаций.</p>
+          </div>
+          <div class="clone-admin-actions">
+            <span id="cloneScanStatus">Подготовка статистики…</span>
+            <button class="ghost-button" id="cloneRefreshButton" type="button">Обновить клона</button>
+          </div>
+        </div>
+
+        <section class="metric-grid clone-metrics" id="cloneMetrics"></section>
+
+        <section class="overview-grid clone-overview">
+          <article class="panel clone-panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">Продуктовая воронка</div>
+                <h2>От создания до оплаты</h2>
+              </div>
+            </div>
+            <div class="funnel" id="cloneFunnel"></div>
+          </article>
+
+          <article class="panel clone-panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">Живые запросы</div>
+                <h2>О чём спрашивают клона</h2>
+              </div>
+            </div>
+            <div class="clone-topics" id="cloneTopics"></div>
+          </article>
+        </section>
+
+        <section class="panel charts-panel clone-panel">
+          <div class="panel-head charts-head">
+            <div>
+              <div class="eyebrow">Клоны и консультации</div>
+              <h2>История диалогов</h2>
+            </div>
+            <label class="search">
+              <span>⌕</span>
+              <input id="cloneSearchInput" placeholder="Имя, Telegram, город или текст вопроса">
+            </label>
+          </div>
+          <div class="table-wrap">
+            <table class="clone-table">
+              <thead>
+                <tr>
+                  <th>Звёздный клон</th>
+                  <th>Telegram</th>
+                  <th>Вопросы</th>
+                  <th>Этап</th>
+                  <th>Последняя активность</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="cloneChartsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty hidden" id="cloneEmpty">Звёздных клонов по этому запросу нет.</div>
+        </section>
       </section>
 
       <section class="panel charts-panel">
@@ -136,5 +205,6 @@
 
   <div class="toast" id="toast"></div>
   <script type="module" src="/admin.js"></script>
+  <script type="module" src="/admin-clone.js"></script>
 </body>
 </html>
