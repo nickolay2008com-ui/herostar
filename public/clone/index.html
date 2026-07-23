@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090814">
+  <meta name="description" content="Создайте Звёздного клона по натальной карте и задайте ему 3 вопроса бесплатно. Узнайте, как поступила бы такая конфигурация звёзд и почему.">
+  <meta name="yandex-metrika-id" content="110937602">
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110937602', 'ym');
+
+    ym(110937602, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+  </script>
+  <!-- /Yandex.Metrika counter -->
+  <title>Звёздный клон — как бы он поступил?</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/clone.css">
+</head>
+<body>
+  <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
+  <div class="orb orb-a"></div><div class="orb orb-b"></div>
+  <header class="topbar">
+    <a class="brand" href="/"><span>✦</span> HeroStar</a>
+    <div class="product">Звёздный клон <i>beta</i></div>
+  </header>
+
+  <main>
+    <section class="hero" id="intro">
+      <div class="hero-copy">
+        <p class="eyebrow">Астрологическая модель решений</p>
+        <h1>Как бы поступил<br><em>ваш клон по звёздам?</em></h1>
+        <p class="lead">Создайте персонажа по натальной карте. Дайте ему реальную ситуацию — и узнайте, какое решение выбрала бы такая конфигурация звёзд и почему.</p>
+        <div class="proof-strip" aria-label="Что входит бесплатно">
+          <div><strong>3</strong><span>вопроса бесплатно</span></div>
+          <div><strong>Плацидус</strong><span>полный расчёт карты</span></div>
+          <div><strong>Почему</strong><span>объяснение решения</span></div>
+        </div>
+        <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
+        <button class="primary" data-go-create>Создать звёздного клона</button>
+        <p class="microcopy">Создание бесплатно. Telegram нужен, чтобы сохранить клона и историю консультаций.</p>
+      </div>
+      <div class="clone-visual">
+        <div class="halo" aria-hidden="true"></div><div class="silhouette" aria-hidden="true"><span>✦</span></div>
+        <div class="signal s1">Марс · действие</div><div class="signal s2">Луна · реакция</div><div class="signal s3">ASC · вход в ситуацию</div>
+        <article class="example-card">
+          <small>Пример ситуации</small>
+          <p>«Мне предлагают новый проект, но условия пока неясны»</p>
+          <strong>Клон сначала уточнил бы роли и предложил пробный этап.</strong>
+          <span>Почему: Марс · 2 дом · Асцендент · земная стихия</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="workspace hidden" id="workspace">
+      <aside class="side">
+        <div class="side-head"><span class="avatar">✦</span><div><strong id="cloneName">Ваш звёздный клон</strong><small id="cloneStatus">ещё не создан</small></div></div>
+        <nav><button class="active" data-tab="dialog">Диалог</button><button data-tab="profile">Модель клона</button></nav>
+        <div class="side-note"><strong>Как это работает</strong><p>Карта рассчитывается по системе домов Плацидуса. В ответе используются только параметры, относящиеся к текущей ситуации.</p></div>
+      </aside>
+
+      <section class="panel">
+        <div id="createView">
+          <p class="eyebrow">Создание модели</p><h2>Данные рождения клона</h2><p class="muted">Точное время особенно важно для домов, Асцендента, Десцендента, MC и IC.</p>
+          <form id="birthForm" class="birth-form">
+            <label>Имя клона<input name="name" placeholder="Например, Звёздный Николай" required></label>
+            <div class="grid"><label>Дата рождения<input type="date" name="date" required></label><label>Время рождения<input type="time" name="time" required></label></div>
+            <label class="place-label">Место рождения<input name="placeQuery" id="placeQuery" autocomplete="off" placeholder="Начните вводить город" required><input type="hidden" name="place" id="placeValue"><div id="placeResults" class="place-results"></div></label>
+            <button class="primary wide" type="submit">Собрать звёздного клона</button>
+            <p class="form-consent">Продолжая, вы соглашаетесь с <a href="/consent" target="_blank">обработкой данных</a> и <a href="/privacy" target="_blank">политикой конфиденциальности</a>.</p>
+            <p class="error" id="formError"></p>
+          </form>
+        </div>
+
+        <div id="buildingView" class="hidden building"><div class="pulse">✦</div><h2>Клон собирает характер решений</h2><p id="buildStep">Рассчитываем натальную карту…</p></div>
+
+        <div id="dialogView" class="hidden dialog-layout">
+          <div class="conversation">
+            <div class="conversation-head"><div><p class="eyebrow">Консультация нового формата</p><h2>Дайте клону ситуацию</h2><div class="allowance" id="questionAllowance">3 бесплатных вопроса</div></div><button class="ghost" id="newSituation">Новая ситуация</button></div>
+            <div class="messages" id="messages"><article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Я готов. Опишите ситуацию, в которой мне нужно выбрать, ответить или действовать.</p></div></article></div>
+            <div class="chips"><button>Войти ли в новый проект?</button><button>Как ответить человеку?</button><button>Рискнуть или сохранить стабильность?</button></div>
+            <form id="questionForm" class="composer"><textarea id="question" rows="3" placeholder="Что произошло, какие варианты есть и что вызывает сомнение?" required></textarea><button class="primary" type="submit">Спросить клона</button></form>
+            <p class="composer-note">Каждый отправленный вопрос считается одной бесплатной консультацией. Уточняйте важные детали сразу.</p>
+            <p class="error" id="dialogError"></p>
+          </div>
+          <aside class="logic"><p class="eyebrow">Логика решения</p><h3>Почему клон решил именно так</h3><div id="logicEmpty" class="logic-empty">После первого ответа здесь появятся главные элементы карты, повлиявшие на решение.</div><div id="logicFactors" class="factors hidden"></div><details><summary>Техническая основа</summary><p>Натальная карта, система домов Плацидуса, планеты, знаки, дома, стихии, аспекты, ретроградность, ASC/DSC и MC/IC.</p></details></aside>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div class="modal-backdrop hidden" id="clonePaywall" role="dialog" aria-modal="true" aria-labelledby="clonePaywallTitle">
+    <section class="paywall-card">
+      <button class="modal-close" id="closeClonePaywall" type="button" aria-label="Закрыть">×</button>
+      <div class="paywall-mark">✦</div>
+      <p class="eyebrow">Первые три решения разобраны</p>
+      <h2 id="clonePaywallTitle">Продолжайте без ограничений</h2>
+      <p>Единый доступ открывает безлимитный диалог со Звёздным клоном и полную интерактивную карту HeroStar.</p>
+      <div class="paywall-benefits"><span>✓ Все следующие вопросы клону</span><span>✓ Полная натальная карта HeroStar</span><span>✓ История консультаций сохраняется</span></div>
+      <label class="receipt-field">Телефон или email для электронного чека<input id="cloneReceiptContact" autocomplete="email" placeholder="name@example.com или +7…"><small id="cloneReceiptHint">Контакт передаётся ЮKassa только для отправки чека.</small></label>
+      <button class="primary wide" id="clonePayButton" type="button">Открыть полный доступ · <span id="clonePrice">990 ₽</span></button>
+      <p class="paywall-legal">Оплата через ЮKassa. Нажимая кнопку, вы принимаете <a href="/offer" target="_blank">оферту</a> и <a href="/refunds" target="_blank">условия возврата</a>.</p>
+    </section>
+  </div>
+
+  <div class="toast" id="cloneToast"></div>
+  <script src="/clone-product-bridge.js"></script>
+  <script src="/clone.js" defer></script>
+</body>
+</html>
