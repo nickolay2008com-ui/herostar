@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 import {
   completeCloneQuestion,
   getCloneQuestionUsage,
+  isCloneChart,
+  registerCloneChart,
   releaseCloneQuestion,
   reserveCloneQuestion,
 } from '../src/clone-quota.js';
@@ -41,22 +43,32 @@ test('неудавшийся ответ освобождает бесплатн�
   assert.equal(usage.remaining, 3);
 });
 
-test('клиент маркирует консультацию и оплату как продукт clone', async () => {
+test('созданная карта навсегда определяется сервером как карта клона', async () => {
+  const chartId = `test-${crypto.randomUUID()}`;
+  assert.equal(await isCloneChart(chartId), false);
+  await registerCloneChart(chartId);
+  assert.equal(await isCloneChart(chartId), true);
+});
+
+test('клиент маркирует создание карты, консультацию и оплату как продукт clone', async () => {
   const [html, bridge] = await Promise.all([
     readFile(cloneHtmlUrl, 'utf8'),
     readFile(bridgeUrl, 'utf8'),
   ]);
   assert.ok(html.indexOf('/clone-product-bridge.js') < html.indexOf('/clone.js'));
+  assert.match(bridge, /\/api\/charts/);
   assert.match(bridge, /\/api\/consult/);
   assert.match(bridge, /\/api\/payments\/create/);
   assert.match(bridge, /product:\s*'clone'/);
 });
 
-test('лимит завершается на сервере, а оплата возвращает в диалог клона', async () => {
+test('лимит привязан к карте на сервере, а оплата возвращает в диалог клона', async () => {
   const [auth, payments] = await Promise.all([
     readFile(authUrl, 'utf8'),
     readFile(paymentsUrl, 'utf8'),
   ]);
+  assert.match(auth, /registerCloneChart/);
+  assert.match(auth, /isCloneChart/);
   assert.match(auth, /reserveCloneQuestion/);
   assert.match(auth, /completeCloneQuestion/);
   assert.match(auth, /releaseCloneQuestion/);
