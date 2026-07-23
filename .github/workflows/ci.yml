@@ -7,58 +7,21 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Apply clone end-to-end fixes
-        if: ${{ hashFiles('scripts/clone-audit-fix.py') != '' }}
-        run: python3 scripts/clone-audit-fix.py
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Run tests and capture result
-        id: tests
-        shell: bash
-        run: |
-          set +e
-          npm test > /tmp/herostar-clone-tests.log 2>&1
-          code=$?
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          if [ "$code" -ne 0 ]; then
-            tail -320 /tmp/herostar-clone-tests.log > docs/clone-audit-test-failure.txt
-          fi
-          exit 0
-      - name: Save failure report
-        if: steps.tests.outputs.exit_code != '0'
-        run: |
-          git config user.name "chatgpt-codex-connector"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/clone-audit-test-failure.txt
-          git commit -m "test: сохранить причину падения сквозной проверки"
-          git push origin HEAD:${GITHUB_HEAD_REF:-codex/clone-end-to-end}
-          exit 1
+      - run: npm test
       - name: Syntax check
-        if: steps.tests.outputs.exit_code == '0'
         run: |
           node --check server.js
           for file in public/*.js; do node --check "$file"; done
           for file in src/*.js; do node --check "$file"; done
-      - name: Commit verified fixes
-        if: steps.tests.outputs.exit_code == '0' && hashFiles('src/consultation-history.js') != ''
-        run: |
-          git config user.name "chatgpt-codex-connector"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f docs/clone-audit-trigger.txt docs/clone-audit-test-failure.txt .github/workflows/clone-audit-fix.yml scripts/clone-audit-fix.py
-          git checkout origin/main -- .github/workflows/ci.yml
-          git add -A
-          git commit -m "Связать весь сценарий Звёздного клона"
-          git push origin HEAD:${GITHUB_HEAD_REF:-codex/clone-end-to-end}
