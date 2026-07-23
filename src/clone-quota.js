@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import pg from 'pg';
 
 const memoryReservations = new Map();
+const memoryCloneCharts = new Set();
 let pool = null;
 let initPromise = null;
 
@@ -28,6 +29,11 @@ async function database() {
   }
   if (!initPromise) {
     initPromise = pool.query(`
+      CREATE TABLE IF NOT EXISTS clone_charts (
+        chart_id UUID PRIMARY KEY REFERENCES charts(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS clone_question_reservations (
         id UUID PRIMARY KEY,
         chart_id UUID NOT NULL REFERENCES charts(id) ON DELETE CASCADE,
@@ -52,11 +58,34 @@ function legacyCloneQuestionSql() {
       AND role = 'user'
       AND NOT (COALESCE(metadata, '{}'::jsonb) ? 'cloneReservationId')
       AND NOT (COALESCE(metadata, '{}'::jsonb) @> '{"quotaExempt":true}'::jsonb)
+      AND NOT (content ILIKE '%[[clone-reservation:%')
       AND (
         COALESCE(metadata->>'product', '') = 'clone'
         OR (content ILIKE '%Звёздный клон%' AND content ILIKE '%Ситуация:%')
       )
   `;
+}
+
+export async function registerCloneChart(chartId) {
+  if (!chartId) return;
+  const db = await database();
+  if (!db) {
+    memoryCloneCharts.add(String(chartId));
+    return;
+  }
+  await db.query(
+    `INSERT INTO clone_charts (chart_id) VALUES ($1)
+     ON CONFLICT (chart_id) DO NOTHING`,
+    [chartId],
+  );
+}
+
+export async function isCloneChart(chartId) {
+  if (!chartId) return false;
+  const db = await database();
+  if (!db) return memoryCloneCharts.has(String(chartId));
+  const result = await db.query('SELECT 1 FROM clone_charts WHERE chart_id = $1', [chartId]);
+  return Boolean(result.rows[0]);
 }
 
 export async function getCloneQuestionUsage(chartId, limit = 3) {
