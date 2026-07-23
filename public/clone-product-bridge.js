@@ -14,8 +14,22 @@
         const payload = JSON.parse(init.body || '{}');
         init = { ...init, body: JSON.stringify({ ...payload, product: 'clone' }) };
       }
+
+      if (url.origin === location.origin && method === 'POST' && url.pathname === '/api/events' && typeof init.body === 'string') {
+        const payload = JSON.parse(init.body || '{}');
+        if (payload.eventType === 'payment_created' && payload.metadata?.action === 'clone_payment_started') {
+          init = {
+            ...init,
+            body: JSON.stringify({
+              ...payload,
+              eventType: 'paywall_opened',
+              metadata: { ...payload.metadata, stage: 'payment_started' },
+            }),
+          };
+        }
+      }
     } catch {
-      // Маркировка продукта не должна ломать основной запрос.
+      // Маркировка продукта и аналитики не должна ломать основной запрос.
     }
     return nativeFetch(input, init);
   };
