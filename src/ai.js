@@ -66,7 +66,27 @@ function localConsultation(portrait, question) {
   return `По этой теме я бы начал с раздела «${related.title}». ${related.key} ${related.action} Дальше можно посмотреть, где этот ресурс раскрывается сильнее, или связать его с конкретной ситуацией.`;
 }
 
-export function consultationSystemPrompt(mode) {
+function localCloneConsultation(chart) {
+  const planets = chart.planets || [];
+  const mars = planets.find((planet) => planet.key === 'mars') || planets[0];
+  const moon = planets.find((planet) => planet.key === 'moon') || planets[1];
+  const ascendant = chart.angles?.ascendant;
+  const actionByElement = {
+    'Огонь': 'быстро выбрал проверяемый ход и посмотрел на результат в действии',
+    'Земля': 'сначала уточнил условия, ресурсы и выбрал самый надёжный обратимый шаг',
+    'Воздух': 'собрал недостающие факты, проговорил варианты и только затем зафиксировал решение',
+    'Вода': 'сначала оценил атмосферу и последствия для отношений, а затем действовал бережно, но определённо',
+  };
+  const action = actionByElement[mars?.element] || 'сначала отделил факты от предположений и выбрал небольшой обратимый шаг';
+  const factors = [
+    mars ? `${mars.name} в ${mars.sign}${mars.house ? `, ${mars.house} дом` : ''} — способ переходить к действию` : null,
+    moon ? `${moon.name} в ${moon.sign}${moon.house ? `, ${moon.house} дом` : ''} — автоматическая реакция модели` : null,
+    ascendant ? `Асцендент в ${ascendant.sign} — то, что клон замечает первым` : null,
+  ].filter(Boolean);
+  return `Ваш звёздный клон, вероятнее всего, ${action}.\n\nПочему: ${factors.join('; ')}.\n\nИтог модели: не угадывать идеальный ответ заранее, а выбрать ход, который соответствует конфигурации карты и даёт ясную обратную связь.`;
+}
+
+export function consultationSystemPrompt(mode, product = 'herostar') {
   const shared = `Ты — персональный навигатор HeroStar. Карта уже рассчитана локальным ядром. Не меняй положения планет, знаки, дома, аспекты и тексты карточек. Отвечай на русском языке, опираясь только на переданную карту, редакционную матрицу, историю разговора и слова человека.
 
 Главная задача HeroStar — помочь человеку сонастроиться с собой, открыть подходящие именно ему ресурсы карты и понять, как сделать с их помощью жизнь яснее, полнее и лучше. Человек пришёл не лечиться и не искать, что с ним не так. Психологическая точность нужна только для эмпатии, понимания запроса и бережного разговора. Не ищи травмы, блоки, диагнозы и скрытые причины без прямых оснований.
@@ -97,6 +117,10 @@ export function consultationSystemPrompt(mode) {
 
 Если человек прямо спрашивает, что здесь можно исследовать, или не знает, с чего начать, спокойно предложи три входа без рекламной витрины: разобрать конкретную ситуацию; открыть сильную сторону карты; посмотреть, куда сейчас естественнее направить силы. Затем помоги выбрать один маршрут.`;
 
+  const cloneRules = product === 'clone' ? `
+
+Режим «Звёздный клон» имеет приоритет над общими правилами консультации. Звёздный клон — самостоятельная символическая модель, созданная по натальной карте, а не прогноз поступков пользователя. Не переноси решение клона на человека и не говори «вы поступите» или «вам следует». Формулируй: «ваш звёздный клон, вероятнее всего, поступил бы…». Дай законченный ответ без обязательного встречного вопроса: сначала ход клона, затем 2–4 конкретных фактора карты и короткий итог модели. Если контекста мало, честно назови ограничение, но всё равно предложи наиболее вероятный ход модели. Не выдавай астрологию за научный прогноз.` : '';
+
   if (mode === 'deep') {
     return `${shared}
 
@@ -108,15 +132,15 @@ export function consultationSystemPrompt(mode) {
 5. Верни человеку авторство: что он может заметить, выбрать или попробовать сам.
 6. Только после полезного открытия, если переход действительно естественен, покажи одно-два ближайших направления исследования.
 
-Не используй видимые рубрики вроде «Что я услышал», «Где теряется сила», «Ресурс» и «Ближайший шаг», если человек сам не просил структурированный разбор. Обычно достаточно 220–450 слов; простой запрос заслуживает более короткого ответа.`;
+Не используй видимые рубрики вроде «Что я услышал», «Где теряется сила», «Ресурс» и «Ближайший шаг», если человек сам не просил структурированный разбор. Обычно достаточно 220–450 слов; простой запрос заслуживает более короткого ответа.${cloneRules}`;
   }
 
   return `${shared}
 
-Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.`;
+Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.${cloneRules}`;
 }
 
-async function requestConsultation(client, { model, effort, maxOutputTokens, mode, chart, portrait, history, question }) {
+async function requestConsultation(client, { model, effort, maxOutputTokens, mode, product, chart, portrait, history, question }) {
   const response = await client.responses.create({
     model,
     reasoning: { effort },
@@ -125,12 +149,13 @@ async function requestConsultation(client, { model, effort, maxOutputTokens, mod
     input: [
       {
         role: 'system',
-        content: consultationSystemPrompt(mode),
+        content: consultationSystemPrompt(mode, product),
       },
       {
         role: 'user',
         content: JSON.stringify({
           mode,
+          product,
           chart: compactChart(chart),
           portrait,
           history: history.slice(-8),
@@ -145,9 +170,9 @@ async function requestConsultation(client, { model, effort, maxOutputTokens, mod
   return answer;
 }
 
-export async function answerConsultation({ chart, portrait, question, history = [] }) {
+export async function answerConsultation({ chart, portrait, question, history = [], product = 'herostar' }) {
   const mode = consultationMode(history);
-  const localAnswer = () => localConsultation(portrait, question);
+  const localAnswer = () => product === 'clone' ? localCloneConsultation(chart) : localConsultation(portrait, question);
 
   if (!process.env.OPENAI_API_KEY) return localAnswer();
 
@@ -159,6 +184,7 @@ export async function answerConsultation({ chart, portrait, question, history = 
     const answer = await requestConsultation(client, {
       ...primary,
       mode,
+      product,
       chart,
       portrait,
       history,
@@ -176,6 +202,7 @@ export async function answerConsultation({ chart, portrait, question, history = 
         const answer = await requestConsultation(client, {
           ...config.dialog,
           mode,
+          product,
           chart,
           portrait,
           history,

@@ -34,7 +34,7 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
   const amount = Number(process.env.FULL_MAP_PRICE || '990').toFixed(2); const customer = normalizeReceiptContact(receiptContact); const appUrl = publicAppUrl();
   const product = currentRequestContext().product === 'clone' ? 'clone' : 'herostar';
   const returnUrl = product === 'clone'
-    ? `${appUrl}/clone?payment=return&chart=${encodeURIComponent(chartId || '')}`
+    ? `${appUrl}/clone/?payment=return&chart=${encodeURIComponent(chartId || '')}`
     : `${appUrl}/payment/return?chart=${encodeURIComponent(chartId || '')}`;
   const description = product === 'clone'
     ? 'HeroStar — полный доступ и безлимитный диалог со Звёздным клоном'

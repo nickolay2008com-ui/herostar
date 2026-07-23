@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080a12">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Звёздный клон · Мои диалоги</title>
+  <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="/admin-typography.css">
+  <link rel="stylesheet" href="/admin-clone.css">
+  <link rel="stylesheet" href="/clone-admin-page.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <a class="brand" href="/clone/">
+      <span class="brand-mark">✦</span>
+      <span>Звёздный клон</span>
+      <small>диалоги</small>
+    </a>
+    <div class="top-actions">
+      <span class="status" id="status">Подключение…</span>
+      <button class="ghost-button hidden" id="refreshButton" type="button">Обновить</button>
+      <a class="ghost-button" href="/admin#clone">Вся админка</a>
+      <a class="ghost-button" href="/clone/">Открыть клона</a>
+    </div>
+  </header>
+
+  <main class="clone-admin-page">
+    <section class="auth-shell hidden" id="authView">
+      <div class="auth-card">
+        <div class="auth-icon">✦</div>
+        <div class="eyebrow">Закрытая зона</div>
+        <h1>Нужен вход администратора</h1>
+        <p id="authText">Войдите в общую панель через Telegram, затем вернитесь сюда.</p>
+        <a class="primary-link" href="/admin">Войти через Telegram</a>
+      </div>
+    </section>
+
+    <section class="clone-dialog-dashboard hidden" id="dashboard">
+      <div class="clone-page-heading">
+        <div>
+          <div class="clone-kicker"><span>✦</span> личная история</div>
+          <h1>Мои диалоги со Звёздным клоном</h1>
+          <p>Последний разговор открывается автоматически. Слева можно выбрать предыдущий диалог.</p>
+        </div>
+      </div>
+
+      <div class="clone-dialog-layout">
+        <aside class="panel clone-conversation-panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">Разговоры</div>
+              <h2>Мои клоны</h2>
+            </div>
+          </div>
+          <div class="clone-conversation-list" id="conversationList"></div>
+          <div class="empty hidden" id="emptyConversations">Диалоги Звёздного клона пока не найдены.</div>
+        </aside>
+
+        <section class="panel clone-current-dialog">
+          <div class="clone-current-head">
+            <div>
+              <div class="eyebrow">Последний диалог</div>
+              <h2 id="dialogTitle">Загрузка…</h2>
+              <p id="dialogMeta"></p>
+            </div>
+            <a class="ghost-button" id="openCloneLink" href="/clone/">Продолжить диалог</a>
+          </div>
+          <div class="clone-detail-summary" id="dialogSummary"></div>
+          <div class="clone-dialogue" id="dialogue"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="/clone-admin-page.js"></script>
+</body>
+</html>

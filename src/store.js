@@ -274,6 +274,76 @@ export async function saveConsultationMessage({ chartId, userId, role, content, 
   };
 }
 
+export async function saveConsultationExchange({
+  chartId,
+  userId,
+  userContent,
+  assistantContent,
+  userMetadata = null,
+  assistantMetadata = null,
+}) {
+  const normalizedUser = String(userContent || '').trim();
+  const normalizedAssistant = String(assistantContent || '').trim();
+  if (!normalizedUser || !normalizedAssistant) throw new Error('Consultation exchange requires both messages.');
+
+  if (!pool) {
+    const user = {
+      id: nextMemoryId(),
+      chartId,
+      userId: userId ? String(userId) : null,
+      role: 'user',
+      content: normalizedUser,
+      metadata: userMetadata,
+      createdAt: nowIso(),
+    };
+    const assistant = {
+      id: nextMemoryId(),
+      chartId,
+      userId: userId ? String(userId) : null,
+      role: 'assistant',
+      content: normalizedAssistant,
+      metadata: assistantMetadata,
+      createdAt: nowIso(),
+    };
+    memory.messages.push(user, assistant);
+    return { user, assistant };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const userResult = await client.query(
+      `INSERT INTO consultation_messages (chart_id, user_id, role, content, metadata)
+       VALUES ($1,$2,'user',$3,$4)
+       RETURNING id, chart_id, user_id, role, content, metadata, created_at`,
+      [chartId, userId ? String(userId) : null, normalizedUser, userMetadata],
+    );
+    const assistantResult = await client.query(
+      `INSERT INTO consultation_messages (chart_id, user_id, role, content, metadata)
+       VALUES ($1,$2,'assistant',$3,$4)
+       RETURNING id, chart_id, user_id, role, content, metadata, created_at`,
+      [chartId, userId ? String(userId) : null, normalizedAssistant, assistantMetadata],
+    );
+    await client.query('COMMIT');
+
+    const normalize = (row) => ({
+      id: row.id,
+      chartId: row.chart_id,
+      userId: row.user_id,
+      role: row.role,
+      content: row.content,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+    });
+    return { user: normalize(userResult.rows[0]), assistant: normalize(assistantResult.rows[0]) };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getConsultationMessages(chartId, limit = 200) {
   const safeLimit = Math.min(500, Math.max(1, Number(limit) || 200));
   if (!pool) {
