@@ -19,8 +19,27 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - name: Run tests
+        id: tests
+        shell: bash
+        run: |
+          set +e
+          npm test > /tmp/herostar-tests.log 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: herostar-test-log-final
+          path: /tmp/herostar-tests.log
+          if-no-files-found: error
+      - name: Fail when tests failed
+        if: steps.tests.outputs.exit_code != '0'
+        run: exit 1
       - name: Syntax check
+        if: always()
         run: |
           node --check server.js
           for file in public/*.js; do node --check "$file"; done
