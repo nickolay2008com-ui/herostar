@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090814">
+  <meta name="description" content="Звёздный клон — персонаж, созданный по натальной карте. Он показывает, какое решение приняла бы астрологическая модель и почему.">
+  <title>Звёздный клон — как бы он поступил?</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/clone.css">
+</head>
+<body>
+  <div class="orb orb-a"></div><div class="orb orb-b"></div>
+  <header class="topbar">
+    <a class="brand" href="/"><span>✦</span> HeroStar</a>
+    <div class="product">Звёздный клон <i>beta</i></div>
+  </header>
+
+  <main>
+    <section class="hero" id="intro">
+      <div class="hero-copy">
+        <p class="eyebrow">Астрологическая модель решений</p>
+        <h1>Как бы поступил<br><em>ваш клон по звёздам?</em></h1>
+        <p class="lead">Создайте персонажа по натальной карте. Дайте ему реальную ситуацию — и узнайте, какое решение выбрала бы такая конфигурация звёзд и почему.</p>
+        <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
+        <button class="primary" data-go-create>Создать звёздного клона</button>
+      </div>
+      <div class="clone-visual" aria-hidden="true">
+        <div class="halo"></div><div class="silhouette"><span>✦</span></div>
+        <div class="signal s1">Марс · действие</div><div class="signal s2">Луна · реакция</div><div class="signal s3">ASC · вход в ситуацию</div>
+      </div>
+    </section>
+
+    <section class="workspace hidden" id="workspace">
+      <aside class="side">
+        <div class="side-head"><span class="avatar">✦</span><div><strong id="cloneName">Ваш звёздный клон</strong><small id="cloneStatus">ещё не создан</small></div></div>
+        <nav><button class="active" data-tab="dialog">Диалог</button><button data-tab="profile">Модель клона</button></nav>
+        <div class="side-note"><strong>Как это работает</strong><p>Карта рассчитывается по системе домов Плацидуса. В ответе используются только параметры, относящиеся к текущей ситуации.</p></div>
+      </aside>
+
+      <section class="panel">
+        <div id="createView">
+          <p class="eyebrow">Шаг 1</p><h2>Создайте персонажа</h2><p class="muted">Точное время рождения особенно важно для домов, Асцендента, Десцендента, MC и IC.</p>
+          <form id="birthForm" class="birth-form">
+            <label>Имя клона<input name="name" placeholder="Например, Звёздный Николай" required></label>
+            <div class="grid"><label>Дата рождения<input type="date" name="date" required></label><label>Время рождения<input type="time" name="time" required></label></div>
+            <label class="place-label">Место рождения<input name="placeQuery" id="placeQuery" autocomplete="off" placeholder="Начните вводить город" required><input type="hidden" name="place" id="placeValue"><div id="placeResults" class="place-results"></div></label>
+            <button class="primary wide" type="submit">Собрать звёздного клона</button>
+            <p class="error" id="formError"></p>
+          </form>
+        </div>
+
+        <div id="buildingView" class="hidden building"><div class="pulse">✦</div><h2>Клон собирает характер решений</h2><p id="buildStep">Рассчитываем натальную карту…</p></div>
+
+        <div id="dialogView" class="hidden dialog-layout">
+          <div class="conversation">
+            <div class="conversation-head"><div><p class="eyebrow">Консультация нового формата</p><h2>Дайте клону ситуацию</h2></div><button class="ghost" id="newSituation">Новая ситуация</button></div>
+            <div class="messages" id="messages"><article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Я готов. Опишите ситуацию, в которой мне нужно выбрать, ответить или действовать.</p></div></article></div>
+            <div class="chips"><button>Войти ли в новый проект?</button><button>Как ответить человеку?</button><button>Рискнуть или сохранить стабильность?</button></div>
+            <form id="questionForm" class="composer"><textarea id="question" rows="3" placeholder="Что произошло, какие варианты есть и что вызывает сомнение?" required></textarea><button class="primary" type="submit">Спросить клона</button></form>
+            <p class="error" id="dialogError"></p>
+          </div>
+          <aside class="logic"><p class="eyebrow">Логика решения</p><h3>Почему клон решил именно так</h3><div id="logicEmpty" class="logic-empty">После первого ответа здесь появятся главные элементы карты, повлиявшие на решение.</div><div id="logicFactors" class="factors hidden"></div><details><summary>Техническая основа</summary><p>Натальная карта, система домов Плацидуса, планеты, знаки, дома, стихии, аспекты, ретроградность, ASC/DSC и MC/IC.</p></details></aside>
+        </div>
+      </section>
+    </section>
+  </main>
+<script src="/clone.js" defer></script>
+</body>
+</html>
