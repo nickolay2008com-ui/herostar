@@ -1,9 +1,18 @@
 import crypto from 'node:crypto';
-import { parseCookies, publicError } from './utils.js';
-import { getUser, upsertUser } from './store.js';
+import { parseCookies, publicError, sha256 } from './utils.js';
+import { getChart, getUser, upsertUser } from './store.js';
+import {
+  completeCloneQuestion,
+  isCloneChart,
+  registerCloneChart,
+  releaseCloneQuestion,
+  reserveCloneQuestion,
+} from './clone-quota.js';
+import { runRequestContext } from './request-context.js';
 
 const COOKIE_NAME = 'herostar_session';
 const METRIKA_INLINE_SCRIPT_HASH = "'sha256-jp2EkOkNiGIs4JfVpE2oclfqqUq75ROwSo88kh7TP5k='";
+const CLONE_FREE_QUESTION_LIMIT = 3;
 const METRIKA_GENERAL_SOURCES = [
   'https://mc.yandex.ru',
   'https://mc.yandex.com',
@@ -124,6 +133,80 @@ function configuredAdminIds() {
   );
 }
 
+function explicitCloneProduct(req) {
+  return String(req.body?.product || '').trim().toLowerCase() === 'clone';
+}
+
+function clonePromptMarker(req) {
+  const question = String(req.body?.question || '');
+  return question.includes('Звёздный клон') && question.includes('Ситуация:');
+}
+
+function canUseChartForClone(record, req) {
+  if (!record || !req.user) return false;
+  if (record.userId) return String(record.userId) === String(req.user.telegram_id);
+  const token = String(req.headers['x-chart-token'] || '');
+  return Boolean(token && record.accessTokenHash && sha256(token) === record.accessTokenHash);
+}
+
+function markCloneChartCreation(req, res) {
+  if (req.method !== 'POST' || req.path !== '/api/charts' || !explicitCloneProduct(req)) return;
+  let settled = false;
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    if (settled) return originalJson(payload);
+    settled = true;
+    const chartId = res.statusCode < 400 ? payload?.id : null;
+    if (!chartId) return originalJson(payload);
+    Promise.resolve(registerCloneChart(chartId))
+      .catch((error) => console.error('Clone chart registration failed:', error))
+      .finally(() => originalJson(payload));
+    return res;
+  };
+}
+
+async function prepareCloneQuota(req, res) {
+  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user || req.user.premium) return;
+  const chartId = String(req.body?.chartId || '').trim();
+  if (!chartId) return;
+  const record = await getChart(chartId);
+  if (!canUseChartForClone(record, req)) return;
+
+  const explicitlyClone = explicitCloneProduct(req) || clonePromptMarker(req);
+  const registeredClone = await isCloneChart(chartId);
+  if (!explicitlyClone && !registeredClone) return;
+  if (explicitlyClone && !registeredClone) await registerCloneChart(chartId);
+
+  const reservation = await reserveCloneQuestion({
+    chartId,
+    userId: req.user.telegram_id,
+    limit: CLONE_FREE_QUESTION_LIMIT,
+  });
+  if (!reservation.allowed) {
+    throw publicError(
+      'Три бесплатных вопроса использованы. Откройте полный доступ, чтобы продолжить диалог с клоном.',
+      402,
+      'CLONE_FREE_LIMIT',
+    );
+  }
+
+  req.body.question = `[[clone-reservation:${reservation.reservationId}]]\n${String(req.body.question || '')}`;
+  let settled = false;
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    if (settled) return originalJson(payload);
+    settled = true;
+    const succeeded = res.statusCode < 400 && Boolean(payload?.answer);
+    const operation = succeeded
+      ? completeCloneQuestion(reservation.reservationId)
+      : releaseCloneQuestion(reservation.reservationId);
+    Promise.resolve(operation)
+      .catch((error) => console.error('Clone quota finalization failed:', error))
+      .finally(() => originalJson(payload));
+    return res;
+  };
+}
+
 export function isAdminUser(user) {
   if (!user?.telegram_id) return false;
   return configuredAdminIds().has(String(user.telegram_id));
@@ -177,9 +260,12 @@ export async function attachUser(req, res, next) {
     const session = decodeSession(cookies[COOKIE_NAME]);
     req.user = session?.sub ? await getUser(session.sub) : null;
     req.isAdmin = isAdminUser(req.user);
-    next();
+    markCloneChartCreation(req, res);
+    await prepareCloneQuota(req, res);
+    const product = String(req.body?.product || '').trim().toLowerCase();
+    return runRequestContext({ product, path: req.path }, next);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
 

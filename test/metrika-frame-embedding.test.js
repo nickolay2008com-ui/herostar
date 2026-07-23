@@ -5,11 +5,17 @@ import { readFile } from 'node:fs/promises';
 
 const authUrl = new URL('../src/auth.js', import.meta.url);
 const indexUrl = new URL('../public/index.html', import.meta.url);
+const cloneUrl = new URL('../public/clone.html', import.meta.url);
+
+function inlineMetrikaScript(source) {
+  return source.match(/<script type="text\/javascript">([\s\S]*?)<\/script>/)?.[1];
+}
 
 test('HTML-страницы разрешают официальный счётчик и визуальный редактор Метрики без открытия для чужих сайтов', async () => {
-  const [authSource, indexSource] = await Promise.all([
+  const [authSource, indexSource, cloneSource] = await Promise.all([
     readFile(authUrl, 'utf8'),
     readFile(indexUrl, 'utf8'),
+    readFile(cloneUrl, 'utf8'),
   ]);
 
   assert.match(authSource, /frame-ancestors/);
@@ -24,8 +30,12 @@ test('HTML-страницы разрешают официальный счётч
   assert.match(authSource, /removeHeader\('Cross-Origin-Opener-Policy'\)/);
   assert.match(authSource, /isDocumentRequest/);
 
-  const inlineScript = indexSource.match(/<script type="text\/javascript">([\s\S]*?)<\/script>/)?.[1];
-  assert.ok(inlineScript, 'Официальный inline-код Метрики должен присутствовать в HTML');
-  const hash = crypto.createHash('sha256').update(inlineScript).digest('base64');
+  const indexScript = inlineMetrikaScript(indexSource);
+  const cloneScript = inlineMetrikaScript(cloneSource);
+  assert.ok(indexScript, 'Официальный inline-код Метрики должен присутствовать на главной странице');
+  assert.ok(cloneScript, 'Официальный inline-код Метрики должен присутствовать на странице клона');
+  assert.equal(cloneScript, indexScript, 'Клон должен использовать канонический bootstrap Метрики без расхождения hash');
+
+  const hash = crypto.createHash('sha256').update(indexScript).digest('base64');
   assert.match(authSource, new RegExp(`sha256-${hash.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 });
