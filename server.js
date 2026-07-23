@@ -9,7 +9,7 @@ import {
   saveChart,
   getChart,
   claimChart,
-  saveConsultationMessage,
+  saveConsultationExchange,
   getConsultationMessages,
   trackEvent,
   getAdminOverview,
@@ -29,6 +29,7 @@ import { createPayment, processWebhook } from './src/payments.js';
 import { searchPlaces, unpackSelectedPlace } from './src/places.js';
 import { getLegalConfig, renderLegalPage } from './src/legal.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
+import { historyForProduct } from './src/consultation-history.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -203,7 +204,9 @@ function hasAnonymousAccess(record, token) {
 
 function canAccessRecord(record, req) {
   if (!record) return false;
-  if (req.user && record.userId && String(record.userId) === String(req.user.telegram_id)) return true;
+  if (record.userId) {
+    return Boolean(req.user && String(record.userId) === String(req.user.telegram_id));
+  }
   return hasAnonymousAccess(record, req.headers['x-chart-token']);
 }
 
@@ -277,7 +280,7 @@ app.get('/api/config', async (req, res, next) => {
       telegramConfigurationIssue: telegram.issue,
       paymentsConfigured: Boolean(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY),
       openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
-      adminConfigured: Boolean(process.env.TELEGRAM_ADMIN_IDS || process.env.TELEGRAM_ADMIN_ID),
+      adminConfigured: true,
       demoMode,
       freeCardCount,
       price: Number(process.env.FULL_MAP_PRICE || '990'),
@@ -430,7 +433,8 @@ app.post('/api/charts/:id/claim', requireUser, async (req, res, next) => {
     if (!record) throw publicError('Карта не найдена.', 404);
     if (!canAccessRecord(record, req) && record.userId) throw publicError('Карта уже принадлежит другому пользователю.', 403);
     if (!record.userId && !hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ этой карты.', 403);
-    await claimChart(record.id, req.user.telegram_id);
+    const claimed = await claimChart(record.id, req.user.telegram_id);
+    if (!claimed) throw publicError('Карта уже принадлежит другому пользователю.', 403);
     await safeTrack({
       eventType: 'chart_claimed',
       visitorId: visitorIdFrom(req),
@@ -453,41 +457,55 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
     if (record.userId && String(record.userId) !== String(req.user.telegram_id)) throw publicError('Нет доступа к карте.', 403);
     if (!record.userId) {
       if (!hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ этой карты.', 403);
-      await claimChart(record.id, req.user.telegram_id);
+      const claimed = await claimChart(record.id, req.user.telegram_id);
+      if (!claimed) throw publicError('Карта уже принадлежит другому пользователю.', 403);
     }
 
-    const storedHistory = await getConsultationMessages(record.id, 20);
-    await saveConsultationMessage({
-      chartId: record.id,
-      userId: req.user.telegram_id,
-      role: 'user',
-      content: question,
-    });
+    const requestedProduct = String(req.body.product || '').trim().toLowerCase();
+    const product = req.cloneReservationId || requestedProduct === 'clone' ? 'clone' : 'herostar';
+    const storedMessages = await getConsultationMessages(record.id, 40);
+    const history = historyForProduct(storedMessages, product).slice(-8).map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
 
     const answer = await answerConsultation({
       chart: record.chartData,
       portrait: record.portraitData,
       question,
-      history: storedHistory.slice(-8).map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
+      history,
+      product,
     });
 
-    await saveConsultationMessage({
+    const messageMetadata = product === 'clone'
+      ? { product: 'clone', cloneReservationId: req.cloneReservationId || null }
+      : { product: 'herostar' };
+    await saveConsultationExchange({
       chartId: record.id,
       userId: req.user.telegram_id,
-      role: 'assistant',
-      content: answer,
+      userContent: question,
+      assistantContent: answer,
+      userMetadata: messageMetadata,
+      assistantMetadata: messageMetadata,
     });
+
     await safeTrack({
       eventType: 'consultation_answered',
       visitorId: visitorIdFrom(req),
       userId: req.user.telegram_id,
       chartId: record.id,
-      metadata: { questionLength: question.length, answerLength: answer.length },
+      metadata: { questionLength: question.length, answerLength: answer.length, product },
     });
-    res.json({ answer });
+    res.json({
+      answer,
+      cloneUsage: req.cloneQuestionUsage
+        ? {
+            used: req.cloneQuestionUsage.used,
+            remaining: req.cloneQuestionUsage.remaining,
+            limit: req.cloneQuestionUsage.limit,
+          }
+        : null,
+    });
   } catch (error) {
     next(error);
   }
@@ -505,6 +523,10 @@ app.get('/auth/telegram/callback', async (req, res, next) => {
 
     const rawState = String(req.query.state || '');
     if (rawState === 'admin') return res.redirect('/admin');
+    if (rawState.startsWith('clone:')) {
+      const cloneChartId = rawState.slice('clone:'.length).replace(/[^a-f0-9-]/gi, '');
+      return res.redirect(`/clone/?auth=ok${cloneChartId ? `&chart=${encodeURIComponent(cloneChartId)}` : ''}`);
+    }
     const chartId = rawState.replace(/[^a-f0-9-]/gi, '');
     return res.redirect(`/?auth=ok${chartId ? `&chart=${encodeURIComponent(chartId)}` : ''}#map`);
   } catch (error) {

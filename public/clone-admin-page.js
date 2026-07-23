@@ -68,8 +68,10 @@ async function api(path) {
   return payload;
 }
 
-function isClonePrompt(content) {
-  const text = String(content || '');
+function isCloneQuestion(message) {
+  if (message?.role !== 'user') return false;
+  if (message.metadata?.product === 'clone') return true;
+  const text = String(message.content || '');
   return text.includes('Звёздный клон') && text.includes('Ситуация:');
 }
 
@@ -82,21 +84,17 @@ function cleanCloneQuestion(content) {
 
 function extractCloneDialogue(messages = []) {
   const dialogue = [];
-  let awaitingAnswer = false;
-
+  let pendingUser = null;
   for (const message of messages) {
-    if (message.role === 'user' && isClonePrompt(message.content)) {
-      dialogue.push({ ...message, content: cleanCloneQuestion(message.content) });
-      awaitingAnswer = true;
+    if (isCloneQuestion(message)) {
+      pendingUser = { ...message, content: cleanCloneQuestion(message.content) };
       continue;
     }
-
-    if (message.role === 'assistant' && awaitingAnswer) {
-      dialogue.push(message);
-      awaitingAnswer = false;
+    if (message.role === 'assistant' && pendingUser) {
+      dialogue.push(pendingUser, message);
+      pendingUser = null;
     }
   }
-
   return dialogue;
 }
 
@@ -224,7 +222,7 @@ function openConversation(conversationId) {
     detailStat('Создан', formatDate(conversation.createdAt)),
   ].join('');
   els.dialogue.innerHTML = renderDialogue(conversation);
-  els.openCloneLink.href = '/clone';
+  els.openCloneLink.href = `/clone/?chart=${encodeURIComponent(conversation.id)}`;
 }
 
 function renderEmptyState() {
@@ -240,7 +238,7 @@ function showAuth(reason = 'login') {
   els.refreshButton.classList.add('hidden');
   els.status.textContent = reason === 'forbidden' ? 'Нет доступа' : 'Требуется вход';
   if (reason === 'forbidden') {
-    els.authText.textContent = 'Этот Telegram-аккаунт вошёл, но его ID не указан в TELEGRAM_ADMIN_IDS.';
+    els.authText.textContent = 'Этот Telegram-аккаунт вошёл, но не указан среди администраторов HeroStar.';
   }
 }
 

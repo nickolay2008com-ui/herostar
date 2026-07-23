@@ -214,7 +214,8 @@ async function prepareCloneQuota(req, res) {
     );
   }
 
-  req.body.question = `[[clone-reservation:${reservation.reservationId}]]\n${String(req.body.question || '')}`;
+  req.cloneReservationId = reservation.reservationId;
+  req.cloneQuestionUsage = reservation;
   let settled = false;
   const originalJson = res.json.bind(res);
   res.json = (payload) => {

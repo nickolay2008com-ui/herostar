@@ -74,9 +74,27 @@ function isCloneEvent(event) {
   return event?.metadata?.product === 'clone' || cloneAction(event).startsWith('clone_');
 }
 
-function isClonePrompt(content) {
-  const text = String(content || '');
+function isCloneQuestion(message) {
+  if (message?.role !== 'user') return false;
+  if (message.metadata?.product === 'clone') return true;
+  const text = String(message.content || '');
   return text.includes('Звёздный клон') && text.includes('Ситуация:');
+}
+
+function extractCloneDialogue(messages = []) {
+  const dialogue = [];
+  let pendingUser = null;
+  for (const message of messages) {
+    if (isCloneQuestion(message)) {
+      pendingUser = { ...message, cleanContent: cleanCloneQuestion(message.content) };
+      continue;
+    }
+    if (message.role === 'assistant' && pendingUser) {
+      dialogue.push(pendingUser, message);
+      pendingUser = null;
+    }
+  }
+  return dialogue;
 }
 
 function cleanCloneQuestion(content) {
@@ -105,22 +123,21 @@ function personName(item) {
 
 function normalizeClone(summary, details) {
   const messages = Array.isArray(details.messages) ? details.messages : [];
-  const markedQuestions = messages.filter((message) => message.role === 'user' && isClonePrompt(message.content));
-  const userMessages = markedQuestions.length
-    ? markedQuestions
-    : messages.filter((message) => message.role === 'user');
-  const assistantMessages = messages.filter((message) => message.role === 'assistant');
+  const dialogue = extractCloneDialogue(messages);
+  const userMessages = dialogue.filter((message) => message.role === 'user');
+  const assistantMessages = dialogue.filter((message) => message.role === 'assistant');
   const events = (details.events || []).filter(isCloneEvent);
   const payments = (details.payments || []).filter(isClonePayment);
-  const activityDates = [summary.createdAt, ...messages.map((item) => item.createdAt), ...events.map((item) => item.createdAt)];
+  const activityDates = [summary.createdAt, ...dialogue.map((item) => item.createdAt), ...events.map((item) => item.createdAt)];
   const lastActivityAt = activityDates.sort((a, b) => timestamp(b) - timestamp(a))[0] || summary.createdAt;
 
   return {
     ...summary,
     details,
+    dialogue,
     events,
     payments,
-    questions: userMessages.map((message) => ({ ...message, cleanContent: cleanCloneQuestion(message.content) })),
+    questions: userMessages.map((message) => ({ ...message, cleanContent: message.cleanContent || cleanCloneQuestion(message.content) })),
     answers: assistantMessages,
     questionCount: userMessages.length,
     paid: payments.length > 0,
@@ -131,7 +148,7 @@ function normalizeClone(summary, details) {
 
 function belongsToClone(details) {
   return (details.events || []).some(isCloneEvent)
-    || (details.messages || []).some((message) => message.role === 'user' && isClonePrompt(message.content));
+    || (details.messages || []).some(isCloneQuestion);
 }
 
 async function loadAllCharts() {
@@ -273,7 +290,7 @@ function detailStat(label, value) {
 }
 
 function renderDialogue(item) {
-  const messages = item.details.messages || [];
+  const messages = item.dialogue || [];
   return messages.length
     ? messages.map((message) => {
         const content = message.role === 'user' ? cleanCloneQuestion(message.content) : message.content;
