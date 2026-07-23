@@ -5,6 +5,8 @@ import { calculateNatalChart } from '../src/astro.js';
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
+const YANDEX_METRIKA_ID = '110937602';
+
 test('поиск городов не отправляет Photon неподдерживаемый lang=ru', () => {
   const source = read('src/places.js');
   assert.doesNotMatch(source, /searchParams\.set\(['"]lang['"],\s*['"]ru['"]\)/);
@@ -12,8 +14,10 @@ test('поиск городов не отправляет Photon неподде�
 
 test('рекламная аналитика содержит подтверждённый счётчик и цели', () => {
   const html = read('public/index.html');
+  const cloneHtml = read('public/clone.html');
   const analytics = read('public/marketing-analytics.js');
-  assert.match(html, /110783019/);
+  assert.match(html, new RegExp(YANDEX_METRIKA_ID));
+  assert.match(cloneHtml, new RegExp(YANDEX_METRIKA_ID));
   for (const goal of ['landing_to_bot','bot_started','free_key_received','bridge_received','paywall_viewed','payment_started','purchase_success']) {
     assert.match(analytics, new RegExp(goal));
   }
