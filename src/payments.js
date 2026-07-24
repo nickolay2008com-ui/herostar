@@ -127,9 +127,14 @@ function offerCopy(offer) {
   };
 }
 
+function cloneReturnPath(requestedProduct) {
+  return requestedProduct === 'clone_live' ? '/clone/live/' : '/clone/';
+}
+
 export async function createPayment({ user, chartId, visitorId = null, receiptContact, offerCode = null }) {
   const context = currentRequestContext();
-  const product = context.product === 'clone' ? 'clone' : 'herostar';
+  const requestedProduct = String(context.product || '').trim().toLowerCase();
+  const product = ['clone', 'clone_live'].includes(requestedProduct) ? 'clone' : 'herostar';
   const offer = await resolveOffer({
     user,
     offerCode: offerCode || context.offerCode,
@@ -139,13 +144,15 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
   const customer = normalizeReceiptContact(receiptContact);
   const appUrl = publicAppUrl();
   const returnUrl = offer.product === 'clone'
-    ? `${appUrl}/clone/?payment=return&chart=${encodeURIComponent(chartId || '')}&offer=${encodeURIComponent(offer.code)}`
+    ? `${appUrl}${cloneReturnPath(requestedProduct)}?payment=return&chart=${encodeURIComponent(chartId || '')}&offer=${encodeURIComponent(offer.code)}`
     : `${appUrl}/payment/return?chart=${encodeURIComponent(chartId || '')}`;
   const copy = offerCopy(offer);
+  const experience = requestedProduct === 'clone_live' ? 'live' : 'standard';
   const metadata = {
     user_id: String(user.telegram_id),
     chart_id: chartId || '',
     product: offer.product,
+    experience,
     offer_code: offer.code,
     credit_source_payment_id: offer.creditSourcePaymentId || '',
   };
@@ -200,6 +207,7 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
       amount: Number(amount),
       status: payment.status,
       product: offer.product,
+      experience,
       offerCode: offer.code,
       credited: offer.credited,
     },
@@ -238,6 +246,7 @@ export async function processWebhook(notification) {
         amount: Number(payment.amount?.value || 0),
         currency: payment.amount?.currency || 'RUB',
         product: payment.metadata?.product || 'herostar',
+        experience: payment.metadata?.experience || 'standard',
         offerCode,
         credited: Boolean(creditSourcePaymentId),
       },
