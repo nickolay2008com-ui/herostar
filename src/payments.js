@@ -83,50 +83,36 @@ function normalizeReceiptContact(value) {
 function normalizeAppUrlCandidate(value) {
   const raw = String(value || '').trim();
   if (!raw) return null;
-
-  const repaired = raw
-    .replace(/^https\/\//i, 'https://')
-    .replace(/^http\/\//i, 'http://');
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(repaired)
-    ? repaired
-    : `https://${repaired}`;
+  const repaired = raw.replace(/^https\/\//i, 'https://').replace(/^http\/\//i, 'http://');
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(repaired) ? repaired : `https://${repaired}`;
 }
 
 export function publicAppUrl(env = process.env) {
-  const candidates = [
-    env.APP_URL,
-    env.RAILWAY_PUBLIC_DOMAIN,
-    'https://herostar.up.railway.app',
-  ];
-
+  const candidates = [env.APP_URL, env.RAILWAY_PUBLIC_DOMAIN, 'https://herostar.up.railway.app'];
   for (const value of candidates) {
     const candidate = normalizeAppUrlCandidate(value);
     if (!candidate) continue;
-
     try {
       const url = new URL(candidate);
       if (!url.hostname || !['http:', 'https:'].includes(url.protocol)) continue;
       if (env.NODE_ENV === 'production' && url.protocol !== 'https:') continue;
       return url.origin;
-    } catch {
-      // Переходим к Railway-домену или безопасному production fallback.
-    }
+    } catch {}
   }
-
   throw publicError('Адрес возврата после оплаты настроен неверно.', 503, 'PAYMENT_RETURN_URL_INVALID');
 }
 
 function offerCopy(offer) {
   if (offer.code === OFFER_CODES.CLONE_DAY) {
     return {
-      description: 'HeroStar — День со Звёздным клоном на 24 часа',
-      itemDescription: 'Глубокий режим клона на 24 часа, полная карта и Паспорт клона',
+      description: 'HeroStar — 7 дней со Звёздным клоном',
+      itemDescription: 'Доступ к Звёздному клону на 7 дней, полная карта и память диалога',
     };
   }
   if (offer.code === OFFER_CODES.CLONE_ALIGNMENT) {
     return {
-      description: 'HeroStar — Сонастройка со Звёздным клоном на 30 дней',
-      itemDescription: '30 дней глубокого режима клона и Telegram-сопровождения',
+      description: 'HeroStar — 30 дней со Звёздным клоном и полная карта',
+      itemDescription: '30 дней диалога с памятью, углублённая астрологическая механика и полная карта HeroStar',
     };
   }
   return {
@@ -143,12 +129,7 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
   const context = currentRequestContext();
   const requestedProduct = String(context.product || '').trim().toLowerCase();
   const product = ['clone', 'clone_live'].includes(requestedProduct) ? 'clone' : 'herostar';
-  const offer = await resolveOffer({
-    user,
-    offerCode: offerCode || context.offerCode,
-    product,
-    chartId,
-  });
+  const offer = await resolveOffer({ user, offerCode: offerCode || context.offerCode, product, chartId });
   const amount = Number(offer.amount).toFixed(2);
   const customer = normalizeReceiptContact(receiptContact);
   const appUrl = publicAppUrl();
@@ -199,18 +180,10 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
     });
   } catch (error) {
     if (error?.code === 'PAYMENT_CREDIT_RESERVED') {
-      throw publicError(
-        'Стоимость Дня уже используется в другом платеже. Завершите его или повторите через двадцать минут.',
-        409,
-        'PAYMENT_CREDIT_RESERVED',
-      );
+      throw publicError('Стоимость первого тарифа уже используется в другом платеже. Завершите его или повторите через двадцать минут.', 409, 'PAYMENT_CREDIT_RESERVED');
     }
     if (error?.code === 'PAYMENT_CHECKOUT_ACTIVE') {
-      throw publicError(
-        'Для этого предложения уже открыт незавершённый платёж. Завершите его или повторите немного позже.',
-        409,
-        'PAYMENT_CHECKOUT_ACTIVE',
-      );
+      throw publicError('Для этого предложения уже открыт незавершённый платёж. Завершите его или повторите немного позже.', 409, 'PAYMENT_CHECKOUT_ACTIVE');
     }
     throw error;
   }
@@ -223,16 +196,10 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
       body: JSON.stringify(body),
     });
   } catch (error) {
-    // При сетевом таймауте платёж мог быть создан у провайдера. Оставляем
-    // резерв на короткое время, чтобы webhook мог безопасно завершить операцию.
-    if (error?.code !== 'PAYMENT_NETWORK_ERROR') {
-      await failPaymentCheckout(returnRef, error?.message).catch(() => {});
-    }
+    if (error?.code !== 'PAYMENT_NETWORK_ERROR') await failPaymentCheckout(returnRef, error?.message).catch(() => {});
     throw error;
   }
 
-  // После успешного ответа ЮKassa не освобождаем резерв при ошибке БД:
-  // webhook сможет завершить ту же операцию по return_ref.
   await finalizePaymentCheckout(returnRef, payment);
   await recordPaymentOffer({
     paymentId: payment.id,
@@ -289,9 +256,7 @@ async function reconcilePayment(payment, savedOperation = null) {
     || await getPaymentByIdOrReturnRef({ paymentId: payment.id })
     || (returnRef ? await getPaymentByIdOrReturnRef({ returnRef }) : null);
   assertPaymentMatchesSaved(payment, saved);
-  if (returnRef && saved?.id?.startsWith('checkout:')) {
-    await finalizePaymentCheckout(returnRef, payment);
-  }
+  if (returnRef && saved?.id?.startsWith('checkout:')) await finalizePaymentCheckout(returnRef, payment);
   await updatePayment(payment.id, payment.status, payment);
   await markCommercePaymentStatus(payment.id, payment.status);
 
@@ -302,13 +267,7 @@ async function reconcilePayment(payment, savedOperation = null) {
       || (payment.metadata?.product === 'clone' ? OFFER_CODES.CLONE_DAY : OFFER_CODES.FULL_MAP);
     const creditSourcePaymentId = payment.metadata?.credit_source_payment_id || null;
     if (userId) {
-      await applyPaymentEntitlement({
-        paymentId: payment.id,
-        userId,
-        chartId,
-        offerCode,
-        creditSourcePaymentId,
-      });
+      await applyPaymentEntitlement({ paymentId: payment.id, userId, chartId, offerCode, creditSourcePaymentId });
     }
     if (userId && chartId) await claimChart(chartId, userId);
     await safeTrack({
