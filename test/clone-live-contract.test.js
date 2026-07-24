@@ -13,13 +13,15 @@ const html = readFileSync(new URL('../public/clone/live/index.html', import.meta
 const css = readFileSync(new URL('../public/clone-live.css', import.meta.url), 'utf8');
 const jsPath = new URL('../public/clone-live.js', import.meta.url);
 const js = readFileSync(jsPath, 'utf8');
-const quota = readFileSync(new URL('../src/clone-quota.js', import.meta.url), 'utf8');
-const gears = readFileSync(new URL('../public/clone-ui-gears.js', import.meta.url), 'utf8');
+const quotaPath = new URL('../src/clone-quota.js', import.meta.url);
+const quota = readFileSync(quotaPath, 'utf8');
+const paymentsPath = new URL('../src/payments.js', import.meta.url);
+const payments = readFileSync(paymentsPath, 'utf8');
 
-test('clone live frontend has valid JavaScript bundles', () => {
+test('clone live frontend and server helpers have valid JavaScript', () => {
   execFileSync(process.execPath, ['--check', jsPath.pathname], { stdio: 'pipe' });
-  execFileSync(process.execPath, ['--check', new URL('../public/clone-ui-gears.js', import.meta.url).pathname], { stdio: 'pipe' });
-  execFileSync(process.execPath, ['--check', new URL('../src/clone-quota.js', import.meta.url).pathname], { stdio: 'pipe' });
+  execFileSync(process.execPath, ['--check', quotaPath.pathname], { stdio: 'pipe' });
+  execFileSync(process.execPath, ['--check', paymentsPath.pathname], { stdio: 'pipe' });
 });
 
 test('clone live route follows situation-first flow', () => {
@@ -74,11 +76,12 @@ test('clone live uses a quiet 24-hour trial with at least three completed answer
   assert.match(quota, /experience = 'live'/);
 });
 
-test('payment return comes back only to the matching live dialogue', () => {
-  assert.match(js, /starCloneLiveReturn/);
-  assert.match(gears, /LIVE_RETURN_KEY = 'starCloneLiveReturn'/);
-  assert.match(gears, /returnedChartId === liveChartId/);
-  assert.match(gears, /location\.replace\(target\.toString\(\)\)/);
+test('payments return each clone experience to its canonical route', () => {
+  assert.match(js, /product:'clone_live'/);
+  assert.match(payments, /function cloneReturnPath\(requestedProduct\)/);
+  assert.match(payments, /requestedProduct === 'clone_live' \? '\/clone\/live\/' : '\/clone\/'/);
+  assert.match(payments, /cloneReturnPath\(requestedProduct\)/);
+  assert.match(payments, /experience = requestedProduct === 'clone_live' \? 'live' : 'standard'/);
 });
 
 test('clone profiles express the new astrological mechanism and memory model', () => {
