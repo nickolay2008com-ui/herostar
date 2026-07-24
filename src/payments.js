@@ -72,18 +72,40 @@ function normalizeReceiptContact(value) {
   throw publicError('Укажите телефон или email для электронного чека.', 400, 'RECEIPT_CONTACT_REQUIRED');
 }
 
-function publicAppUrl() {
-  const candidate = String(process.env.APP_URL || 'https://herostar.up.railway.app').trim().replace(/\/+$/, '');
-  let url;
-  try {
-    url = new URL(candidate);
-  } catch {
-    throw publicError('Адрес возврата после оплаты настроен неверно.', 503, 'PAYMENT_RETURN_URL_INVALID');
+function normalizeAppUrlCandidate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  const repaired = raw
+    .replace(/^https\/\//i, 'https://')
+    .replace(/^http\/\//i, 'http://');
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(repaired)
+    ? repaired
+    : `https://${repaired}`;
+}
+
+export function publicAppUrl(env = process.env) {
+  const candidates = [
+    env.APP_URL,
+    env.RAILWAY_PUBLIC_DOMAIN,
+    'https://herostar.up.railway.app',
+  ];
+
+  for (const value of candidates) {
+    const candidate = normalizeAppUrlCandidate(value);
+    if (!candidate) continue;
+
+    try {
+      const url = new URL(candidate);
+      if (!url.hostname || !['http:', 'https:'].includes(url.protocol)) continue;
+      if (env.NODE_ENV === 'production' && url.protocol !== 'https:') continue;
+      return url.origin;
+    } catch {
+      // Переходим к Railway-домену или безопасному production fallback.
+    }
   }
-  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
-    throw publicError('Адрес возврата после оплаты должен использовать HTTPS.', 503, 'PAYMENT_RETURN_URL_INVALID');
-  }
-  return url.toString().replace(/\/$/, '');
+
+  throw publicError('Адрес возврата после оплаты настроен неверно.', 503, 'PAYMENT_RETURN_URL_INVALID');
 }
 
 function offerCopy(offer) {
