@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - codex/clone-stage-a-safety
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -21,19 +18,16 @@ jobs:
           ref: codex/clone-stage-a-safety
           fetch-depth: 0
 
-      - name: Reconstruct audit payload
+      - name: Assemble audit payload without decoding
         run: |
           set -euo pipefail
           ls -l .github/stage-a-payload
           cat .github/stage-a-payload/part-* > /tmp/stage-a.b64
           wc -c /tmp/stage-a.b64
-          base64 -d /tmp/stage-a.b64 > /tmp/stage-a.tar.gz
-          sha256sum /tmp/stage-a.tar.gz
+          sha256sum /tmp/stage-a.b64
 
       - uses: actions/upload-artifact@v4
         with:
           name: stage-a-reconstructed
-          path: |
-            /tmp/stage-a.b64
-            /tmp/stage-a.tar.gz
+          path: /tmp/stage-a.b64
           retention-days: 1
