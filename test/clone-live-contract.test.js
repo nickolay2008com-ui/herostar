@@ -8,31 +8,28 @@ import {
   consultationProfiles,
 } from '../src/consultation-profiles.js';
 
-// Этот контракт удерживает новый сценарий как единый продуктовый механизм.
 const html = readFileSync(new URL('../public/clone/live/index.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../public/clone-live.css', import.meta.url), 'utf8');
+const safetyCss = readFileSync(new URL('../public/clone-live-safety.css', import.meta.url), 'utf8');
 const jsPath = new URL('../public/clone-live.js', import.meta.url);
 const js = readFileSync(jsPath, 'utf8');
 const quotaPath = new URL('../src/clone-quota.js', import.meta.url);
 const quota = readFileSync(quotaPath, 'utf8');
 const paymentsPath = new URL('../src/payments.js', import.meta.url);
 const payments = readFileSync(paymentsPath, 'utf8');
+const commercePath = new URL('../src/commerce.js', import.meta.url);
+const commerce = readFileSync(commercePath, 'utf8');
 
 test('clone live frontend and server helpers have valid JavaScript', () => {
-  execFileSync(process.execPath, ['--check', jsPath.pathname], { stdio: 'pipe' });
-  execFileSync(process.execPath, ['--check', quotaPath.pathname], { stdio: 'pipe' });
-  execFileSync(process.execPath, ['--check', paymentsPath.pathname], { stdio: 'pipe' });
+  for (const path of [jsPath, quotaPath, paymentsPath, commercePath]) {
+    execFileSync(process.execPath, ['--check', path.pathname], { stdio: 'pipe' });
+  }
 });
 
-test('clone live route follows situation-first flow', () => {
+test('clone live route follows situation-first flow and shows value before Telegram', () => {
   for (const id of [
-    'situationStage',
-    'understandingStage',
-    'birthStage',
-    'buildingStage',
-    'resultStage',
-    'telegramSection',
-    'dialogueSection',
+    'situationStage', 'understandingStage', 'birthStage', 'buildingStage',
+    'resultStage', 'telegramSection', 'dialogueSection',
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
@@ -41,21 +38,31 @@ test('clone live route follows situation-first flow', () => {
   assert.match(html, /Преимущество вашего клона/);
   assert.match(html, /Почему это индивидуально/);
   assert.match(html, /Telegram сохранит карту, ситуацию и этот разбор/);
+  assert.ok(html.indexOf('Первый полный ответ') < html.indexOf('Сохранить клона через Telegram'));
+});
+
+test('birth data has explicit consent and the canonical Metrika counter', () => {
+  assert.match(html, /name="personalDataConsent"[^>]*required/);
+  assert.match(html, /110937602/);
+  assert.match(html, /clone-live-safety\.css/);
+  assert.match(safetyCss, /\.consent-check/);
+  assert.match(js, /personalDataConsent:true/);
 });
 
 test('clone live keeps anonymous value before Telegram and then continues through existing APIs', () => {
   const chartCreation = js.indexOf("json('/api/charts'");
-  const localDemo = js.indexOf('buildDemo(state.chart,state.category)');
+  const localDemo = js.indexOf('buildDemo(state.chart, state.category)');
   const telegramMount = js.indexOf('async function mountTelegram()');
   const consultation = js.indexOf("json('/api/consult'");
   assert.ok(chartCreation > -1);
   assert.ok(localDemo > chartCreation);
   assert.ok(telegramMount > localDemo);
   assert.ok(consultation > telegramMount);
-  assert.match(js, /callback\.searchParams\.set\('state',`clone:\$\{state\.chartId\|\|''\}`\)/);
+  assert.match(js, /callback\.searchParams\.set\('state', `clone:\$\{state\.chartId \|\| ''\}`\)/);
   assert.match(js, /await claimChart\(\)/);
-  assert.match(js, /if \(state\.user\) \{ await finishExistingLogin\(\)/);
-  assert.match(js, /prepared\.carriesContext\)\{state\.contextSynced=true;persist\(\);\}/);
+  assert.match(js, /if \(state\.user\) \{[\s\S]*await finishExistingLogin\(\)/);
+  assert.match(js, /if \(prepared\.carriesContext\) \{[\s\S]*state\.contextSynced = true;[\s\S]*persist\(\)/);
+  assert.match(js, /\/api\/charts\/\$\{encodeURIComponent\(state\.chartId\)\}\/messages/);
 });
 
 test('clone live reads Placidus cusps from the real chart structure', () => {
@@ -74,14 +81,28 @@ test('clone live uses a quiet 24-hour trial with at least three completed answer
   assert.match(quota, /timeOpen \|\| minimumOpen/);
   assert.match(quota, /metadata->>'product'.*= 'clone_live'/s);
   assert.match(quota, /experience = 'live'/);
+  assert.doesNotMatch(html, /осталось \d|из 3 вопросов|таймер/i);
 });
 
-test('payments return each clone experience to its canonical route', () => {
+test('payments return each clone experience to its canonical route and are verified', () => {
   assert.match(js, /product:'clone_live'/);
+  assert.match(js, /PAYMENT_KEY = 'starCloneLivePayment'/);
+  assert.match(js, /\/api\/payments\/status\?\$\{query\}/);
+  assert.match(js, /if \(status\.paid\)/);
   assert.match(payments, /function cloneReturnPath\(requestedProduct\)/);
   assert.match(payments, /requestedProduct === 'clone_live' \? '\/clone\/live\/' : '\/clone\/'/);
-  assert.match(payments, /cloneReturnPath\(requestedProduct\)/);
+  assert.match(payments, /payment_ref=/);
   assert.match(payments, /experience = requestedProduct === 'clone_live' \? 'live' : 'standard'/);
+});
+
+test('approved tariffs are 7 days for 490 and 30 days for 990 without autorenew', () => {
+  assert.match(commerce, /title: '7 дней со Звёздным клоном'/);
+  assert.match(commerce, /490/);
+  assert.match(commerce, /durationHours: 7 \* 24/);
+  assert.match(commerce, /title: '30 дней \+ полная карта HeroStar'/);
+  assert.match(commerce, /990/);
+  assert.match(commerce, /INTERVAL '7 days'/);
+  assert.doesNotMatch(commerce, /autoRenew/);
 });
 
 test('clone profiles express the new astrological mechanism and memory model', () => {
