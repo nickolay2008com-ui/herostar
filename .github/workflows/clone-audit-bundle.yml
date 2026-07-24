@@ -1,9 +1,9 @@
 name: Clone audit bundle
 
 on:
-  push:
+  pull_request:
     branches:
-      - audit/clone-full-lifecycle
+      - main
 
 permissions:
   contents: read
