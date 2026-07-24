@@ -1,9 +1,9 @@
 name: Apply clone stage A
 
 on:
-  push:
+  pull_request:
     branches:
-      - codex/clone-stage-a-safety
+      - main
 
 permissions:
   contents: write
