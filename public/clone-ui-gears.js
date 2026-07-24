@@ -1,7 +1,17 @@
 (() => {
   const PENDING_KEY = 'starClonePendingQuestion';
+  const LIVE_RETURN_KEY = 'starCloneLiveReturn';
   const params = new URLSearchParams(location.search);
   const authReturned = params.get('auth') === 'ok';
+
+  const liveReturn = localStorage.getItem(LIVE_RETURN_KEY);
+  if (params.get('payment') === 'return' && liveReturn) {
+    localStorage.removeItem(LIVE_RETURN_KEY);
+    const target = new URL(liveReturn, location.origin);
+    for (const [key, value] of params.entries()) target.searchParams.set(key, value);
+    location.replace(target.toString());
+    return;
+  }
 
   function pendingQuestion() {
     return String(localStorage.getItem(PENDING_KEY) || '').trim();
