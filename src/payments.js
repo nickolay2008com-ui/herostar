@@ -106,7 +106,7 @@ function offerCopy(offer) {
   if (offer.code === OFFER_CODES.CLONE_DAY) {
     return {
       description: 'HeroStar — 7 дней со Звёздным клоном',
-      itemDescription: 'Доступ к Звёздному клону на 7 дней, полная карта и память диалога',
+      itemDescription: 'Диалог со Звёздным клоном на 7 дней с памятью ситуации и углублёнными ответами',
     };
   }
   if (offer.code === OFFER_CODES.CLONE_ALIGNMENT) {
