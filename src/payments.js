@@ -105,11 +105,23 @@ export function publicAppUrl(env = process.env) {
 function offerCopy(offer) {
   if (offer.code === OFFER_CODES.CLONE_DAY) {
     return {
+      description: 'HeroStar — День со Звёздным клоном на 24 часа',
+      itemDescription: 'Глубокий режим клона на 24 часа, полная карта и Паспорт клона',
+    };
+  }
+  if (offer.code === OFFER_CODES.CLONE_ALIGNMENT) {
+    return {
+      description: 'HeroStar — Сонастройка со Звёздным клоном на 30 дней',
+      itemDescription: '30 дней глубокого режима клона и Telegram-сопровождения',
+    };
+  }
+  if (offer.code === OFFER_CODES.CLONE_LIVE_WEEK) {
+    return {
       description: 'HeroStar — 7 дней со Звёздным клоном',
       itemDescription: 'Диалог со Звёздным клоном на 7 дней с памятью ситуации и углублёнными ответами',
     };
   }
-  if (offer.code === OFFER_CODES.CLONE_ALIGNMENT) {
+  if (offer.code === OFFER_CODES.CLONE_LIVE_MONTH) {
     return {
       description: 'HeroStar — 30 дней со Звёздным клоном и полная карта',
       itemDescription: '30 дней диалога с памятью, углублённая астрологическая механика и полная карта HeroStar',
@@ -121,21 +133,30 @@ function offerCopy(offer) {
   };
 }
 
-function cloneReturnPath(requestedProduct) {
-  return requestedProduct === 'clone_live' ? '/clone/live/' : '/clone/';
+function liveOfferCode(offerCode) {
+  if (offerCode === OFFER_CODES.CLONE_DAY) return OFFER_CODES.CLONE_LIVE_WEEK;
+  if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) return OFFER_CODES.CLONE_LIVE_MONTH;
+  return offerCode;
 }
 
 export async function createPayment({ user, chartId, visitorId = null, receiptContact, offerCode = null }) {
   const context = currentRequestContext();
   const requestedProduct = String(context.product || '').trim().toLowerCase();
   const product = ['clone', 'clone_live'].includes(requestedProduct) ? 'clone' : 'herostar';
-  const offer = await resolveOffer({ user, offerCode: offerCode || context.offerCode, product, chartId });
+  const requestedOfferCode = offerCode || context.offerCode;
+  const effectiveOfferCode = requestedProduct === 'clone_live'
+    ? liveOfferCode(requestedOfferCode)
+    : requestedOfferCode;
+  const offer = await resolveOffer({ user, offerCode: effectiveOfferCode, product, chartId });
   const amount = Number(offer.amount).toFixed(2);
   const customer = normalizeReceiptContact(receiptContact);
   const appUrl = publicAppUrl();
   const returnRef = crypto.randomUUID();
+  const query = `payment=return&chart=${encodeURIComponent(chartId || '')}&offer=${encodeURIComponent(offer.code)}&payment_ref=${encodeURIComponent(returnRef)}`;
   const returnUrl = offer.product === 'clone'
-    ? `${appUrl}${cloneReturnPath(requestedProduct)}?payment=return&chart=${encodeURIComponent(chartId || '')}&offer=${encodeURIComponent(offer.code)}&payment_ref=${encodeURIComponent(returnRef)}`
+    ? (requestedProduct === 'clone_live'
+      ? `${appUrl}/clone/live/?${query}`
+      : `${appUrl}/clone/?${query}`)
     : `${appUrl}/payment/return?chart=${encodeURIComponent(chartId || '')}&payment_ref=${encodeURIComponent(returnRef)}`;
   const copy = offerCopy(offer);
   const experience = requestedProduct === 'clone_live' ? 'live' : 'standard';
