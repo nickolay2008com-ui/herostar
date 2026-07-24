@@ -45,7 +45,28 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Run tests
-        run: npm test
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: npm test > /tmp/test-output.txt 2>&1
+
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monetization-test-output
+          path: /tmp/test-output.txt
+          retention-days: 1
+
+      - name: Require passing tests
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.tests.outcome }}" != "success" ]; then
+            tail -n 180 /tmp/test-output.txt
+            exit 1
+          fi
+          tail -n 40 /tmp/test-output.txt
 
       - name: Check syntax
         shell: bash
