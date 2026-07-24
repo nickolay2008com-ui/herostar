@@ -85,10 +85,12 @@ FREE_CARD_COUNT=3
 
 1. Деплой имеет статус `Success`.
 2. `https://herostar.up.railway.app/health` возвращает успешный ответ.
-3. Создаётся демонстрационная карта.
-4. Telegram Login открывает callback на production-домене.
-5. Тестовый платёж возвращается на production-домен и подтверждается webhook.
-
+3. `/api/config` показывает `paymentsConfigured: true`, но не раскрывает секретные значения и реквизиты целиком.
+4. При временном удалении одного обязательного реквизита `/api/payments/create` возвращает `PAYMENTS_NOT_READY` и не создаёт заказ в ЮKassa.
+5. Создаётся демонстрационная карта.
+6. Telegram Login открывает callback на production-домене.
+7. Тестовый платёж возвращается на production-домен и подтверждается по конкретным `payment_ref` и `paymentId`.
+8. Повторный webhook не продлевает доступ второй раз.
 
 ## Монетизация Звёздного клона
 
