@@ -44,7 +44,7 @@
         </div>
         <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
         <button class="primary" data-go-create>Создать звёздного клона</button>
-        <p class="microcopy">Создание бесплатно. Telegram нужен, чтобы сохранить клона и историю консультаций.</p>
+        <p class="microcopy">Telegram подключается перед первым ответом, чтобы сохранить клона, историю и оплаченный доступ.</p>
       </div>
       <div class="clone-visual">
         <div class="halo" aria-hidden="true"></div><div class="silhouette" aria-hidden="true"><span>✦</span></div>
@@ -86,7 +86,7 @@
             <div class="messages" id="messages"><article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Я готов. Опишите ситуацию, в которой мне нужно выбрать, ответить или действовать.</p></div></article></div>
             <div class="chips"><button>Войти ли в новый проект?</button><button>Как ответить человеку?</button><button>Рискнуть или сохранить стабильность?</button></div>
             <form id="questionForm" class="composer"><textarea id="question" rows="3" placeholder="Что произошло, какие варианты есть и что вызывает сомнение?" required></textarea><button class="primary" type="submit">Спросить клона</button></form>
-            <p class="composer-note">Каждый отправленный вопрос считается одной бесплатной консультацией. Уточняйте важные детали сразу.</p>
+            <p class="composer-note">Перед первым ответом откроется быстрый вход через Telegram. Он нужен только для сохранения клона, ответа и доступа после оплаты.</p>
             <p class="error" id="dialogError"></p>
           </div>
           <aside class="logic"><p class="eyebrow">Модель клона</p><h3>Базовые параметры решения</h3><div id="logicEmpty" class="logic-empty">После создания здесь появятся главные элементы карты, формирующие стиль решений клона.</div><div id="logicFactors" class="factors hidden"></div><details><summary>Техническая основа</summary><p>Натальная карта, система домов Плацидуса, планеты, знаки, дома, стихии, аспекты, ретроградность, ASC/DSC и MC/IC.</p></details></aside>
@@ -113,5 +113,6 @@
   <script src="/clone-product-bridge.js"></script>
   <script src="/clone-ui-gears.js"></script>
   <script src="/clone.js" defer></script>
+  <script src="/clone-conversion-hotfix.js?v=20260724" defer></script>
 </body>
 </html>
