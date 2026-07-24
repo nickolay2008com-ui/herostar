@@ -23,7 +23,7 @@ export const consultationProfiles = Object.freeze({
   }),
 });
 
-export function resolveConsultationProfile({ product, premium = false } = {}) {
-  if (product === 'clone' && !premium) return consultationProfiles[CLONE_FREE_PROFILE_ID];
+export function resolveConsultationProfile({ product } = {}) {
+  if (product === 'clone') return consultationProfiles[CLONE_FREE_PROFILE_ID];
   return null;
 }
