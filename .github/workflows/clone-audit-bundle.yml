@@ -1,0 +1,22 @@
+name: Clone audit bundle
+
+on:
+  push:
+    branches:
+      - audit/clone-full-lifecycle
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build clean audit archive
+        run: tar --exclude=.git --exclude=.github/workflows/clone-audit-bundle.yml -czf /tmp/herostar-audit.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: herostar-audit
+          path: /tmp/herostar-audit.tar.gz
+          retention-days: 1
