@@ -141,17 +141,18 @@ async function ensureSchema(pool) {
 
 async function syncSubscriptions(pool, firstDelayMinutes) {
   const inserted = await pool.query(
-    `WITH latest AS (
-       SELECT DISTINCT ON (chart.user_id) chart.user_id, chart.id AS chart_id
-       FROM charts AS chart
-       JOIN users AS user_record ON user_record.telegram_id = chart.user_id
-       WHERE chart.user_id IS NOT NULL
-         AND user_record.clone_alignment_until > NOW()
-       ORDER BY chart.user_id, chart.created_at DESC
+    `WITH active_alignment AS (
+       SELECT user_record.telegram_id AS user_id, user_record.clone_alignment_chart_id AS chart_id
+       FROM users AS user_record
+       JOIN charts AS chart
+         ON chart.id = user_record.clone_alignment_chart_id
+        AND chart.user_id = user_record.telegram_id
+       WHERE user_record.clone_alignment_until > NOW()
+         AND user_record.clone_alignment_chart_id IS NOT NULL
      )
      INSERT INTO practice_subscriptions (user_id, chart_id, program, enabled, next_delivery_at)
      SELECT user_id, chart_id, 'clone_alignment', TRUE, NOW() + ($1::text || ' minutes')::interval
-     FROM latest
+     FROM active_alignment
      ON CONFLICT (user_id) DO UPDATE SET
        chart_id = EXCLUDED.chart_id,
        program = 'clone_alignment',
@@ -174,6 +175,7 @@ async function syncSubscriptions(pool, firstDelayMinutes) {
         SELECT 1 FROM users AS user_record
         WHERE user_record.telegram_id = subscription.user_id
           AND user_record.clone_alignment_until > NOW()
+          AND user_record.clone_alignment_chart_id = subscription.chart_id
       )
   `);
 
@@ -182,12 +184,12 @@ async function syncSubscriptions(pool, firstDelayMinutes) {
 
 async function loadAlignmentStatus(pool, userId) {
   const result = await pool.query(
-    `SELECT clone_alignment_until,
+    `SELECT clone_alignment_until, clone_alignment_chart_id,
             clone_alignment_until > NOW() AS active
      FROM users WHERE telegram_id = $1 LIMIT 1`,
     [String(userId)],
   );
-  return result.rows[0] || { active: false, clone_alignment_until: null };
+  return result.rows[0] || { active: false, clone_alignment_until: null, clone_alignment_chart_id: null };
 }
 
 async function sendWelcome(pool, token, subscription) {
@@ -264,6 +266,7 @@ async function loadPracticeContext(pool, subscription) {
      WHERE chart.id = $1
        AND chart.user_id = $2
        AND user_record.clone_alignment_until > NOW()
+       AND user_record.clone_alignment_chart_id = chart.id
      LIMIT 1`,
     [subscription.chart_id, subscription.user_id],
   );
@@ -348,18 +351,11 @@ async function setRuntimeValue(pool, key, value) {
   );
 }
 
-async function latestChartForUser(pool, userId) {
-  const result = await pool.query(
-    `SELECT id FROM charts WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-    [String(userId)],
-  );
-  return result.rows[0]?.id || null;
-}
 
 async function setSubscriptionEnabled(pool, userId, enabled) {
   const status = await loadAlignmentStatus(pool, userId);
   if (!status.active) return { subscription: null, active: false, until: status.clone_alignment_until };
-  const chartId = await latestChartForUser(pool, userId);
+  const chartId = status.clone_alignment_chart_id;
   if (!chartId) return { subscription: null, active: true, until: status.clone_alignment_until };
   const result = await pool.query(
     `INSERT INTO practice_subscriptions (user_id, chart_id, program, enabled, next_delivery_at, last_error)

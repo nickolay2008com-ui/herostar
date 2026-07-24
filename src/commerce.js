@@ -72,6 +72,7 @@ function emptyAccess(userId) {
     clone_passport_unlocked: false,
     clone_access_until: null,
     clone_alignment_until: null,
+    clone_alignment_chart_id: null,
   };
 }
 
@@ -90,6 +91,7 @@ export function normalizeAccess(user, now = new Date()) {
   const legacyUntil = asDate(user.premium_until);
   const dayUntil = asDate(user.clone_access_until ?? user.cloneAccessUntil);
   const alignmentUntil = asDate(user.clone_alignment_until ?? user.cloneAlignmentUntil);
+  const alignmentChartId = user.clone_alignment_chart_id ?? user.cloneAlignmentChartId ?? null;
   const legacyActive = active(legacyUntil, now);
   const dayActive = active(dayUntil, now);
   const alignmentActive = active(alignmentUntil, now);
@@ -118,17 +120,29 @@ export function normalizeAccess(user, now = new Date()) {
     mapUnlocked,
     clonePassportUnlocked,
     cloneAccessActive,
+    cloneDayAccessActive: dayActive,
+    cloneAlignmentActive: alignmentActive,
     clonePlan,
     cloneAccessUntil: iso(cloneAccessUntil),
     cloneAlignmentUntil: iso(alignmentUntil),
+    cloneAlignmentChartId: alignmentChartId ? String(alignmentChartId) : null,
   };
+}
+
+export function hasCloneAccessForChart(user, chartId, now = new Date()) {
+  const access = normalizeAccess(user, now);
+  if (!access?.cloneAccessActive) return false;
+  if (access.legacyPremiumActive || access.cloneDayAccessActive) return true;
+  if (!access.cloneAlignmentActive) return false;
+  if (!access.cloneAlignmentChartId || !chartId) return false;
+  return String(access.cloneAlignmentChartId) === String(chartId);
 }
 
 async function getDbAccess(userId) {
   if (!pool) return null;
   const result = await pool.query(
     `SELECT telegram_id, premium_until, full_map_unlocked, clone_passport_unlocked,
-            clone_access_until, clone_alignment_until
+            clone_access_until, clone_alignment_until, clone_alignment_chart_id
      FROM users WHERE telegram_id = $1 LIMIT 1`,
     [String(userId)],
   );
@@ -143,16 +157,17 @@ export async function decorateUserAccess(user, now = new Date()) {
   return normalizeAccess({ ...user, ...(stored || {}) }, now);
 }
 
-async function eligibleDayPayment(userId, now = new Date()) {
+async function eligibleDayPayment(userId, chartId = null, now = new Date()) {
   if (!userId) return null;
   if (!pool) {
     return [...memoryPayments.values()]
       .filter((payment) => payment.userId === String(userId)
+        && (!chartId || String(payment.chartId || '') === String(chartId))
         && payment.offerCode === OFFER_CODES.CLONE_DAY
         && payment.status === 'succeeded'
         && payment.entitlementAppliedAt
         && new Date(payment.entitlementAppliedAt).getTime() >= now.getTime() - DAY_MS
-        && ![...memoryPayments.values()].some((candidate) => candidate.creditSourcePaymentId === payment.id && ['pending', 'waiting_for_capture', 'succeeded'].includes(candidate.status)))
+        && ![...memoryPayments.values()].some((candidate) => candidate.creditSourcePaymentId === payment.id && ['checkout_reserved', 'pending', 'waiting_for_capture', 'succeeded'].includes(candidate.status)))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
   }
 
@@ -160,6 +175,7 @@ async function eligibleDayPayment(userId, now = new Date()) {
     `SELECT day.id, day.created_at
      FROM payments AS day
      WHERE day.user_id = $1
+       AND ($3::uuid IS NULL OR day.chart_id = $3::uuid)
        AND day.offer_code = $2
        AND day.status = 'succeeded'
        AND day.entitlement_applied_at IS NOT NULL
@@ -167,16 +183,16 @@ async function eligibleDayPayment(userId, now = new Date()) {
        AND NOT EXISTS (
          SELECT 1 FROM payments AS upgrade
          WHERE upgrade.credit_source_payment_id = day.id
-           AND upgrade.status IN ('pending', 'waiting_for_capture', 'succeeded')
+           AND upgrade.status IN ('checkout_reserved', 'pending', 'waiting_for_capture', 'succeeded')
        )
      ORDER BY day.created_at DESC
      LIMIT 1`,
-    [String(userId), OFFER_CODES.CLONE_DAY],
+    [String(userId), OFFER_CODES.CLONE_DAY, chartId || null],
   );
   return result.rows[0] || null;
 }
 
-export async function getCommerceState(user, now = new Date()) {
+export async function getCommerceState(user, now = new Date(), chartId = null) {
   const access = await decorateUserAccess(user, now);
   const catalog = offerCatalog();
   if (!access) {
@@ -189,14 +205,14 @@ export async function getCommerceState(user, now = new Date()) {
     };
   }
 
-  const creditPayment = await eligibleDayPayment(access.telegram_id, now);
+  const creditPayment = await eligibleDayPayment(access.telegram_id, chartId, now);
   const alignment = catalog[OFFER_CODES.CLONE_ALIGNMENT];
   return {
     access,
     offers: {
       day: {
         ...catalog[OFFER_CODES.CLONE_DAY],
-        available: access.clonePlan === 'free',
+        available: !hasCloneAccessForChart(access, chartId, now),
       },
       alignment: {
         ...alignment,
@@ -209,7 +225,7 @@ export async function getCommerceState(user, now = new Date()) {
   };
 }
 
-export async function resolveOffer({ user, offerCode, product }) {
+export async function resolveOffer({ user, offerCode, product, chartId = null }) {
   const catalog = offerCatalog();
   const normalized = String(offerCode || '').trim().toLowerCase();
   const code = normalized || (product === 'clone' ? OFFER_CODES.CLONE_DAY : OFFER_CODES.FULL_MAP);
@@ -222,9 +238,24 @@ export async function resolveOffer({ user, offerCode, product }) {
     throw error;
   }
 
+  if (offer.product !== product) {
+    const error = new Error('Предложение не относится к выбранному продукту.');
+    error.status = 400;
+    error.code = 'OFFER_PRODUCT_MISMATCH';
+    error.expose = true;
+    throw error;
+  }
+  if (offer.product === 'clone' && !chartId) {
+    const error = new Error('Сначала выберите Звёздного клона для покупки.');
+    error.status = 400;
+    error.code = 'CLONE_CHART_REQUIRED';
+    error.expose = true;
+    throw error;
+  }
+
   if (code === OFFER_CODES.CLONE_DAY) {
-    const state = await getCommerceState(user);
-    if (state.access?.cloneAccessActive) {
+    const state = await getCommerceState(user, new Date(), chartId);
+    if (hasCloneAccessForChart(state.access, chartId)) {
       const error = new Error('Глубокий режим уже активен. Продолжить его можно через Сонастройку.');
       error.status = 409;
       error.code = 'OFFER_NOT_AVAILABLE';
@@ -234,7 +265,17 @@ export async function resolveOffer({ user, offerCode, product }) {
   }
 
   if (code === OFFER_CODES.CLONE_ALIGNMENT) {
-    const state = await getCommerceState(user);
+    const state = await getCommerceState(user, new Date(), chartId);
+    if (state.access?.cloneAlignmentActive) {
+      const sameChart = String(state.access.cloneAlignmentChartId || '') === String(chartId);
+      const error = new Error(sameChart
+        ? 'Сонастройка для этого клона уже активна.'
+        : 'Сонастройка уже активна для другого клона. Сначала завершите текущий период.');
+      error.status = 409;
+      error.code = sameChart ? 'ALIGNMENT_ALREADY_ACTIVE' : 'ALIGNMENT_ACTIVE_FOR_ANOTHER_CHART';
+      error.expose = true;
+      throw error;
+    }
     return {
       ...offer,
       amount: state.offers.alignment.payableAmount,
@@ -253,25 +294,42 @@ export async function initCommerce(storePool = null) {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS clone_passport_unlocked BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS clone_access_until TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS clone_alignment_until TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS clone_alignment_chart_id UUID REFERENCES charts(id) ON DELETE SET NULL;
+    ALTER TABLE payments ADD COLUMN IF NOT EXISTS return_ref UUID;
     ALTER TABLE payments ADD COLUMN IF NOT EXISTS offer_code TEXT;
     ALTER TABLE payments ADD COLUMN IF NOT EXISTS entitlement_applied_at TIMESTAMPTZ;
     ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit_source_payment_id TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS payments_return_ref_unique ON payments(return_ref) WHERE return_ref IS NOT NULL;
     CREATE INDEX IF NOT EXISTS payments_offer_user_idx ON payments(user_id, offer_code, created_at DESC);
-    CREATE UNIQUE INDEX IF NOT EXISTS payments_day_credit_active_unique
+    DROP INDEX IF EXISTS payments_day_credit_active_unique;
+    CREATE UNIQUE INDEX payments_day_credit_active_unique
       ON payments(credit_source_payment_id)
       WHERE credit_source_payment_id IS NOT NULL
-        AND status IN ('pending', 'waiting_for_capture', 'succeeded');
+        AND status IN ('checkout_reserved', 'pending', 'waiting_for_capture', 'succeeded');
     CREATE INDEX IF NOT EXISTS users_clone_alignment_idx ON users(clone_alignment_until) WHERE clone_alignment_until IS NOT NULL;
+
+    UPDATE users AS user_record
+    SET clone_alignment_chart_id = (
+      SELECT chart.id
+      FROM charts AS chart
+      JOIN clone_charts AS clone ON clone.chart_id = chart.id
+      WHERE chart.user_id = user_record.telegram_id
+      ORDER BY chart.created_at DESC
+      LIMIT 1
+    )
+    WHERE user_record.clone_alignment_until IS NOT NULL
+      AND user_record.clone_alignment_chart_id IS NULL;
   `);
 }
 
-export async function recordPaymentOffer({ paymentId, userId, offerCode, creditSourcePaymentId = null }) {
+export async function recordPaymentOffer({ paymentId, userId, chartId = null, offerCode, creditSourcePaymentId = null }) {
   if (!pool) {
     const previous = memoryPayments.get(paymentId) || {};
     memoryPayments.set(paymentId, {
       ...previous,
       id: paymentId,
       userId: String(userId),
+      chartId: chartId || previous.chartId || null,
       offerCode,
       creditSourcePaymentId,
       status: previous.status || 'pending',
@@ -298,7 +356,7 @@ function addDuration(base, milliseconds) {
   return new Date(Math.max(Date.now(), asDate(base)?.getTime() || 0) + milliseconds);
 }
 
-export async function applyPaymentEntitlement({ paymentId, userId, offerCode, creditSourcePaymentId = null }) {
+export async function applyPaymentEntitlement({ paymentId, userId, chartId = null, offerCode, creditSourcePaymentId = null }) {
   if (!userId || !offerCode) return null;
   if (!pool) {
     const payment = memoryPayments.get(paymentId) || {
@@ -318,12 +376,14 @@ export async function applyPaymentEntitlement({ paymentId, userId, offerCode, cr
       access.clone_passport_unlocked = true;
       access.clone_access_until = addDuration(access.clone_access_until, DAY_MS).toISOString();
     } else if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
+      if (!chartId) throw new Error('Alignment entitlement requires a chart.');
       access.full_map_unlocked = true;
       access.clone_passport_unlocked = true;
       const base = latestDate(access.clone_alignment_until, new Date());
       const until = new Date(base.getTime() + ALIGNMENT_MS).toISOString();
       access.clone_access_until = until;
       access.clone_alignment_until = until;
+      access.clone_alignment_chart_id = String(chartId);
     }
     memoryAccess.set(String(userId), access);
     memoryPayments.set(paymentId, {
@@ -366,14 +426,16 @@ export async function applyPaymentEntitlement({ paymentId, userId, offerCode, cr
         [String(userId)],
       );
     } else if (effectiveOffer === OFFER_CODES.CLONE_ALIGNMENT) {
+      if (!chartId) throw new Error('Alignment entitlement requires a chart.');
       await client.query(
         `UPDATE users
          SET full_map_unlocked = TRUE,
              clone_passport_unlocked = TRUE,
              clone_access_until = GREATEST(COALESCE(clone_alignment_until, NOW()), NOW()) + INTERVAL '30 days',
-             clone_alignment_until = GREATEST(COALESCE(clone_alignment_until, NOW()), NOW()) + INTERVAL '30 days'
+             clone_alignment_until = GREATEST(COALESCE(clone_alignment_until, NOW()), NOW()) + INTERVAL '30 days',
+             clone_alignment_chart_id = $2
          WHERE telegram_id = $1`,
-        [String(userId)],
+        [String(userId), chartId],
       );
     } else {
       throw new Error(`Unsupported offer entitlement: ${effectiveOffer}`);

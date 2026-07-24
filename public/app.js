@@ -1,6 +1,7 @@
 import { deepDiveButtonMarkup, openDeepDive } from './deep-dive-ui.js';
 
 const CURRENT_CHART_VERSION = '0.2-placidus';
+const PENDING_PAYMENT_KEY = 'herostar_pending_payment';
 
 const state = {
   config: null,
@@ -395,6 +396,23 @@ function openPurchase() {
   openModal(els.payModal);
 }
 
+async function restoreOwnedChart(chartId) {
+  const id = String(chartId || '').trim();
+  if (!id || !state.config?.user) return false;
+  if (state.current?.id !== id) {
+    localStorage.setItem('herostar_chart_id', id);
+    localStorage.removeItem('herostar_chart_token');
+    state.current = null;
+  }
+  const result = await api(`/api/charts/${encodeURIComponent(id)}`);
+  state.current = { ...result, accessToken: '' };
+  renderMap();
+  document.querySelector('.hero').classList.add('hidden');
+  els.map.classList.remove('hidden');
+  els.consultFab.classList.remove('hidden');
+  return true;
+}
+
 async function refreshCurrentChart() {
   const id = state.current?.id || localStorage.getItem('herostar_chart_id');
   if (!id) return;
@@ -466,6 +484,13 @@ async function startPayment() {
       body: JSON.stringify({ chartId: state.current?.id, receiptContact }),
     });
     if (!result.confirmationUrl) throw new Error('ЮKassa не вернула ссылку оплаты.');
+    localStorage.setItem(PENDING_PAYMENT_KEY, JSON.stringify({
+      paymentId: result.paymentId,
+      paymentRef: result.paymentRef,
+      chartId: state.current?.id || null,
+      amount: Number(state.config?.price || 990),
+      createdAt: new Date().toISOString(),
+    }));
     location.href = result.confirmationUrl;
   } catch (error) {
     toast(error.message);
@@ -527,6 +552,7 @@ els.birthForm.addEventListener('submit', (event) => {
     time: data.get('time'),
     place: data.get('place'),
     unknownTime: data.get('unknownTime') === 'on',
+    personalDataConsent: data.get('personalDataConsent') === 'on',
   });
 });
 els.demoButton.addEventListener('click', () => createChart({ demo: true }));
@@ -586,6 +612,66 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+function readPendingPayment() {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_PAYMENT_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function clearPaymentReturnState() {
+  localStorage.removeItem(PENDING_PAYMENT_KEY);
+  const url = new URL(location.href);
+  url.searchParams.delete('payment');
+  url.searchParams.delete('payment_ref');
+  history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
+async function verifyPaymentReturn() {
+  const params = new URLSearchParams(location.search);
+  const pending = readPendingPayment();
+  const paymentRef = params.get('payment_ref') || pending?.paymentRef || null;
+  const paymentId = paymentRef ? null : pending?.paymentId || null;
+  if (!paymentRef && !paymentId) {
+    toast('Не найден идентификатор платежа. Войдите через Telegram и проверьте свою карту.');
+    return;
+  }
+
+  toast('Проверяем конкретный платёж…');
+  let lastError = null;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      const query = new URLSearchParams();
+      if (paymentRef) query.set('ref', paymentRef);
+      if (paymentId) query.set('paymentId', paymentId);
+      const payment = await api(`/api/payments/status?${query.toString()}`);
+      if (payment.status === 'canceled') {
+        clearPaymentReturnState();
+        toast('Платёж отменён. Доступ не изменён.');
+        return;
+      }
+      if (payment.status === 'succeeded' && payment.paid) {
+        await loadConfig();
+        if (payment.chartId) await restoreOwnedChart(payment.chartId);
+        else await refreshCurrentChart();
+        clearPaymentReturnState();
+        toast('Полная карта открыта.');
+        window.dispatchEvent(new CustomEvent('herostar:purchase-success', {
+          detail: { price: Number(payment.amount || state.config.price || 990), currency: 'RUB' },
+        }));
+        return;
+      }
+    } catch (error) {
+      lastError = error;
+      if (!['PAYMENT_NETWORK_ERROR', 'PAYMENT_RATE_LIMITED', 'PAYMENT_PROVIDER_ERROR'].includes(error.code)) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 700 : 1500));
+  }
+  if (lastError) console.warn('Payment verification remains pending:', lastError.message);
+  toast('Платёж ещё подтверждается. Обновите страницу через минуту.');
+}
+
 async function bootstrap() {
   try {
     await loadConfig();
@@ -594,22 +680,10 @@ async function bootstrap() {
       toast('Telegram подключён. Карта сохранена.');
       await claimCurrentChart();
     }
-    if (params.get('payment') === 'return') {
-      toast('Проверяем оплату…');
-      setTimeout(async () => {
-        await loadConfig();
-        await refreshCurrentChart();
-        const paymentSucceeded = Boolean(state.config.user?.premium);
-        toast(paymentSucceeded ? 'Полная карта открыта.' : 'Платёж ещё подтверждается. Обновите карту чуть позже.');
-        if (paymentSucceeded) {
-          window.dispatchEvent(new CustomEvent('herostar:purchase-success', {
-            detail: { price: Number(state.config.price || 990), currency: 'RUB' },
-          }));
-        }
-      }, 1800);
-    } else {
-      await refreshCurrentChart();
-    }
+    const returnedChartId = params.get('chart');
+    if (returnedChartId && state.config?.user) await restoreOwnedChart(returnedChartId).catch(() => false);
+    else await refreshCurrentChart();
+    if (params.get('payment') === 'return') await verifyPaymentReturn();
   } catch (error) {
     toast(error.message);
   }

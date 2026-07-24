@@ -41,7 +41,7 @@ test('платный клон сохраняет текущий серверны
 });
 
 test('уровень доступа выбирается только на сервере', () => {
-  assert.match(serverSource, /const premium = Boolean\(req\.user\?\.cloneAccessActive\)/);
+  assert.match(serverSource, /const premium = hasCloneAccessForChart\(req\.user, record\.id\)/);
   assert.match(serverSource, /answerConsultation\(\{[\s\S]*?product,[\s\S]*?premium,/);
 });
 

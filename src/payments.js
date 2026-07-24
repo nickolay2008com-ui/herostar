@@ -1,6 +1,14 @@
 import crypto from 'node:crypto';
 import { publicError } from './utils.js';
-import { savePayment, updatePayment, claimChart, trackEvent } from './store.js';
+import {
+  updatePayment,
+  claimChart,
+  trackEvent,
+  getPaymentByIdOrReturnRef,
+  reservePaymentCheckout,
+  finalizePaymentCheckout,
+  failPaymentCheckout,
+} from './store.js';
 import { currentRequestContext } from './request-context.js';
 import {
   OFFER_CODES,
@@ -134,13 +142,15 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
     user,
     offerCode: offerCode || context.offerCode,
     product,
+    chartId,
   });
   const amount = Number(offer.amount).toFixed(2);
   const customer = normalizeReceiptContact(receiptContact);
   const appUrl = publicAppUrl();
+  const returnRef = crypto.randomUUID();
   const returnUrl = offer.product === 'clone'
-    ? `${appUrl}/clone/?payment=return&chart=${encodeURIComponent(chartId || '')}&offer=${encodeURIComponent(offer.code)}`
-    : `${appUrl}/payment/return?chart=${encodeURIComponent(chartId || '')}`;
+    ? `${appUrl}/clone/?payment=return&chart=${encodeURIComponent(chartId || '')}&offer=${encodeURIComponent(offer.code)}&payment_ref=${encodeURIComponent(returnRef)}`
+    : `${appUrl}/payment/return?chart=${encodeURIComponent(chartId || '')}&payment_ref=${encodeURIComponent(returnRef)}`;
   const copy = offerCopy(offer);
   const metadata = {
     user_id: String(user.telegram_id),
@@ -148,6 +158,7 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
     product: offer.product,
     offer_code: offer.code,
     credit_source_payment_id: offer.creditSourcePaymentId || '',
+    return_ref: returnRef,
   };
   const body = {
     amount: { value: amount, currency: 'RUB' },
@@ -170,22 +181,56 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
     },
   };
 
-  const payment = await yookassaRequest('/payments', {
-    method: 'POST',
-    headers: { 'Idempotence-Key': crypto.randomUUID() },
-    body: JSON.stringify(body),
-  });
-  await savePayment({
-    id: payment.id,
-    userId: String(user.telegram_id),
-    chartId: chartId || null,
-    status: payment.status,
-    amount,
-    payload: payment,
-  });
+  try {
+    await reservePaymentCheckout({
+      returnRef,
+      userId: user.telegram_id,
+      chartId: chartId || null,
+      amount,
+      offerCode: offer.code,
+      creditSourcePaymentId: offer.creditSourcePaymentId,
+    });
+  } catch (error) {
+    if (error?.code === 'PAYMENT_CREDIT_RESERVED') {
+      throw publicError(
+        'Стоимость Дня уже используется в другом платеже. Завершите его или повторите через двадцать минут.',
+        409,
+        'PAYMENT_CREDIT_RESERVED',
+      );
+    }
+    if (error?.code === 'PAYMENT_CHECKOUT_ACTIVE') {
+      throw publicError(
+        'Для этого предложения уже открыт незавершённый платёж. Завершите его или повторите немного позже.',
+        409,
+        'PAYMENT_CHECKOUT_ACTIVE',
+      );
+    }
+    throw error;
+  }
+
+  let payment;
+  try {
+    payment = await yookassaRequest('/payments', {
+      method: 'POST',
+      headers: { 'Idempotence-Key': returnRef },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    // При сетевом таймауте платёж мог быть создан у провайдера. Оставляем
+    // резерв на короткое время, чтобы webhook мог безопасно завершить операцию.
+    if (error?.code !== 'PAYMENT_NETWORK_ERROR') {
+      await failPaymentCheckout(returnRef, error?.message).catch(() => {});
+    }
+    throw error;
+  }
+
+  // После успешного ответа ЮKassa не освобождаем резерв при ошибке БД:
+  // webhook сможет завершить ту же операцию по return_ref.
+  await finalizePaymentCheckout(returnRef, payment);
   await recordPaymentOffer({
     paymentId: payment.id,
     userId: user.telegram_id,
+    chartId: chartId || null,
     offerCode: offer.code,
     creditSourcePaymentId: offer.creditSourcePaymentId,
   });
@@ -204,19 +249,47 @@ export async function createPayment({ user, chartId, visitorId = null, receiptCo
       credited: offer.credited,
     },
   });
-  return payment;
+  return { ...payment, returnRef };
 }
 
-export async function processWebhook(notification) {
-  const paymentId = notification?.object?.id;
-  if (!paymentId) throw publicError('Некорректное уведомление.', 400);
-  const payment = await yookassaRequest(`/payments/${encodeURIComponent(paymentId)}`, { method: 'GET' });
+function assertPaymentMatchesSaved(payment, saved) {
+  if (!saved) throw publicError('Платёж не найден в HeroStar.', 404, 'PAYMENT_NOT_FOUND');
+  const metadata = payment?.metadata || {};
+  const returnRef = metadata.return_ref || null;
+  if (saved.returnRef && returnRef && String(saved.returnRef) !== String(returnRef)) {
+    throw publicError('Платёж не прошёл проверку связи с заказом.', 409, 'PAYMENT_REFERENCE_MISMATCH');
+  }
+  if (saved.userId && metadata.user_id && String(saved.userId) !== String(metadata.user_id)) {
+    throw publicError('Платёж не прошёл проверку владельца.', 409, 'PAYMENT_OWNER_MISMATCH');
+  }
+  if (saved.chartId && metadata.chart_id && String(saved.chartId) !== String(metadata.chart_id)) {
+    throw publicError('Платёж не прошёл проверку выбранного клона.', 409, 'PAYMENT_CHART_MISMATCH');
+  }
+  if (saved.offerCode && metadata.offer_code && String(saved.offerCode) !== String(metadata.offer_code)) {
+    throw publicError('Платёж не прошёл проверку предложения.', 409, 'PAYMENT_OFFER_MISMATCH');
+  }
+  const savedAmount = Number(saved.amount || 0);
+  const providerAmount = Number(payment?.amount?.value || 0);
+  if (savedAmount && providerAmount && Math.abs(savedAmount - providerAmount) > 0.001) {
+    throw publicError('Сумма платежа не совпала с созданным заказом.', 409, 'PAYMENT_AMOUNT_MISMATCH');
+  }
+}
+
+async function reconcilePayment(payment, savedOperation = null) {
+  const returnRef = payment.metadata?.return_ref || null;
+  const saved = savedOperation
+    || await getPaymentByIdOrReturnRef({ paymentId: payment.id })
+    || (returnRef ? await getPaymentByIdOrReturnRef({ returnRef }) : null);
+  assertPaymentMatchesSaved(payment, saved);
+  if (returnRef && saved?.id?.startsWith('checkout:')) {
+    await finalizePaymentCheckout(returnRef, payment);
+  }
   await updatePayment(payment.id, payment.status, payment);
   await markCommercePaymentStatus(payment.id, payment.status);
 
   if (payment.status === 'succeeded' && payment.paid) {
     const userId = payment.metadata?.user_id;
-    const chartId = payment.metadata?.chart_id;
+    const chartId = payment.metadata?.chart_id || null;
     const offerCode = payment.metadata?.offer_code
       || (payment.metadata?.product === 'clone' ? OFFER_CODES.CLONE_DAY : OFFER_CODES.FULL_MAP);
     const creditSourcePaymentId = payment.metadata?.credit_source_payment_id || null;
@@ -224,6 +297,7 @@ export async function processWebhook(notification) {
       await applyPaymentEntitlement({
         paymentId: payment.id,
         userId,
+        chartId,
         offerCode,
         creditSourcePaymentId,
       });
@@ -232,7 +306,7 @@ export async function processWebhook(notification) {
     await safeTrack({
       eventType: 'payment_succeeded',
       userId: userId || null,
-      chartId: chartId || null,
+      chartId,
       metadata: {
         paymentId: payment.id,
         amount: Number(payment.amount?.value || 0),
@@ -244,4 +318,50 @@ export async function processWebhook(notification) {
     });
   }
   return payment;
+}
+
+export async function refreshPaymentStatus({ paymentId = null, returnRef = null, userId }) {
+  const saved = await getPaymentByIdOrReturnRef({ paymentId: returnRef ? null : paymentId, returnRef });
+  if (!saved) throw publicError('Платёж не найден.', 404, 'PAYMENT_NOT_FOUND');
+  if (!userId || String(saved.userId || '') !== String(userId)) {
+    throw publicError('Нет доступа к этому платежу.', 403, 'PAYMENT_FORBIDDEN');
+  }
+
+  const providerPaymentId = saved.id?.startsWith('checkout:') ? paymentId : saved.id;
+  if (!providerPaymentId) {
+    return {
+      paymentId: null,
+      returnRef: saved.returnRef || returnRef || null,
+      chartId: saved.chartId || null,
+      offerCode: saved.offerCode || null,
+      status: 'pending',
+      paid: false,
+      amount: Number(saved.amount || 0),
+    };
+  }
+  if (!saved.id?.startsWith('checkout:') && paymentId && String(saved.id) !== String(paymentId)) {
+    throw publicError('Платёж не совпадает с сохранённой операцией.', 409, 'PAYMENT_ID_MISMATCH');
+  }
+
+  const payment = await yookassaRequest(`/payments/${encodeURIComponent(providerPaymentId)}`, { method: 'GET' });
+  await reconcilePayment(payment, saved);
+  return {
+    paymentId: payment.id,
+    returnRef: saved.returnRef || returnRef || null,
+    chartId: payment.metadata?.chart_id || saved.chartId || null,
+    offerCode: payment.metadata?.offer_code || saved.offerCode || null,
+    status: payment.status,
+    paid: Boolean(payment.paid),
+    amount: Number(payment.amount?.value || saved.amount || 0),
+  };
+}
+
+export async function processWebhook(notification) {
+  const paymentId = notification?.object?.id;
+  if (!paymentId) throw publicError('Некорректное уведомление.', 400);
+  const payment = await yookassaRequest(`/payments/${encodeURIComponent(paymentId)}`, { method: 'GET' });
+  const returnRef = payment.metadata?.return_ref || null;
+  const saved = await getPaymentByIdOrReturnRef({ paymentId })
+    || (returnRef ? await getPaymentByIdOrReturnRef({ returnRef }) : null);
+  return reconcilePayment(payment, saved);
 }

@@ -7,6 +7,7 @@ const state = {
   chartId: null,
   token: null,
   chart: null,
+  chartAccess: null,
   passport: null,
   user: null,
   selectedPlace: null,
@@ -95,6 +96,16 @@ async function json(url, options = {}) {
     throw error;
   }
   return data;
+}
+
+function configEndpoint() {
+  return state.chartId
+    ? `/api/config?chartId=${encodeURIComponent(state.chartId)}`
+    : '/api/config';
+}
+
+async function loadConfig() {
+  return json(configEndpoint());
 }
 
 async function track(eventType, action, metadata = {}) {
@@ -193,14 +204,23 @@ function selectedPlaceValue(item) {
   return `${item.label || item.name}\u001f${item.latitude}\u001f${item.longitude}`;
 }
 
+function currentAccess() {
+  return state.chartAccess || state.user || null;
+}
+
+function currentCloneAccessActive() {
+  return Boolean(currentAccess()?.cloneAccessActive);
+}
+
 function accessLabel() {
-  if (!state.user?.cloneAccessActive) return null;
-  const until = state.user.cloneAccessUntil ? new Date(state.user.cloneAccessUntil) : null;
+  const access = currentAccess();
+  if (!access?.cloneAccessActive) return null;
+  const until = access.cloneAccessUntil ? new Date(access.cloneAccessUntil) : null;
   const date = until && !Number.isNaN(until.getTime())
     ? until.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     : null;
-  if (state.user.clonePlan === 'alignment') return date ? `Сонастройка активна до ${date}` : 'Сонастройка активна';
-  if (state.user.clonePlan === 'day') return date ? `Глубокий режим открыт до ${date}` : 'День со Звёздным клоном открыт';
+  if (access.clonePlan === 'alignment') return date ? `Сонастройка активна до ${date}` : 'Сонастройка активна';
+  if (access.clonePlan === 'day') return date ? `Глубокий режим открыт до ${date}` : 'День со Звёздным клоном открыт';
   return date ? `Глубокий режим открыт до ${date}` : 'Глубокий режим открыт';
 }
 
@@ -251,8 +271,9 @@ function alignmentOffer() {
 
 function renderCommerceUi() {
   const alignment = alignmentOffer();
-  const activeDay = state.user?.clonePlan === 'day' && state.user?.cloneAccessActive;
-  const showAlignment = Boolean(state.user && !state.user?.clonePlan?.includes('alignment') && (activeDay || alignment.credited));
+  const access = currentAccess();
+  const activeDay = access?.clonePlan === 'day' && access?.cloneAccessActive;
+  const showAlignment = Boolean(state.user && access?.clonePlan !== 'alignment' && (activeDay || alignment.credited));
   $('#alignmentOffer')?.classList.toggle('hidden', !showAlignment);
   if ($('#alignmentPrice')) $('#alignmentPrice').textContent = formatPrice(alignment.payableAmount || alignment.amount);
   if ($('#alignmentCreditNote')) {
@@ -301,7 +322,7 @@ function closePaywall() {
 }
 
 function canAsk() {
-  if (state.user?.cloneAccessActive) return true;
+  if (currentCloneAccessActive()) return true;
   if (state.questionCount < FREE_QUESTIONS) return true;
   openPaywall('clone_day');
   return false;
@@ -355,7 +376,14 @@ async function startPayment() {
       }),
     });
     if (!result.confirmationUrl) throw new Error('ЮKassa не вернула ссылку оплаты.');
-    localStorage.setItem('starClonePendingPayment', JSON.stringify({ offerCode, amount, createdAt: new Date().toISOString() }));
+    localStorage.setItem('starClonePendingPayment', JSON.stringify({
+      paymentId: result.paymentId,
+      paymentRef: result.paymentRef,
+      chartId: state.chartId,
+      offerCode,
+      amount,
+      createdAt: new Date().toISOString(),
+    }));
     location.href = result.confirmationUrl;
   } catch (error) {
     toast(error.message);
@@ -471,7 +499,7 @@ function stopAuthPoll() {
 
 async function askClone(question, pending, userElement) {
   track('consultant_opened', 'clone_question_sent', {
-    question: question.slice(0, 500),
+    questionLength: question.length,
     questionNumber: state.questionCount + 1,
   });
   try {
@@ -494,7 +522,7 @@ async function askClone(question, pending, userElement) {
       answerLength: data.answer.length,
     });
     if (state.questionCount === 1) goal('clone_first_answer');
-    if (!state.user?.cloneAccessActive && state.questionCount >= FREE_QUESTIONS) {
+    if (!currentCloneAccessActive() && state.questionCount >= FREE_QUESTIONS) {
       goal('clone_third_answer');
       setTimeout(() => openPaywall('clone_day'), 900);
     }
@@ -529,7 +557,7 @@ function startAuthPoll(pending) {
       return;
     }
     try {
-      const config = await json('/api/config');
+      const config = await loadConfig();
       if (!config.user) return;
       state.config = config;
       state.user = config.user;
@@ -579,6 +607,7 @@ function mountTelegramLogin(container) {
 
 function applyChartView(data, savedName) {
   state.chart = data.chart;
+  state.chartAccess = data.access || null;
   state.passport = data.clonePassport || null;
   $('#cloneName').textContent = savedName || data.chart?.person?.name || data.chart?.birth?.name || 'Ваш звёздный клон';
   $('#cloneStatus').textContent = data.access?.cloneAccessActive ? accessLabel() : 'модель сохранена';
@@ -596,6 +625,8 @@ async function restoreClone(saved) {
   state.token = saved.token || null;
   state.questionCount = Number(saved.questionCount || 0);
   state.localMessages = Array.isArray(saved.messages) ? saved.messages : [];
+  state.config = await loadConfig();
+  state.user = state.config.user;
   const data = await json(`/api/charts/${encodeURIComponent(state.chartId)}`);
   applyChartView(data, saved.name);
   if (state.localMessages.length) renderConversation(state.localMessages);
@@ -609,41 +640,117 @@ async function restoreClone(saved) {
   return true;
 }
 
+async function restoreLatestOwnedClone() {
+  if (!state.user) return false;
+  const library = await json('/api/me/charts?limit=1');
+  const latest = library.items?.[0];
+  if (!latest?.id) return false;
+  const restored = await restoreClone({
+    chartId: latest.id,
+    token: null,
+    name: latest.name,
+    questionCount: 0,
+    messages: [],
+  });
+  if (restored) toast('Сохранённый клон восстановлен через Telegram.');
+  return restored;
+}
+
+function clearClonePaymentReturnState() {
+  localStorage.removeItem('starClonePendingPayment');
+  const url = new URL(location.href);
+  url.searchParams.delete('payment');
+  url.searchParams.delete('payment_ref');
+  url.searchParams.delete('offer');
+  history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
 async function verifyPaymentReturn() {
-  toast('Проверяем оплату…');
-  const returnedOffer = new URLSearchParams(location.search).get('offer') || 'clone_day';
+  toast('Проверяем конкретный платёж…');
+  const params = new URLSearchParams(location.search);
   let pendingPayment = null;
   try { pendingPayment = JSON.parse(localStorage.getItem('starClonePendingPayment') || 'null'); } catch { pendingPayment = null; }
+  const paymentRef = params.get('payment_ref') || pendingPayment?.paymentRef || null;
+  const paymentId = paymentRef ? null : pendingPayment?.paymentId || null;
+
+  if (!paymentId && !paymentRef) {
+    toast('Не найден идентификатор платежа. Войдите через Telegram и откройте сохранённого клона.');
+    return;
+  }
+
+  let lastError = null;
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, attempt ? 1500 : 800));
-    state.config = await json('/api/config');
-    state.user = state.config.user;
-    const expectedActive = returnedOffer === 'clone_alignment'
-      ? state.user?.clonePlan === 'alignment'
-      : state.user?.cloneAccessActive;
-    if (expectedActive) {
+    try {
+      const query = new URLSearchParams();
+      if (paymentRef) query.set('ref', paymentRef);
+      if (paymentId) query.set('paymentId', paymentId);
+      const payment = await json(`/api/payments/status?${query.toString()}`);
+
+      if (payment.status === 'canceled') {
+        clearClonePaymentReturnState();
+        toast('Платёж отменён. Доступ не изменён.');
+        return;
+      }
+      if (payment.status !== 'succeeded' || !payment.paid) {
+        await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 700 : 1500));
+        continue;
+      }
+
+      const offerCode = payment.offerCode || pendingPayment?.offerCode || params.get('offer') || 'clone_day';
+      if (payment.chartId && payment.chartId !== state.chartId) {
+        await restoreClone({
+          chartId: payment.chartId,
+          token: null,
+          name: null,
+          questionCount: 0,
+          messages: [],
+        });
+      }
+      state.config = await loadConfig();
+      state.user = state.config.user;
       closePaywall();
-      renderAllowance();
-      renderCommerceUi();
-      const offer = returnedOffer === 'clone_alignment' ? alignmentOffer() : dayOffer();
-      const amount = Number(pendingPayment?.offerCode === returnedOffer
-        ? pendingPayment.amount
-        : returnedOffer === 'clone_alignment' ? (offer.payableAmount || offer.amount) : offer.amount);
-      goal('clone_payment_success', { order_price: amount, currency: 'RUB', offer: returnedOffer });
-      track('paywall_opened', 'clone_payment_succeeded', { stage: 'payment_succeeded', price: amount, offerCode: returnedOffer });
+      goal('clone_payment_success', { order_price: Number(payment.amount || 0), currency: 'RUB', offer: offerCode });
+      track('paywall_opened', 'clone_payment_succeeded', {
+        stage: 'payment_succeeded',
+        price: Number(payment.amount || 0),
+        offerCode,
+      });
       if (state.chartId) {
         const data = await json(`/api/charts/${encodeURIComponent(state.chartId)}`).catch(() => null);
         if (data) applyChartView(data, $('#cloneName')?.textContent);
       }
-      localStorage.removeItem('starClonePendingPayment');
-      toast(returnedOffer === 'clone_alignment'
-        ? 'Сонастройка открыта на 30 дней. Автопродления нет.'
+      renderAllowance();
+      renderCommerceUi();
+      clearClonePaymentReturnState();
+      toast(offerCode === 'clone_alignment'
+        ? 'Сонастройка открыта для выбранного клона на 30 дней. Автопродления нет.'
         : 'Глубокий режим открыт на 24 часа. Карта и Паспорт клона останутся у вас.');
       return;
+    } catch (error) {
+      lastError = error;
+      if (!['PAYMENT_NETWORK_ERROR', 'PAYMENT_RATE_LIMITED', 'PAYMENT_PROVIDER_ERROR'].includes(error.code)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 700 : 1500));
     }
   }
+  if (lastError) console.warn('Clone payment verification remains pending:', lastError.message);
   toast('Платёж ещё подтверждается. Обновите страницу через минуту.');
 }
+
+$('#restoreCloneAccess')?.addEventListener('click', async () => {
+  try {
+    if (state.user) {
+      const restored = await restoreLatestOwnedClone();
+      if (!restored) toast('В Telegram-профиле пока нет сохранённого клона.');
+      return;
+    }
+    const slot = $('#restoreTelegramSlot');
+    slot.classList.remove('hidden');
+    mountTelegramLogin(slot);
+    track('auth_opened', 'clone_restore_auth_opened');
+  } catch (error) {
+    toast(error.message);
+  }
+});
 
 $$('[data-go-create]').forEach((button) => button.addEventListener('click', () => {
   track('form_started', 'clone_creation_started');
@@ -708,12 +815,14 @@ $('#birthForm').addEventListener('submit', async (event) => {
       date: formData.get('date'),
       time: formData.get('time'),
       place: selectedPlaceValue(state.selectedPlace),
+      personalDataConsent: formData.get('personalDataConsent') === 'on',
       product: 'clone',
     };
     const data = await json('/api/charts', { method: 'POST', body: JSON.stringify(payload) });
     state.chartId = data.id;
     state.token = data.accessToken;
     state.chart = data.chart;
+    state.chartAccess = data.access || null;
     state.questionCount = 0;
     state.localMessages = [];
     $('#cloneName').textContent = payload.name;
@@ -759,7 +868,7 @@ $('#questionForm').addEventListener('submit', async (event) => {
   $('#question').value = '';
   const pending = message('clone', 'Клон сопоставляет ситуацию с конфигурацией карты…', { persist: false });
   try {
-    state.config = await json('/api/config');
+    state.config = await loadConfig();
     state.user = state.config.user;
     renderAllowance();
     if (!state.user) {
@@ -798,7 +907,7 @@ document.addEventListener('keydown', (event) => {
 (async () => {
   track('page_view', 'clone_page_view', { path: location.pathname });
   try {
-    state.config = await json('/api/config');
+    state.config = await loadConfig();
     state.user = state.config.user;
     prepareOffer('clone_day');
     $('#clonePayButton').disabled = !state.config.paymentsConfigured;
@@ -820,6 +929,7 @@ document.addEventListener('keydown', (event) => {
     }
     if (!restored && saved) restored = await restoreClone(saved).catch(() => false);
     if (!restored && saved) localStorage.removeItem(STORAGE_KEY);
+    if (!restored && state.user) restored = await restoreLatestOwnedClone().catch(() => false);
     if (params.get('payment') === 'return') await verifyPaymentReturn();
   } catch (error) {
     toast(error.message);

@@ -57,6 +57,10 @@ OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5-mini
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_USERNAME=...
+LEGAL_FULL_NAME=...
+LEGAL_OGRNIP=...
+LEGAL_INN=...
+LEGAL_ADDRESS=...
 YOOKASSA_SHOP_ID=...
 YOOKASSA_SECRET_KEY=...
 FULL_MAP_PRICE=990.00
@@ -71,14 +75,22 @@ DEMO_MODE=true
 FREE_CARD_COUNT=3
 ```
 
+## Production-gate оплаты
+
+Перед включением кнопки оплаты сервер проверяет единый набор обязательных условий: HTTPS-адрес приложения, PostgreSQL, сильный `SESSION_SECRET`, Telegram-бот, ключи ЮKassa и опубликованные реквизиты исполнителя. Если хотя бы одного элемента нет, `/api/config` возвращает `paymentsConfigured: false`, а `/api/payments/create` отказывает до устранения причины.
+
+После возврата из ЮKassa клиент проверяет конкретную операцию по одноразовому `payment_ref`; наличие старого доступа больше не считается подтверждением нового платежа.
+
 ## Контроль после изменения переменных
 
 1. Деплой имеет статус `Success`.
 2. `https://herostar.up.railway.app/health` возвращает успешный ответ.
-3. Создаётся демонстрационная карта.
-4. Telegram Login открывает callback на production-домене.
-5. Тестовый платёж возвращается на production-домен и подтверждается webhook.
-
+3. `/api/config` показывает `paymentsConfigured: true`, но не раскрывает секретные значения и реквизиты целиком.
+4. При временном удалении одного обязательного реквизита `/api/payments/create` возвращает `PAYMENTS_NOT_READY` и не создаёт заказ в ЮKassa.
+5. Создаётся демонстрационная карта.
+6. Telegram Login открывает callback на production-домене.
+7. Тестовый платёж возвращается на production-домен и подтверждается по конкретным `payment_ref` и `paymentId`.
+8. Повторный webhook не продлевает доступ второй раз.
 
 ## Монетизация Звёздного клона
 

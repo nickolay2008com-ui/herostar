@@ -36,6 +36,9 @@ test('клиент соединяет создание, Telegram, историю
   assert.match(clone, /clone_day/);
   assert.match(clone, /clone_alignment/);
   assert.match(clone, /verifyPaymentReturn/);
+  assert.match(clone, /\/api\/payments\/status/);
+  assert.match(clone, /\/api\/me\/charts/);
+  assert.match(clone, /personalDataConsent/);
   assert.match(clone, /clone_payment_success/);
 });
 
@@ -85,7 +88,7 @@ test('серверная квота и ЮKassa замыкают бесплатн
   ]);
 
   assert.match(auth, /CLONE_FREE_QUESTION_LIMIT = 3/);
-  assert.match(auth, /cloneAccessActive/);
+  assert.match(auth, /hasCloneAccessForChart/);
   assert.match(auth, /reserveCloneQuestion/);
   assert.match(auth, /completeCloneQuestion/);
   assert.match(auth, /releaseCloneQuestion/);
@@ -96,6 +99,8 @@ test('серверная квота и ЮKassa замыкают бесплатн
   assert.match(payments, /\/clone\/\?payment=return&chart=/);
   assert.match(payments, /applyPaymentEntitlement/);
   assert.match(payments, /offer_code/);
+  assert.match(payments, /reservePaymentCheckout/);
+  assert.match(payments, /refreshPaymentStatus/);
   assert.match(commerce, /clone_day/);
   assert.match(commerce, /clone_alignment/);
   assert.doesNotMatch(payments, /grantPremium/);
