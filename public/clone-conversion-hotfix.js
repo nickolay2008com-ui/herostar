@@ -7,19 +7,23 @@
   ];
 
   let config = null;
+  let configLoading = null;
+  let configLoadedAt = 0;
   let offerTimer = null;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-  function chartId() {
-    const fromUrl = new URLSearchParams(location.search).get('chart');
-    if (fromUrl) return fromUrl;
+  function savedClone() {
     try {
-      return JSON.parse(localStorage.getItem('starClone') || 'null')?.chartId || '';
+      return JSON.parse(localStorage.getItem('starClone') || 'null') || {};
     } catch {
-      return '';
+      return {};
     }
+  }
+
+  function chartId() {
+    return new URLSearchParams(location.search).get('chart') || savedClone().chartId || '';
   }
 
   function sendGoal(name, params = {}) {
@@ -31,14 +35,20 @@
   }
 
   function trackOffer(action) {
+    const clone = savedClone();
     const id = chartId();
+    const visitor = localStorage.getItem('herostar_visitor_id') || '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (clone.token) headers['x-chart-token'] = clone.token;
+    if (visitor) headers['x-visitor-id'] = visitor;
+
     fetch('/api/events', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         eventType: 'paywall_opened',
         chartId: id || null,
-        visitorId: localStorage.getItem('herostar_visitor_id') || null,
+        visitorId: visitor || null,
         metadata: { product: 'clone', action },
       }),
     }).catch(() => {});
@@ -160,14 +170,24 @@
     note.textContent = 'Перед первым ответом откроется быстрый вход через Telegram. Он нужен только для сохранения клона, ответа и доступа после оплаты.';
   }
 
-  async function loadConfig() {
-    try {
-      const response = await fetch('/api/config');
-      config = response.ok ? await response.json() : null;
-      updateTelegramExpectation();
-    } catch {
-      // Основной интерфейс сам покажет ошибку конфигурации.
-    }
+  async function loadConfig({ force = false } = {}) {
+    if (!force && config && Date.now() - configLoadedAt < 3000) return config;
+    if (configLoading) return configLoading;
+
+    configLoading = fetch('/api/config')
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((value) => {
+        config = value;
+        configLoadedAt = Date.now();
+        updateTelegramExpectation();
+        return config;
+      })
+      .catch(() => null)
+      .finally(() => {
+        configLoading = null;
+      });
+
+    return configLoading;
   }
 
   function observeConversation() {
@@ -175,7 +195,7 @@
     if (!messages) return;
     const observer = new MutationObserver(() => {
       maybeShowFirstOffer();
-      loadConfig();
+      loadConfig({ force: true });
     });
     observer.observe(messages, { childList: true, subtree: true, characterData: true });
     maybeShowFirstOffer();
