@@ -21,7 +21,7 @@ test('оба публичных адреса клона отдают одну и
   assert.doesNotMatch(canonical, /clone-conversion-hotfix/);
 });
 
-test('клиент соединяет создание, Telegram, историю, квоту и два платных продукта', async () => {
+test('клиент соединяет создание, три ответа до Telegram, свободный базовый диалог и два платных продукта', async () => {
   const clone = await read('public/clone.js');
 
   assert.match(clone, /json\('\/api\/charts'/);
@@ -29,8 +29,11 @@ test('клиент соединяет создание, Telegram, историю
   assert.match(clone, /\/api\/charts\/\$\{encodeURIComponent\(state\.chartId\)\}\/messages/);
   assert.match(clone, /\/api\/charts\/\$\{state\.chartId\}\/claim/);
   assert.match(clone, /callback\.searchParams\.set\('state', `clone:/);
-  assert.match(clone, /CLONE_FREE_LIMIT/);
+  assert.match(clone, /CLONE_TELEGRAM_REQUIRED/);
   assert.match(clone, /cloneUsage/);
+  assert.match(clone, /сообщения без лимита/);
+  assert.match(clone, /showTelegramContinuation/);
+  assert.match(clone, /fullModeOffer/);
   assert.match(clone, /json\('\/api\/payments\/create'/);
   assert.match(clone, /offerCode,/);
   assert.match(clone, /clone_day/);
@@ -79,7 +82,7 @@ test('сервер содержит все звенья публичного и 
   assert.match(server, /getCommerceState/);
 });
 
-test('серверная квота и ЮKassa замыкают бесплатный день и Сонастройку', async () => {
+test('серверная квота ограничивает только анонимное знакомство, а ЮKassa открывает глубину и Сонастройку', async () => {
   const [auth, quota, payments, commerce] = await Promise.all([
     read('src/auth.js'),
     read('src/clone-quota.js'),
@@ -87,12 +90,12 @@ test('серверная квота и ЮKassa замыкают бесплатн
     read('src/commerce.js'),
   ]);
 
-  assert.match(auth, /CLONE_FREE_QUESTION_LIMIT = 3/);
-  assert.match(auth, /hasCloneAccessForChart/);
+  assert.match(auth, /CLONE_ANONYMOUS_QUESTION_LIMIT = 3/);
   assert.match(auth, /reserveCloneQuestion/);
   assert.match(auth, /completeCloneQuestion/);
   assert.match(auth, /releaseCloneQuestion/);
-  assert.match(auth, /CLONE_FREE_LIMIT/);
+  assert.match(auth, /if \(req\.user\) return/);
+  assert.match(auth, /CLONE_TELEGRAM_REQUIRED/);
   assert.match(quota, /FOR UPDATE/);
   assert.match(quota, /status IN \('reserved', 'completed'\)/);
   assert.match(payments, /currentRequestContext/);

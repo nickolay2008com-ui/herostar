@@ -202,6 +202,10 @@ const consultLimiter = rateLimit({
   limit: 25,
   standardHeaders: true,
   legacyHeaders: false,
+  message: {
+    error: 'Клон получил слишком много сообщений подряд. Сделайте короткую паузу и продолжите разговор.',
+    code: 'CONSULT_RATE_LIMIT',
+  },
 });
 const eventLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -514,28 +518,39 @@ app.post('/api/charts/:id/claim', requireUser, async (req, res, next) => {
   }
 });
 
-app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => {
+app.post('/api/consult', consultLimiter, async (req, res, next) => {
   try {
     const question = String(req.body.question || '').trim().slice(0, 1600);
     if (question.length < 3) throw publicError('Напишите вопрос чуть подробнее.');
-    const record = await getChart(req.body.chartId);
-    if (!record) throw publicError('Карта не найдена.', 404);
-    if (record.userId && String(record.userId) !== String(req.user.telegram_id)) throw publicError('Нет доступа к карте.', 403);
-    if (!record.userId) {
-      if (!hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ этой карты.', 403);
-      const claimed = await claimChart(record.id, req.user.telegram_id);
-      if (!claimed) throw publicError('Карта уже принадлежит другому пользователю.', 403);
-    }
 
     const requestedProduct = String(req.body.product || '').trim().toLowerCase();
     const product = req.cloneReservationId || requestedProduct === 'clone' ? 'clone' : 'herostar';
+    if (!req.user && product !== 'clone') {
+      throw publicError('Войдите через Telegram, чтобы продолжить.', 401, 'AUTH_REQUIRED');
+    }
+
+    const record = await getChart(req.body.chartId);
+    if (!record) throw publicError('Карта не найдена.', 404);
+    if (record.userId) {
+      if (!req.user || String(record.userId) !== String(req.user.telegram_id)) {
+        throw publicError('Нет доступа к карте.', 403);
+      }
+    } else {
+      if (!hasAnonymousAccess(record, req.headers['x-chart-token'])) {
+        throw publicError('Нужен ключ этой карты.', 403);
+      }
+      if (req.user) {
+        const claimed = await claimChart(record.id, req.user.telegram_id);
+        if (!claimed) throw publicError('Карта уже принадлежит другому пользователю.', 403);
+      }
+    }
     const storedMessages = await getConsultationMessages(record.id, 40);
-    const history = historyForProduct(storedMessages, product).slice(-8).map((message) => ({
+    const history = historyForProduct(storedMessages, product).slice(-24).map((message) => ({
       role: message.role,
       content: message.content,
     }));
 
-    const premium = hasCloneAccessForChart(req.user, record.id);
+    const premium = req.user ? hasCloneAccessForChart(req.user, record.id) : false;
     const answer = await answerConsultation({
       chart: record.chartData,
       portrait: record.portraitData,
@@ -550,7 +565,7 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
       : { product: 'herostar' };
     await saveConsultationExchange({
       chartId: record.id,
-      userId: req.user.telegram_id,
+      userId: req.user?.telegram_id || null,
       userContent: question,
       assistantContent: answer,
       userMetadata: messageMetadata,
@@ -560,7 +575,7 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
     await safeTrack({
       eventType: 'consultation_answered',
       visitorId: visitorIdFrom(req),
-      userId: req.user.telegram_id,
+      userId: req.user?.telegram_id || null,
       chartId: record.id,
       metadata: { questionLength: question.length, answerLength: answer.length, product, premium },
     });
