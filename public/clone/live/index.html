@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080711">
+  <meta name="description" content="Опишите ситуацию, создайте Звёздного клона и получите персональный разбор решения по натальной карте.">
+  <meta name="yandex-metrika-id" content="110937602">
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110937602', 'ym');
+
+    ym(110937602, 'init', {ssr:true, webvisor:false, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+  </script>
+  <!-- /Yandex.Metrika counter -->
+  <title>Живая карта решений — Звёздный клон</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/clone-live.css?v=20260725">
+  <link rel="stylesheet" href="/clone-live-safety.css?v=20260725">
+</head>
+<body>
+  <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <a class="brand" href="/"><span>✦</span> HeroStar</a>
+    <div class="product">Звёздный клон <i>Живая карта решений</i></div>
+  </header>
+
+  <main class="shell">
+    <section class="stage" id="situationStage">
+      <div class="stage-copy">
+        <p class="eyebrow">Начните не с анкеты, а с того, что происходит</p>
+        <h1>Что вы хотите<br><em>сейчас решить?</em></h1>
+        <p class="lead">Опишите ситуацию своими словами. Звёздный клон сначала поймёт задачу, затем соберётся по данным рождения и покажет, какой ход выбрала бы именно такая конфигурация карты.</p>
+        <div class="promise-row">
+          <span>Без гороскопа на все случаи</span>
+          <span>Без переноса решения на вас</span>
+          <span>С объяснением «почему»</span>
+        </div>
+      </div>
+
+      <form class="situation-card" id="situationForm">
+        <label for="situation">Расскажите, что происходит</label>
+        <textarea id="situation" rows="7" minlength="20" maxlength="1800" placeholder="Например: мне предлагают войти в новый проект. Идея нравится, но роли и деньги пока не определены. Хочу понять, как лучше подойти к решению." required></textarea>
+        <div class="suggestions" aria-label="Примеры ситуаций">
+          <button type="button">Стоит ли входить в новый проект?</button>
+          <button type="button">Как поговорить с партнёром?</button>
+          <button type="button">Переезжать или сохранить стабильность?</button>
+        </div>
+        <button class="primary" type="submit">Передать ситуацию клону <span>→</span></button>
+        <p class="micro">Сначала система только уточнит, что именно вы хотите решить. Данные рождения понадобятся на следующем шаге.</p>
+      </form>
+    </section>
+
+    <section class="stage hidden" id="understandingStage">
+      <article class="understanding-card">
+        <div class="clone-mark">✦</div>
+        <p class="eyebrow">Ситуация понята</p>
+        <h2 id="understandingTitle">Клон определил задачу</h2>
+        <p id="understandingText"></p>
+        <div class="original-situation" id="originalSituation"></div>
+        <button class="primary" id="continueToBirth" type="button">Собрать клона по карте <span>→</span></button>
+        <button class="text-button" id="editSituation" type="button">Изменить описание</button>
+      </article>
+    </section>
+
+    <section class="stage hidden" id="birthStage">
+      <div class="stage-copy compact-copy">
+        <p class="eyebrow">Теперь нужна личная конфигурация</p>
+        <h2>Данные рождения<br><em>Звёздного клона</em></h2>
+        <p class="lead">Точное время позволяет учесть дома Плацидуса, куспиды с градусами, ASC/DSC и MC/IC. Без этого небесная механика, как обычно, начинает притворяться более точной, чем она есть.</p>
+      </div>
+      <form class="birth-card" id="birthForm">
+        <label>Имя клона<input name="name" maxlength="80" placeholder="Например, Звёздный Николай" required></label>
+        <div class="field-grid">
+          <label>Дата рождения<input name="date" type="date" required></label>
+          <label>Точное время<input name="time" type="time" required></label>
+        </div>
+        <label class="place-field">Место рождения<input id="placeQuery" name="placeQuery" autocomplete="off" placeholder="Город и страна" required><input id="placeValue" name="place" type="hidden"><div class="place-results" id="placeResults"></div></label>
+        <label class="consent-check">
+          <input name="personalDataConsent" type="checkbox" required>
+          <span>Я даю отдельное согласие на обработку данных рождения для расчёта карты и сохранения результата. <a href="/consent" target="_blank">Текст согласия</a></span>
+        </label>
+        <button class="primary" type="submit">Создать модель решения <span>✦</span></button>
+        <p class="legal-copy">Подробнее: <a href="/privacy" target="_blank">политика конфиденциальности</a>.</p>
+        <p class="error" id="birthError"></p>
+      </form>
+    </section>
+
+    <section class="stage hidden" id="buildingStage">
+      <article class="building-card">
+        <div class="orbit"><span>✦</span></div>
+        <p class="eyebrow">Собираем логику решения</p>
+        <h2 id="buildingTitle">Определяем жизненную сферу ситуации</h2>
+        <div class="building-steps">
+          <span class="active">Куспид сферы</span>
+          <span>Управитель дома</span>
+          <span>Аспекты и преимущества</span>
+          <span>Практический ход</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="result-shell hidden" id="resultStage">
+      <aside class="result-side">
+        <div class="clone-identity"><div class="clone-avatar">✦</div><div><small>Живая карта решений</small><strong id="cloneName">Ваш Звёздный клон</strong></div></div>
+        <div class="situation-summary"><small>Текущая ситуация</small><p id="resultSituation"></p></div>
+        <div class="technical-note"><strong>Расчёт</strong><p>Плацидус · точные куспиды · управители домов · планеты · аспекты · ASC/DSC · MC/IC</p></div>
+      </aside>
+
+      <section class="result-main">
+        <div class="result-head">
+          <div><p class="eyebrow">Первый полный ответ</p><h2>Как бы поступил ваш Звёздный клон</h2></div>
+          <button class="ghost" id="restartFlow" type="button">Новая ситуация</button>
+        </div>
+
+        <article class="answer-card answer-primary">
+          <span class="card-number">01</span>
+          <div><h3>Ход клона</h3><p id="cloneDecision"></p></div>
+        </article>
+
+        <article class="answer-card">
+          <span class="card-number">02</span>
+          <div><h3>Почему именно так</h3><p id="cloneWhy"></p><button class="contrast-toggle" id="contrastToggle" type="button">✦ Почему это индивидуально</button><div class="contrast hidden" id="cloneContrast"></div></div>
+        </article>
+
+        <article class="answer-card advantage-card">
+          <span class="card-number">03</span>
+          <div><h3>Преимущество вашего клона</h3><p id="cloneAdvantage"></p><small>Это не гарантия удачи, а сочетание качеств, которое в этой ситуации легче использовать вместе.</small></div>
+        </article>
+
+        <article class="answer-card">
+          <span class="card-number">04</span>
+          <div><h3>Первый проверяемый ход</h3><p id="cloneFirstMove"></p></div>
+        </article>
+
+        <section class="telegram-after-value" id="telegramSection">
+          <div>
+            <p class="eyebrow">Ответ уже у вас. Теперь можно сохранить путь</p>
+            <h3>Продолжите разговор без повторений</h3>
+            <p>Telegram сохранит карту, ситуацию и этот разбор. Следующие ответы будут учитывать ваши подтверждённые выводы, выбранные действия и новые обстоятельства.</p>
+            <div class="memory-benefits">
+              <span>✓ История диалога сохраняется</span>
+              <span>✓ Новые ответы учитывают прежние открытия</span>
+              <span>✓ Можно вернуться с результатом реального шага</span>
+            </div>
+          </div>
+          <div class="telegram-box" id="telegramBox"><button class="primary" id="openTelegram" type="button">Сохранить клона через Telegram</button></div>
+        </section>
+
+        <section class="dialogue hidden" id="dialogueSection">
+          <div class="dialogue-head"><div><p class="eyebrow">Диалог с памятью</p><h3>Продолжение ситуации</h3></div><span id="accessBadge">История сохранена</span></div>
+          <div class="messages" id="messages"></div>
+          <form class="composer" id="dialogueForm"><textarea id="dialogueQuestion" rows="3" maxlength="1600" placeholder="Что изменилось, что хотите уточнить или какой вариант проверить?" required></textarea><button class="primary" type="submit">Продолжить</button></form>
+          <p class="error" id="dialogueError"></p>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="paywall" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
+    <section class="paywall-card">
+      <button class="modal-close" id="closePaywall" type="button" aria-label="Закрыть">×</button>
+      <p class="eyebrow">Разговор и карта сохранены</p>
+      <h2 id="paywallTitle">Продолжите путь со своим клоном</h2>
+      <p>Ничего заново объяснять не придётся. После открытия доступа клон продолжит учитывать текущую ситуацию, историю, подтверждённые выводы и новые обстоятельства.</p>
+      <div class="paywall-benefits">
+        <span>История и данные рождения остаются сохранёнными</span>
+        <span>Подключаются точные аспекты и скрытые преимущества</span>
+        <span>Можно возвращаться с результатами реальных решений</span>
+      </div>
+      <label class="receipt-field">Телефон или email для чека<input id="receiptContact" placeholder="name@example.com или +7…"></label>
+      <div class="offer-actions">
+        <button class="primary" id="dayOffer" type="button">Открыть продолжение</button>
+        <button class="secondary" id="alignmentOffer" type="button">30 дней + полная карта</button>
+      </div>
+      <p class="legal-copy">Разовая оплата без автоматического продления. <a href="/offer" target="_blank">Оферта</a> · <a href="/refunds" target="_blank">Возврат</a></p>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/clone-live.js?v=20260725" defer></script>
+</body>
+</html>

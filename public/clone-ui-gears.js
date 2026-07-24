@@ -1,7 +1,21 @@
 (() => {
   const PENDING_KEY = 'starClonePendingQuestion';
+  const LIVE_STATE_KEY = 'starCloneLive';
   const params = new URLSearchParams(location.search);
   const authReturned = params.get('auth') === 'ok';
+
+  if (authReturned && !window.opener) {
+    try {
+      const liveState = JSON.parse(localStorage.getItem(LIVE_STATE_KEY) || '{}');
+      const returnedChartId = String(params.get('chart') || '');
+      if (liveState.chartId && returnedChartId === String(liveState.chartId)) {
+        location.replace(`/clone/live/?auth=ok&chart=${encodeURIComponent(returnedChartId)}`);
+        return;
+      }
+    } catch {
+      // Обычная версия клона продолжает собственный сценарий.
+    }
+  }
 
   function pendingQuestion() {
     return String(localStorage.getItem(PENDING_KEY) || '').trim();

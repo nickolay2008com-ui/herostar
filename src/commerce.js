@@ -1,8 +1,10 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
+const CLONE_ACCESS_MS = 7 * DAY_MS;
 const ALIGNMENT_MS = 30 * DAY_MS;
 
 export const OFFER_CODES = Object.freeze({
   FULL_MAP: 'herostar_full_map',
+  // Код сохраняется для обратной совместимости с уже созданными платежами.
   CLONE_DAY: 'clone_day',
   CLONE_ALIGNMENT: 'clone_alignment',
 });
@@ -50,16 +52,16 @@ export function offerCatalog(env = process.env) {
     [OFFER_CODES.CLONE_DAY]: {
       code: OFFER_CODES.CLONE_DAY,
       product: 'clone',
-      title: 'День со Звёздным клоном',
-      amount: money(env.CLONE_DAY_PRICE, 499),
-      durationHours: 24,
+      title: '7 дней со Звёздным клоном',
+      amount: money(env.CLONE_WEEK_PRICE, 490),
+      durationHours: 7 * 24,
     },
     [OFFER_CODES.CLONE_ALIGNMENT]: {
       code: OFFER_CODES.CLONE_ALIGNMENT,
       product: 'clone',
-      title: 'Сонастройка со Звёздным клоном',
-      amount: money(env.CLONE_ALIGNMENT_PRICE, 1499),
-      upgradeAmount: money(env.CLONE_ALIGNMENT_UPGRADE_PRICE, 1000),
+      title: '30 дней + полная карта HeroStar',
+      amount: money(env.CLONE_MONTH_PRICE, 990),
+      upgradeAmount: money(env.CLONE_MONTH_UPGRADE_PRICE, 500),
       durationDays: 30,
     },
   });
@@ -113,8 +115,6 @@ export function normalizeAccess(user, now = new Date()) {
 
   return {
     ...user,
-    // Внутренний alias нужен для существующей квоты и выбора AI-профиля.
-    // В публичном API отдельно показываются карта и временный диалог.
     premium: cloneAccessActive,
     legacyPremiumActive: legacyActive,
     mapUnlocked,
@@ -151,9 +151,7 @@ async function getDbAccess(userId) {
 
 export async function decorateUserAccess(user, now = new Date()) {
   if (!user?.telegram_id) return user || null;
-  const stored = pool
-    ? await getDbAccess(user.telegram_id)
-    : rowForUser(user);
+  const stored = pool ? await getDbAccess(user.telegram_id) : rowForUser(user);
   return normalizeAccess({ ...user, ...(stored || {}) }, now);
 }
 
@@ -166,7 +164,7 @@ async function eligibleDayPayment(userId, chartId = null, now = new Date()) {
         && payment.offerCode === OFFER_CODES.CLONE_DAY
         && payment.status === 'succeeded'
         && payment.entitlementAppliedAt
-        && new Date(payment.entitlementAppliedAt).getTime() >= now.getTime() - DAY_MS
+        && new Date(payment.entitlementAppliedAt).getTime() >= now.getTime() - CLONE_ACCESS_MS
         && ![...memoryPayments.values()].some((candidate) => candidate.creditSourcePaymentId === payment.id && ['checkout_reserved', 'pending', 'waiting_for_capture', 'succeeded'].includes(candidate.status)))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
   }
@@ -179,7 +177,7 @@ async function eligibleDayPayment(userId, chartId = null, now = new Date()) {
        AND day.offer_code = $2
        AND day.status = 'succeeded'
        AND day.entitlement_applied_at IS NOT NULL
-       AND day.entitlement_applied_at >= NOW() - INTERVAL '24 hours'
+       AND day.entitlement_applied_at >= NOW() - INTERVAL '7 days'
        AND NOT EXISTS (
          SELECT 1 FROM payments AS upgrade
          WHERE upgrade.credit_source_payment_id = day.id
@@ -256,7 +254,7 @@ export async function resolveOffer({ user, offerCode, product, chartId = null })
   if (code === OFFER_CODES.CLONE_DAY) {
     const state = await getCommerceState(user, new Date(), chartId);
     if (hasCloneAccessForChart(state.access, chartId)) {
-      const error = new Error('Глубокий режим уже активен. Продолжить его можно через Сонастройку.');
+      const error = new Error('Доступ уже активен. Продлить его можно тарифом на 30 дней.');
       error.status = 409;
       error.code = 'OFFER_NOT_AVAILABLE';
       error.expose = true;
@@ -269,8 +267,8 @@ export async function resolveOffer({ user, offerCode, product, chartId = null })
     if (state.access?.cloneAlignmentActive) {
       const sameChart = String(state.access.cloneAlignmentChartId || '') === String(chartId);
       const error = new Error(sameChart
-        ? 'Сонастройка для этого клона уже активна.'
-        : 'Сонастройка уже активна для другого клона. Сначала завершите текущий период.');
+        ? 'Доступ на 30 дней для этого клона уже активен.'
+        : 'Доступ на 30 дней уже активен для другого клона. Сначала завершите текущий период.');
       error.status = 409;
       error.code = sameChart ? 'ALIGNMENT_ALREADY_ACTIVE' : 'ALIGNMENT_ACTIVE_FOR_ANOTHER_CHART';
       error.expose = true;
@@ -372,9 +370,7 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     if (offerCode === OFFER_CODES.FULL_MAP) {
       access.full_map_unlocked = true;
     } else if (offerCode === OFFER_CODES.CLONE_DAY) {
-      access.full_map_unlocked = true;
-      access.clone_passport_unlocked = true;
-      access.clone_access_until = addDuration(access.clone_access_until, DAY_MS).toISOString();
+      access.clone_access_until = addDuration(access.clone_access_until, CLONE_ACCESS_MS).toISOString();
     } else if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
       if (!chartId) throw new Error('Alignment entitlement requires a chart.');
       access.full_map_unlocked = true;
@@ -419,9 +415,7 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     } else if (effectiveOffer === OFFER_CODES.CLONE_DAY) {
       await client.query(
         `UPDATE users
-         SET full_map_unlocked = TRUE,
-             clone_passport_unlocked = TRUE,
-             clone_access_until = GREATEST(COALESCE(clone_access_until, NOW()), NOW()) + INTERVAL '24 hours'
+         SET clone_access_until = GREATEST(COALESCE(clone_access_until, NOW()), NOW()) + INTERVAL '7 days'
          WHERE telegram_id = $1`,
         [String(userId)],
       );
