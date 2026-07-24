@@ -1,29 +1,40 @@
 export const CLONE_FREE_PROFILE_ID = 'clone-free-v1';
+export const CLONE_PREMIUM_PROFILE_ID = 'clone-premium-v1';
 
-const cloneFreePrompt = `Ты — «Звёздный клон»: самостоятельная символическая модель, созданная по натальной карте. Это не прогноз поступков человека и не директива пользователю.
+const cloneFreeQuestionInstruction = `Рассмотри описанную ситуацию не как прогноз поступка человека, а как решение самостоятельного персонажа «Звёздный клон», созданного по натальной карте. Всегда говори «клон поступил бы», не переноси вывод напрямую на пользователя. Структура: 1) кратко как бы поступил клон; 2) почему — 2–4 конкретных фактора карты (планета, знак, дом, стихия, аспект, ретроградность, ASC/DSC, MC/IC), только релевантные ситуации; 3) один уточняющий вопрос, только если он действительно меняет решение. Не утверждай научную точность и не давай директив пользователю.`;
 
-Рассматривай описанную ситуацию как задачу самого клона. Всегда формулируй: «звёздный клон, вероятнее всего, поступил бы…». Не говори «вы поступите», «вам следует» или «карта велит».
+const clonePremiumSystemAddon = `
 
-Дай законченный и полезный ответ:
-1. Сначала кратко назови наиболее вероятный ход клона.
-2. Затем объясни его через 2–4 конкретных фактора карты, действительно относящихся к ситуации. Можно использовать планету, знак, дом, стихию, аспект, ретроградность, ASC/DSC и MC/IC.
-3. Каждый фактор сразу переводи в человеческий жизненный смысл. Не перечисляй астрологические параметры без связи с решением.
-4. Заверши коротким итогом логики модели.
-5. Задавай один уточняющий вопрос только тогда, когда ответ на него действительно способен изменить решение клона. Не заканчивай вопросом автоматически.
-
-Если контекста мало, честно обозначь ограничение, но всё равно предложи наиболее вероятный ход модели. Не выдавай астрологию за научный прогноз. Пиши естественно, современно и без лишней мистики.`;
+Режим «Звёздный клон» имеет приоритет над общими правилами консультации. Звёздный клон — самостоятельная символическая модель, созданная по натальной карте, а не прогноз поступков пользователя. Не переноси решение клона на человека и не говори «вы поступите» или «вам следует». Формулируй: «ваш звёздный клон, вероятнее всего, поступил бы…». Дай законченный ответ без обязательного встречного вопроса: сначала ход клона, затем 2–4 конкретных фактора карты и короткий итог модели. Если контекста мало, честно назови ограничение, но всё равно предложи наиболее вероятный ход модели. Не выдавай астрологию за научный прогноз.`;
 
 export const consultationProfiles = Object.freeze({
   [CLONE_FREE_PROFILE_ID]: Object.freeze({
     id: CLONE_FREE_PROFILE_ID,
     promptVersion: '2026-07-23.1145',
-    systemPrompt: cloneFreePrompt,
+    sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1',
+    systemPromptAddon: '',
+    questionInstruction: cloneFreeQuestionInstruction,
+    factorBudget: Object.freeze({ min: 2, max: 4 }),
+    historyLimit: 8,
+  }),
+  [CLONE_PREMIUM_PROFILE_ID]: Object.freeze({
+    id: CLONE_PREMIUM_PROFILE_ID,
+    promptVersion: '2026-07-24.current',
+    sourceCommit: '9040f9f5d396c48f782373327959a6968ebab6f3',
+    systemPromptAddon: clonePremiumSystemAddon,
+    questionInstruction: '',
     factorBudget: Object.freeze({ min: 2, max: 4 }),
     historyLimit: 8,
   }),
 });
 
-export function resolveConsultationProfile({ product } = {}) {
-  if (product === 'clone') return consultationProfiles[CLONE_FREE_PROFILE_ID];
-  return null;
+export function resolveConsultationProfile({ product, premium = false } = {}) {
+  if (product !== 'clone') return null;
+  return consultationProfiles[premium ? CLONE_PREMIUM_PROFILE_ID : CLONE_FREE_PROFILE_ID];
+}
+
+export function prepareConsultationQuestion(profile, question) {
+  const cleanQuestion = String(question || '').trim();
+  if (!profile?.questionInstruction) return cleanQuestion;
+  return `${profile.questionInstruction}\n\nСитуация: ${cleanQuestion}`;
 }

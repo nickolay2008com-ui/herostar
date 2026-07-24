@@ -469,12 +469,14 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
       content: message.content,
     }));
 
+    const premium = Boolean(req.user?.premium);
     const answer = await answerConsultation({
       chart: record.chartData,
       portrait: record.portraitData,
       question,
       history,
       product,
+      premium,
     });
 
     const messageMetadata = product === 'clone'
@@ -494,7 +496,7 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
       visitorId: visitorIdFrom(req),
       userId: req.user.telegram_id,
       chartId: record.id,
-      metadata: { questionLength: question.length, answerLength: answer.length, product },
+      metadata: { questionLength: question.length, answerLength: answer.length, product, premium },
     });
     res.json({
       answer,

@@ -1,5 +1,8 @@
 import OpenAI from 'openai';
-import { resolveConsultationProfile } from './consultation-profiles.js';
+import {
+  prepareConsultationQuestion,
+  resolveConsultationProfile,
+} from './consultation-profiles.js';
 import { buildFallbackPortrait } from './narrative.js';
 
 const REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
@@ -87,9 +90,9 @@ function localCloneConsultation(chart) {
   return `Ваш звёздный клон, вероятнее всего, ${action}.\n\nПочему: ${factors.join('; ')}.\n\nИтог модели: не угадывать идеальный ответ заранее, а выбрать ход, который соответствует конфигурации карты и даёт ясную обратную связь.`;
 }
 
-export function consultationSystemPrompt(mode, product = 'herostar') {
-  const profile = resolveConsultationProfile({ product });
-  if (profile) return profile.systemPrompt;
+export function consultationSystemPrompt(mode, product = 'herostar', premium = false) {
+  const profile = resolveConsultationProfile({ product, premium });
+  const profileAddon = profile?.systemPromptAddon || '';
 
   const shared = `Ты — персональный навигатор HeroStar. Карта уже рассчитана локальным ядром. Не меняй положения планет, знаки, дома, аспекты и тексты карточек. Отвечай на русском языке, опираясь только на переданную карту, редакционную матрицу, историю разговора и слова человека.
 
@@ -132,16 +135,28 @@ export function consultationSystemPrompt(mode, product = 'herostar') {
 5. Верни человеку авторство: что он может заметить, выбрать или попробовать сам.
 6. Только после полезного открытия, если переход действительно естественен, покажи одно-два ближайших направления исследования.
 
-Не используй видимые рубрики вроде «Что я услышал», «Где теряется сила», «Ресурс» и «Ближайший шаг», если человек сам не просил структурированный разбор. Обычно достаточно 220–450 слов; простой запрос заслуживает более короткого ответа.`;
+Не используй видимые рубрики вроде «Что я услышал», «Где теряется сила», «Ресурс» и «Ближайший шаг», если человек сам не просил структурированный разбор. Обычно достаточно 220–450 слов; простой запрос заслуживает более короткого ответа.${profileAddon}`;
   }
 
   return `${shared}
 
-Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.`;
+Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.${profileAddon}`;
 }
 
-async function requestConsultation(client, { model, effort, maxOutputTokens, mode, product, chart, portrait, history, question }) {
-  const profile = resolveConsultationProfile({ product });
+async function requestConsultation(client, {
+  model,
+  effort,
+  maxOutputTokens,
+  mode,
+  product,
+  premium,
+  chart,
+  portrait,
+  history,
+  question,
+}) {
+  const profile = resolveConsultationProfile({ product, premium });
+  const preparedQuestion = prepareConsultationQuestion(profile, question);
   const response = await client.responses.create({
     model,
     reasoning: { effort },
@@ -150,7 +165,7 @@ async function requestConsultation(client, { model, effort, maxOutputTokens, mod
     input: [
       {
         role: 'system',
-        content: consultationSystemPrompt(mode, product),
+        content: consultationSystemPrompt(mode, product, premium),
       },
       {
         role: 'user',
@@ -160,12 +175,13 @@ async function requestConsultation(client, { model, effort, maxOutputTokens, mod
           consultationProfile: profile ? {
             id: profile.id,
             promptVersion: profile.promptVersion,
+            sourceCommit: profile.sourceCommit,
             factorBudget: profile.factorBudget,
           } : null,
           chart: compactChart(chart),
           portrait,
           history: history.slice(-(profile?.historyLimit || 8)),
-          question,
+          question: preparedQuestion,
         }),
       },
     ],
@@ -176,8 +192,16 @@ async function requestConsultation(client, { model, effort, maxOutputTokens, mod
   return answer;
 }
 
-export async function answerConsultation({ chart, portrait, question, history = [], product = 'herostar' }) {
+export async function answerConsultation({
+  chart,
+  portrait,
+  question,
+  history = [],
+  product = 'herostar',
+  premium = false,
+}) {
   const mode = consultationMode(history);
+  const profile = resolveConsultationProfile({ product, premium });
   const localAnswer = () => product === 'clone' ? localCloneConsultation(chart) : localConsultation(portrait, question);
 
   if (!process.env.OPENAI_API_KEY) return localAnswer();
@@ -191,12 +215,13 @@ export async function answerConsultation({ chart, portrait, question, history = 
       ...primary,
       mode,
       product,
+      premium,
       chart,
       portrait,
       history,
       question,
     });
-    console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${resolveConsultationProfile({ product })?.id || 'default'} model=${primary.model} effort=${primary.effort}`);
+    console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${profile?.id || 'default'} model=${primary.model} effort=${primary.effort}`);
     return answer;
   } catch (primaryError) {
     const canFallbackToDialog = mode === 'deep'
@@ -209,12 +234,13 @@ export async function answerConsultation({ chart, portrait, question, history = 
           ...config.dialog,
           mode,
           product,
+          premium,
           chart,
           portrait,
           history,
           question,
         });
-        console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${resolveConsultationProfile({ product })?.id || 'default'} model=${config.dialog.model} effort=${config.dialog.effort} fallback=true`);
+        console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${profile?.id || 'default'} model=${config.dialog.model} effort=${config.dialog.effort} fallback=true`);
         return answer;
       } catch (fallbackError) {
         console.error('OpenAI consultation fallback failed:', fallbackError?.message || fallbackError);
