@@ -1,16 +1,16 @@
 name: Apply clone 1145 prompt hierarchy
 
 on:
-  push:
+  pull_request:
     branches:
-      - codex/fix-clone-1145-prompt-hierarchy
+      - main
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: ${{ !contains(github.event.head_commit.message, '[prompt-hierarchy-applied]') }}
+    if: ${{ !contains(github.event.pull_request.head.sha, '[prompt-hierarchy-applied]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
