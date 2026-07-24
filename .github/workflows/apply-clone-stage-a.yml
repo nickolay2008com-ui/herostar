@@ -21,35 +21,20 @@ jobs:
           ref: codex/clone-stage-a-safety
           fetch-depth: 0
 
-      - name: Diagnose approved Stage A patch
+      - name: Export assembled Stage A patch payload
         run: |
-          set +e
-          set -u
-          cat .github/stage-a-patch/chunk-* | base64 -d > /tmp/stage-a.patch.xz 2>/tmp/base64.err
-          base64_rc=$?
-          echo "base64_rc=$base64_rc" > /tmp/stage-a-diagnostic.txt
-          sha256sum /tmp/stage-a.patch.xz >> /tmp/stage-a-diagnostic.txt
-          wc -c /tmp/stage-a.patch.xz >> /tmp/stage-a-diagnostic.txt
-          xz -t /tmp/stage-a.patch.xz 2>/tmp/xz.err
-          xz_rc=$?
-          echo "xz_rc=$xz_rc" >> /tmp/stage-a-diagnostic.txt
-          apply_rc=not_run
-          if [ "$xz_rc" -eq 0 ]; then
-            xz -dc /tmp/stage-a.patch.xz > /tmp/stage-a.patch 2>>/tmp/xz.err
-            git apply --3way --check /tmp/stage-a.patch > /tmp/apply.out 2>/tmp/apply.err
-            apply_rc=$?
-          fi
-          echo "apply_rc=$apply_rc" >> /tmp/stage-a-diagnostic.txt
-          touch /tmp/stage-a.patch /tmp/apply.out /tmp/apply.err /tmp/base64.err /tmp/xz.err
-          cat /tmp/base64.err /tmp/xz.err /tmp/apply.out /tmp/apply.err >> /tmp/stage-a-diagnostic.txt
-          cat /tmp/stage-a-diagnostic.txt
-          exit 0
+          set -euo pipefail
+          wc -c .github/stage-a-patch/chunk-* > /tmp/stage-a-chunk-sizes.txt
+          sha256sum .github/stage-a-patch/chunk-* > /tmp/stage-a-chunk-hashes.txt
+          cat .github/stage-a-patch/chunk-* > /tmp/stage-a-patch.b64
+          wc -c /tmp/stage-a-patch.b64 >> /tmp/stage-a-chunk-sizes.txt
+          sha256sum /tmp/stage-a-patch.b64 >> /tmp/stage-a-chunk-hashes.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: stage-a-patch-diagnostic
+          name: stage-a-patch-payload
           path: |
-            /tmp/stage-a.patch.xz
-            /tmp/stage-a.patch
-            /tmp/stage-a-diagnostic.txt
+            /tmp/stage-a-patch.b64
+            /tmp/stage-a-chunk-sizes.txt
+            /tmp/stage-a-chunk-hashes.txt
           retention-days: 1
