@@ -19,7 +19,28 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - name: Run tests with report
+        shell: bash
+        run: |
+          set +e
+          npm test > /tmp/herostar-test.log 2>&1
+          code=$?
+          echo "$code" > /tmp/herostar-test-exit.txt
+          tail -n 120 /tmp/herostar-test.log
+          exit 0
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: herostar-test-report
+          path: |
+            /tmp/herostar-test.log
+            /tmp/herostar-test-exit.txt
+      - name: Enforce test result
+        shell: bash
+        run: |
+          code=$(cat /tmp/herostar-test-exit.txt)
+          exit "$code"
       - name: Syntax check
         run: |
           node --check server.js
