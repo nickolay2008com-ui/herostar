@@ -7,6 +7,7 @@ const state = {
   chartId: null,
   token: null,
   chart: null,
+  passport: null,
   user: null,
   selectedPlace: null,
   config: null,
@@ -16,10 +17,20 @@ const state = {
   questionCount: 0,
   localMessages: [],
   asking: false,
+  selectedOffer: 'clone_day',
 };
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('\"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
 function show(id) {
   ['#createView', '#buildingView', '#dialogView'].forEach((selector) => $(selector).classList.add('hidden'));
@@ -74,6 +85,7 @@ function visitorId() {
 async function json(url, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (state.token) headers['x-chart-token'] = state.token;
+  headers['x-visitor-id'] = visitorId();
   const response = await fetch(url, { ...options, headers });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -181,19 +193,31 @@ function selectedPlaceValue(item) {
   return `${item.label || item.name}\u001f${item.latitude}\u001f${item.longitude}`;
 }
 
+function accessLabel() {
+  if (!state.user?.cloneAccessActive) return null;
+  const until = state.user.cloneAccessUntil ? new Date(state.user.cloneAccessUntil) : null;
+  const date = until && !Number.isNaN(until.getTime())
+    ? until.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : null;
+  if (state.user.clonePlan === 'alignment') return date ? `Сонастройка активна до ${date}` : 'Сонастройка активна';
+  if (state.user.clonePlan === 'day') return date ? `Глубокий режим открыт до ${date}` : 'День со Звёздным клоном открыт';
+  return date ? `Глубокий режим открыт до ${date}` : 'Глубокий режим открыт';
+}
+
 function renderAllowance() {
   const element = $('#questionAllowance');
   if (!element) return;
-  if (state.user?.premium) {
-    element.textContent = 'Безлимитный доступ открыт';
+  const paidLabel = accessLabel();
+  if (paidLabel) {
+    element.textContent = paidLabel;
     element.classList.add('unlimited');
     return;
   }
   element.classList.remove('unlimited');
   const remaining = Math.max(0, FREE_QUESTIONS - state.questionCount);
   element.textContent = remaining
-    ? `${remaining} ${remaining === 1 ? 'бесплатный вопрос' : 'бесплатных вопроса'}`
-    : 'Бесплатные вопросы закончились';
+    ? `${remaining} ${remaining === 1 ? 'бесплатное решение' : 'бесплатных решения'}`
+    : 'Бесплатные решения закончились';
 }
 
 function setComposerBusy(busy) {
@@ -207,9 +231,68 @@ function setComposerBusy(busy) {
   if (textarea) textarea.disabled = busy;
 }
 
-function openPaywall() {
-  track('paywall_opened', 'clone_paywall_opened', { questionCount: state.questionCount });
-  goal('clone_paywall');
+function formatPrice(value) {
+  return `${new Intl.NumberFormat('ru-RU').format(Number(value || 0))} ₽`;
+}
+
+function dayOffer() {
+  return state.config?.cloneOffers?.day || { code: 'clone_day', amount: 499, title: 'День со Звёздным клоном' };
+}
+
+function alignmentOffer() {
+  return state.config?.cloneOffers?.alignment || {
+    code: 'clone_alignment',
+    amount: 1499,
+    payableAmount: 1499,
+    credited: false,
+    creditAmount: 0,
+  };
+}
+
+function renderCommerceUi() {
+  const alignment = alignmentOffer();
+  const activeDay = state.user?.clonePlan === 'day' && state.user?.cloneAccessActive;
+  const showAlignment = Boolean(state.user && !state.user?.clonePlan?.includes('alignment') && (activeDay || alignment.credited));
+  $('#alignmentOffer')?.classList.toggle('hidden', !showAlignment);
+  if ($('#alignmentPrice')) $('#alignmentPrice').textContent = formatPrice(alignment.payableAmount || alignment.amount);
+  if ($('#alignmentCreditNote')) {
+    $('#alignmentCreditNote').textContent = alignment.credited
+      ? `499 ₽ уже зачтены · доплата ${formatPrice(alignment.payableAmount)}`
+      : '30 дней · без автопродления';
+  }
+}
+
+function prepareOffer(offerCode = 'clone_day') {
+  state.selectedOffer = offerCode;
+  const day = dayOffer();
+  const alignment = alignmentOffer();
+  const isAlignment = offerCode === 'clone_alignment';
+  const offer = isAlignment ? alignment : day;
+  $('#cloneOfferEyebrow').textContent = isAlignment ? 'Продолжение после знакомства' : 'Первые три решения разобраны';
+  $('#clonePaywallTitle').textContent = isAlignment ? 'Сонастройка на 30 дней' : 'День со Звёздным клоном';
+  $('#cloneOfferDescription').textContent = isAlignment
+    ? 'Ежедневно сверяйте реальные ситуации с клоном, получайте ключевые моменты карты и простые мини-задания в Telegram.'
+    : 'Разберите за 24 часа все важные ситуации в глубоком режиме. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
+  $('#cloneOfferBenefits').innerHTML = (isAlignment
+    ? ['✓ 30 дней глубоких вопросов клону', '✓ Ключевые моменты карты в Telegram', '✓ Простые мини-задания для проверки в жизни']
+    : ['✓ Глубокий алгоритм на 24 часа', '✓ Все важные вопросы в разумном темпе', '✓ Полная карта и Паспорт клона навсегда'])
+    .map((item) => `<span>${item}</span>`).join('');
+  const amount = isAlignment ? (offer.payableAmount || offer.amount) : offer.amount;
+  $('#clonePrice').textContent = formatPrice(amount);
+  $('#clonePayButton').firstChild.textContent = isAlignment ? 'Открыть Сонастройку · ' : 'Открыть на 24 часа · ';
+  const credit = $('#cloneOfferCredit');
+  if (credit) {
+    credit.classList.toggle('hidden', !(isAlignment && offer.credited));
+    credit.textContent = isAlignment && offer.credited
+      ? `Стоимость дня 499 ₽ полностью зачтена. Сейчас оплачивается только ${formatPrice(amount)}.`
+      : '';
+  }
+}
+
+function openPaywall(offerCode = 'clone_day') {
+  prepareOffer(offerCode);
+  track('paywall_opened', 'clone_paywall_opened', { questionCount: state.questionCount, offerCode });
+  goal('clone_paywall', { offer: offerCode });
   $('#clonePaywall').classList.remove('hidden');
 }
 
@@ -218,9 +301,9 @@ function closePaywall() {
 }
 
 function canAsk() {
-  if (state.user?.premium) return true;
+  if (state.user?.cloneAccessActive) return true;
   if (state.questionCount < FREE_QUESTIONS) return true;
-  openPaywall();
+  openPaywall('clone_day');
   return false;
 }
 
@@ -255,18 +338,24 @@ async function startPayment() {
   const receiptContact = normalizedReceiptContact();
   if (!receiptContact) return;
   const button = $('#clonePayButton');
+  const offerCode = state.selectedOffer || 'clone_day';
+  const offer = offerCode === 'clone_alignment' ? alignmentOffer() : dayOffer();
+  const amount = Number(offerCode === 'clone_alignment' ? (offer.payableAmount || offer.amount) : offer.amount);
   button.disabled = true;
-  track('paywall_opened', 'clone_payment_started', {
-    stage: 'payment_started',
-    price: Number(state.config.price || 990),
-  });
-  goal('clone_payment_start', { order_price: Number(state.config.price || 990), currency: 'RUB' });
+  track('paywall_opened', 'clone_payment_started', { stage: 'payment_started', price: amount, offerCode });
+  goal('clone_payment_start', { order_price: amount, currency: 'RUB', offer: offerCode });
   try {
     const result = await json('/api/payments/create', {
       method: 'POST',
-      body: JSON.stringify({ chartId: state.chartId, receiptContact, product: 'clone' }),
+      body: JSON.stringify({
+        chartId: state.chartId,
+        receiptContact,
+        product: 'clone',
+        offerCode,
+      }),
     });
     if (!result.confirmationUrl) throw new Error('ЮKassa не вернула ссылку оплаты.');
+    localStorage.setItem('starClonePendingPayment', JSON.stringify({ offerCode, amount, createdAt: new Date().toISOString() }));
     location.href = result.confirmationUrl;
   } catch (error) {
     toast(error.message);
@@ -289,6 +378,65 @@ function renderFactorsFromChart(chart) {
   $('#logicFactors').classList.remove('hidden');
   $('#logicFactors').innerHTML = factors.slice(0, 4).map(([title, body]) => `<div class="factor"><strong>${title}</strong><p>${body}</p></div>`).join('');
 }
+
+function renderPassport(passport) {
+  state.passport = passport || null;
+  const panel = $('#clonePassport');
+  if (!panel) return;
+  panel.classList.toggle('hidden', !passport);
+  const sideAvatar = $('#cloneAvatar');
+  if (!passport) {
+    if (sideAvatar) {
+      sideAvatar.textContent = '✦';
+      sideAvatar.removeAttribute('style');
+    }
+    return;
+  }
+
+  const from = passport.avatar?.gradient?.from || '#7c3aed';
+  const to = passport.avatar?.gradient?.to || '#db2777';
+  const initials = passport.avatar?.initials || passport.avatar?.symbol || '✦';
+  if (sideAvatar) {
+    sideAvatar.textContent = initials;
+    sideAvatar.style.background = `linear-gradient(135deg, ${from}, ${to})`;
+  }
+  const avatar = $('#passportAvatar');
+  if (avatar) {
+    avatar.style.background = `linear-gradient(135deg, ${from}, ${to})`;
+    avatar.innerHTML = `<span>${escapeHtml(initials)}</span><small>${escapeHtml(passport.avatar?.symbol || '✦')}</small>`;
+  }
+  $('#clonePassportTitle').textContent = passport.title || 'Паспорт клона';
+  $('#passportSubtitle').textContent = [passport.avatar?.signature, passport.subtitle].filter(Boolean).join(' · ');
+  $('#passportSections').innerHTML = (passport.sections || []).map((section) => `
+    <article class="passport-section">
+      <small>${escapeHtml(section.position || '')}</small>
+      <h4>${escapeHtml(section.title || '')}</h4>
+      <p>${escapeHtml(section.meaning || '')}</p>
+      <div><strong>Как применять</strong><span>${escapeHtml(section.application || '')}</span></div>
+    </article>
+  `).join('');
+  const groups = [
+    ['Сильные опоры', passport.strengths],
+    ['Что проверять', passport.tensions],
+    ['Рабочий маршрут', passport.route],
+  ].filter(([, items]) => Array.isArray(items) && items.length);
+  $('#passportSummary').innerHTML = groups.map(([title, items]) => `
+    <div><strong>${escapeHtml(title)}</strong><ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>
+  `).join('');
+  $('#passportDisclaimer').textContent = passport.disclaimer || '';
+}
+
+function setWorkspaceTab(tab) {
+  const profileMode = tab === 'profile';
+  $('.conversation')?.classList.toggle('hidden', profileMode);
+  $('#logicPanel')?.classList.toggle('profile-mode', profileMode);
+  $$('.side nav button').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
+  if (profileMode) {
+    const target = state.passport ? $('#clonePassport') : $('#logicPanel');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 
 async function loadHistory() {
   if (!state.chartId || !state.user) return false;
@@ -339,15 +487,16 @@ async function askClone(question, pending, userElement) {
     state.questionCount = Number(data.cloneUsage?.used || state.questionCount + 1);
     persistState();
     renderAllowance();
+    renderCommerceUi();
     track('card_opened', 'clone_answered', {
       questionNumber: state.questionCount,
       questionLength: question.length,
       answerLength: data.answer.length,
     });
     if (state.questionCount === 1) goal('clone_first_answer');
-    if (!state.user?.premium && state.questionCount >= FREE_QUESTIONS) {
+    if (!state.user?.cloneAccessActive && state.questionCount >= FREE_QUESTIONS) {
       goal('clone_third_answer');
-      setTimeout(openPaywall, 900);
+      setTimeout(() => openPaywall('clone_day'), 900);
     }
   } catch (error) {
     pending.remove();
@@ -356,7 +505,7 @@ async function askClone(question, pending, userElement) {
     if (error.code === 'CLONE_FREE_LIMIT') {
       state.questionCount = FREE_QUESTIONS;
       renderAllowance();
-      openPaywall();
+      openPaywall('clone_day');
     }
     $('#dialogError').textContent = error.message;
   } finally {
@@ -399,6 +548,7 @@ function startAuthPoll(pending) {
         setComposerBusy(false);
       }
       renderAllowance();
+      renderCommerceUi();
     } catch {
       // Ожидаем завершения Telegram popup.
     }
@@ -429,12 +579,15 @@ function mountTelegramLogin(container) {
 
 function applyChartView(data, savedName) {
   state.chart = data.chart;
+  state.passport = data.clonePassport || null;
   $('#cloneName').textContent = savedName || data.chart?.person?.name || data.chart?.birth?.name || 'Ваш звёздный клон';
-  $('#cloneStatus').textContent = 'модель сохранена';
+  $('#cloneStatus').textContent = data.access?.cloneAccessActive ? accessLabel() : 'модель сохранена';
   $('#intro').classList.add('hidden');
   $('#workspace').classList.remove('hidden');
   show('#dialogView');
   renderFactorsFromChart(data.chart);
+  renderPassport(data.clonePassport);
+  renderCommerceUi();
 }
 
 async function restoreClone(saved) {
@@ -451,25 +604,41 @@ async function restoreClone(saved) {
     await loadHistory();
   }
   renderAllowance();
+  renderCommerceUi();
   persistState();
   return true;
 }
 
 async function verifyPaymentReturn() {
   toast('Проверяем оплату…');
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  const returnedOffer = new URLSearchParams(location.search).get('offer') || 'clone_day';
+  let pendingPayment = null;
+  try { pendingPayment = JSON.parse(localStorage.getItem('starClonePendingPayment') || 'null'); } catch { pendingPayment = null; }
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, attempt ? 1500 : 800));
     state.config = await json('/api/config');
     state.user = state.config.user;
-    if (state.user?.premium) {
+    const expectedActive = returnedOffer === 'clone_alignment'
+      ? state.user?.clonePlan === 'alignment'
+      : state.user?.cloneAccessActive;
+    if (expectedActive) {
       closePaywall();
       renderAllowance();
-      goal('clone_payment_success', { order_price: Number(state.config.price || 990), currency: 'RUB' });
-      track('paywall_opened', 'clone_payment_succeeded', {
-        stage: 'payment_succeeded',
-        price: Number(state.config.price || 990),
-      });
-      toast('Полный доступ открыт. Диалог с клоном теперь без ограничений.');
+      renderCommerceUi();
+      const offer = returnedOffer === 'clone_alignment' ? alignmentOffer() : dayOffer();
+      const amount = Number(pendingPayment?.offerCode === returnedOffer
+        ? pendingPayment.amount
+        : returnedOffer === 'clone_alignment' ? (offer.payableAmount || offer.amount) : offer.amount);
+      goal('clone_payment_success', { order_price: amount, currency: 'RUB', offer: returnedOffer });
+      track('paywall_opened', 'clone_payment_succeeded', { stage: 'payment_succeeded', price: amount, offerCode: returnedOffer });
+      if (state.chartId) {
+        const data = await json(`/api/charts/${encodeURIComponent(state.chartId)}`).catch(() => null);
+        if (data) applyChartView(data, $('#cloneName')?.textContent);
+      }
+      localStorage.removeItem('starClonePendingPayment');
+      toast(returnedOffer === 'clone_alignment'
+        ? 'Сонастройка открыта на 30 дней. Автопродления нет.'
+        : 'Глубокий режим открыт на 24 часа. Карта и Паспорт клона останутся у вас.');
       return;
     }
   }
@@ -555,6 +724,7 @@ $('#birthForm').addEventListener('submit', async (event) => {
     url.searchParams.set('chart', state.chartId);
     history.replaceState(null, '', url);
     renderFactorsFromChart(data.chart);
+    renderPassport(data.clonePassport);
     show('#dialogView');
     renderAllowance();
     track('new_chart_clicked', 'clone_created', { name: payload.name, place: data.chart?.birth?.place || null });
@@ -618,6 +788,8 @@ $('#clonePaywall').addEventListener('click', (event) => {
   if (event.target === $('#clonePaywall')) closePaywall();
 });
 $('#clonePayButton').addEventListener('click', startPayment);
+$('#openAlignmentOffer')?.addEventListener('click', () => openPaywall('clone_alignment'));
+$$('.side nav button').forEach((button) => button.addEventListener('click', () => setWorkspaceTab(button.dataset.tab || 'dialog')));
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closePaywall();
@@ -628,8 +800,10 @@ document.addEventListener('keydown', (event) => {
   try {
     state.config = await json('/api/config');
     state.user = state.config.user;
-    $('#clonePrice').textContent = `${new Intl.NumberFormat('ru-RU').format(Number(state.config.price || 990))} ₽`;
+    prepareOffer('clone_day');
     $('#clonePayButton').disabled = !state.config.paymentsConfigured;
+    renderAllowance();
+    renderCommerceUi();
 
     const params = new URLSearchParams(location.search);
     const requestedChartId = params.get('chart');

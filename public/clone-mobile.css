@@ -194,3 +194,9 @@ main,
     white-space: normal;
   }
 }
+@media (max-width: 680px) {
+  .passport-head { grid-template-columns: 58px minmax(0, 1fr); }
+  .passport-avatar { width: 58px; height: 58px; border-radius: 19px; }
+  .alignment-price { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .logic.profile-mode { max-width: 100%; }
+}

@@ -30,6 +30,8 @@ import { searchPlaces, unpackSelectedPlace } from './src/places.js';
 import { getLegalConfig, renderLegalPage } from './src/legal.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
 import { historyForProduct } from './src/consultation-history.js';
+import { getCommerceState, initCommerce } from './src/commerce.js';
+import { buildClonePassport } from './src/clone-passport.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -244,16 +246,25 @@ function redactPortrait(portrait, unlocked) {
 }
 
 function presentChart(record, req, { forceUnlocked = false } = {}) {
-  const premium = Boolean(req.user?.premium);
-  const unlocked = forceUnlocked || premium;
+  const mapUnlocked = Boolean(req.user?.mapUnlocked);
+  const cloneAccessActive = Boolean(req.user?.cloneAccessActive);
+  const passportUnlocked = Boolean(req.user?.clonePassportUnlocked);
+  const unlocked = forceUnlocked || mapUnlocked;
   return {
     id: record.id,
     chart: record.chartData,
     portrait: redactPortrait(record.portraitData, unlocked),
+    clonePassport: passportUnlocked ? buildClonePassport(record.chartData, record.portraitData) : null,
     source: record.source,
     access: {
       unlocked,
-      premium,
+      premium: cloneAccessActive,
+      mapUnlocked,
+      cloneAccessActive,
+      clonePassportUnlocked: passportUnlocked,
+      clonePlan: req.user?.clonePlan || 'free',
+      cloneAccessUntil: req.user?.cloneAccessUntil || null,
+      cloneAlignmentUntil: req.user?.cloneAlignmentUntil || null,
       freeCardCount,
       requiresTelegram: !req.user,
     },
@@ -274,6 +285,7 @@ app.get('/api/public/stats', async (_req, res, next) => {
 app.get('/api/config', async (req, res, next) => {
   try {
     const telegram = await telegramConfiguration();
+    const commerce = await getCommerceState(req.user);
     res.json({
       telegramBotUsername: telegram.username,
       telegramConfigured: telegram.configured,
@@ -284,6 +296,7 @@ app.get('/api/config', async (req, res, next) => {
       demoMode,
       freeCardCount,
       price: Number(process.env.FULL_MAP_PRICE || '990'),
+      cloneOffers: commerce.offers,
       legalConfigured: getLegalConfig().configured,
       legalContactUrl: getLegalConfig().contactUrl,
       legalContactLabel: getLegalConfig().contactLabel,
@@ -293,7 +306,14 @@ app.get('/api/config', async (req, res, next) => {
             firstName: req.user.first_name,
             username: req.user.username,
             photoUrl: req.user.photo_url,
-            premium: req.user.premium,
+            // Для старой страницы карты premium означает постоянное открытие карты.
+            premium: req.user.mapUnlocked,
+            mapUnlocked: req.user.mapUnlocked,
+            clonePassportUnlocked: req.user.clonePassportUnlocked,
+            cloneAccessActive: req.user.cloneAccessActive,
+            clonePlan: req.user.clonePlan,
+            cloneAccessUntil: req.user.cloneAccessUntil,
+            cloneAlignmentUntil: req.user.cloneAlignmentUntil,
             admin: isAdminUser(req.user),
           }
         : null,
@@ -469,7 +489,7 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
       content: message.content,
     }));
 
-    const premium = Boolean(req.user?.premium);
+    const premium = Boolean(req.user?.cloneAccessActive);
     const answer = await answerConsultation({
       chart: record.chartData,
       portrait: record.portraitData,
@@ -559,6 +579,7 @@ app.post('/api/payments/create', requireUser, async (req, res, next) => {
       chartId,
       visitorId: visitorIdFrom(req),
       receiptContact: req.body.receiptContact,
+      offerCode: req.body.offerCode,
     });
     res.json({ paymentId: payment.id, confirmationUrl: payment.confirmation?.confirmation_url });
   } catch (error) {
@@ -631,7 +652,8 @@ app.use((error, _req, res, _next) => {
   });
 });
 
-await initStore();
+const storePool = await initStore();
+await initCommerce(storePool);
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`HeroStar запущен на порту ${port}`);
 });

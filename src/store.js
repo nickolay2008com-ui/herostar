@@ -22,7 +22,7 @@ function nextMemoryId() {
 export async function initStore() {
   if (!process.env.DATABASE_URL) {
     console.warn('DATABASE_URL не задан: используется временное хранилище в памяти.');
-    return;
+    return null;
   }
 
   pool = new pg.Pool({
@@ -100,6 +100,7 @@ export async function initStore() {
       ON analytics_events ((metadata->>'paymentId'))
       WHERE event_type = 'payment_succeeded' AND metadata ? 'paymentId';
   `);
+  return pool;
 }
 
 function premiumActive(user) {
@@ -146,23 +147,6 @@ export async function getUser(telegramId) {
   }
   const result = await pool.query('SELECT * FROM users WHERE telegram_id = $1', [String(telegramId)]);
   return result.rows[0] ? { ...result.rows[0], premium: premiumActive(result.rows[0]) } : null;
-}
-
-export async function grantPremium(telegramId, days = 3650) {
-  const premiumUntil = new Date(Date.now() + days * 86400000).toISOString();
-  if (!pool) {
-    const user = memory.users.get(String(telegramId)) || { telegram_id: String(telegramId), created_at: nowIso() };
-    user.premium_until = premiumUntil;
-    user.updated_at = nowIso();
-    memory.users.set(String(telegramId), user);
-    return { ...user, premium: true };
-  }
-  const result = await pool.query(
-    `UPDATE users SET premium_until = GREATEST(COALESCE(premium_until, NOW()), NOW()) + ($2 || ' days')::interval, updated_at = NOW()
-     WHERE telegram_id = $1 RETURNING *`,
-    [String(telegramId), String(days)],
-  );
-  return result.rows[0] ? { ...result.rows[0], premium: true } : null;
 }
 
 export async function saveChart(record) {

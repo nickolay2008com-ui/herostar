@@ -60,6 +60,12 @@ TELEGRAM_BOT_USERNAME=...
 YOOKASSA_SHOP_ID=...
 YOOKASSA_SECRET_KEY=...
 FULL_MAP_PRICE=990.00
+CLONE_DAY_PRICE=499
+CLONE_ALIGNMENT_PRICE=1499
+CLONE_ALIGNMENT_UPGRADE_PRICE=1000
+PRACTICE_NOTIFICATIONS_ENABLED=true
+PRACTICE_NOTIFICATION_HOURS=24
+PRACTICE_FIRST_DELAY_MINUTES=30
 DATABASE_URL=... # Railway подключает из Postgres service
 DEMO_MODE=true
 FREE_CARD_COUNT=3
@@ -72,3 +78,14 @@ FREE_CARD_COUNT=3
 3. Создаётся демонстрационная карта.
 4. Telegram Login открывает callback на production-домене.
 5. Тестовый платёж возвращается на production-домен и подтверждается webhook.
+
+
+## Монетизация Звёздного клона
+
+Платные программы не продлеваются автоматически:
+
+- `clone_day`: 24 часа глубокого диалога за 499 ₽; полная карта, персональный аватар и Паспорт клона остаются открытыми навсегда.
+- `clone_alignment`: 30 дней глубокого диалога и ежедневной Сонастройки в Telegram за 1499 ₽.
+- если `clone_alignment` приобретается в течение 24 часов после успешной покупки `clone_day`, система засчитывает 499 ₽ и выставляет 1000 ₽.
+
+После изменения цен проверяются `/api/config`, создание обоих платежей в ЮKassa и идемпотентное применение webhook.
