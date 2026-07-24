@@ -1,7 +1,8 @@
 export const CLONE_FREE_PROFILE_ID = 'clone-free-v1';
 export const CLONE_PREMIUM_PROFILE_ID = 'clone-premium-v1';
 
-const cloneFreeQuestionInstruction = `Рассмотри описанную ситуацию не как прогноз поступка человека, а как решение самостоятельного персонажа «Звёздный клон», созданного по основным настройкам натальной карты. Всегда говори «клон поступил бы», не переноси вывод напрямую на пользователя. Структура: 1) кратко как бы поступил клон; 2) почему — 2–3 конкретных базовых фактора из переданной карты: личная планета, знак, дом, стихия, ASC или MC; 3) один уточняющий вопрос, только если он действительно меняет решение. Не имитируй полный анализ аспектов и скрытых взаимосвязей, которых нет в базовой проекции карты. Не утверждай научную точность и не давай директив пользователю.`;
+// Проверенная пользователем основа ответов восстановлена дословно из версии 2026-07-23.1145.
+const cloneFreeQuestionInstruction = `Рассмотри описанную ситуацию не как прогноз поступка человека, а как решение самостоятельного персонажа «Звёздный клон», созданного по натальной карте. Всегда говори «клон поступил бы», не переноси вывод напрямую на пользователя. Структура: 1) кратко как бы поступил клон; 2) почему — 2–4 конкретных фактора карты (планета, знак, дом, стихия, аспект, ретроградность, ASC/DSC, MC/IC), только релевантные ситуации; 3) один уточняющий вопрос, только если он действительно меняет решение. Не утверждай научную точность и не давай директив пользователю.`;
 
 const clonePremiumSystemAddon = `
 
@@ -12,14 +13,13 @@ const clonePremiumSystemAddon = `
 export const consultationProfiles = Object.freeze({
   [CLONE_FREE_PROFILE_ID]: Object.freeze({
     id: CLONE_FREE_PROFILE_ID,
-    promptVersion: '2026-07-24.free-unlimited-core',
-    derivedFromPromptVersion: '2026-07-23.1145',
+    promptVersion: '2026-07-23.1145',
     sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1',
     systemPromptAddon: '',
     questionInstruction: cloneFreeQuestionInstruction,
-    factorBudget: Object.freeze({ min: 2, max: 3 }),
+    factorBudget: Object.freeze({ min: 2, max: 4 }),
     historyLimit: 8,
-    chartDepth: 'core',
+    chartDepth: 'full',
   }),
   [CLONE_PREMIUM_PROFILE_ID]: Object.freeze({
     id: CLONE_PREMIUM_PROFILE_ID,
