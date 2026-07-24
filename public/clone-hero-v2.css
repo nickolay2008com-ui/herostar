@@ -1,0 +1,79 @@
+.process-flow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 720px;
+  margin: 22px 0 4px;
+  color: #e8e0f2;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.process-step {
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.process-arrow {
+  color: var(--violet);
+  font-size: 18px;
+  line-height: 1;
+  opacity: .82;
+}
+
+.hero .truth {
+  max-width: 620px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  color: rgba(181, 171, 200, .82);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.visual-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: min(390px, 84%);
+  margin: 0;
+  transform: translateX(-50%);
+  color: rgba(215, 206, 228, .78);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .process-flow {
+    flex-wrap: wrap;
+    gap: 7px 9px;
+    margin-top: 20px;
+    font-size: 13px;
+  }
+
+  .process-step {
+    white-space: normal;
+  }
+
+  .visual-caption {
+    bottom: 0;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .process-flow {
+    display: grid;
+    grid-template-columns: auto 18px auto;
+    justify-content: start;
+  }
+
+  .process-flow .process-step:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .process-flow .process-arrow:last-of-type {
+    display: none;
+  }
+}
