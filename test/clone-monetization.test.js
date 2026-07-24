@@ -23,12 +23,15 @@ test('витрина продаёт день и Сонастройку без а
   assert.doesNotMatch(combined, /подарк\w* от Вселенной|подарк\w* Вселенной/i);
 });
 
-test('три бесплатных решения остаются перед оплатой дня', async () => {
+test('три ответа доступны до Telegram, а после входа базовый диалог не ограничен сообщениями', async () => {
   const [html, clone] = await Promise.all([read('public/clone.html'), read('public/clone.js')]);
-  assert.match(html, /3[^<]*вопроса бесплатно/);
-  assert.match(clone, /const FREE_QUESTIONS = 3/);
-  assert.match(clone, /state\.questionCount >= FREE_QUESTIONS/);
-  assert.match(clone, /prepareOffer\('clone_day'\)/);
+  assert.match(html, /3 ответа без регистрации/);
+  assert.match(html, /без лимита сообщений/);
+  assert.match(clone, /const FREE_PREAUTH_QUESTIONS = 3/);
+  assert.match(clone, /state\.questionCount >= FREE_PREAUTH_QUESTIONS/);
+  assert.match(clone, /Бесплатный режим · сообщения без лимита/);
+  assert.match(clone, /openFullModeOffer/);
+  assert.doesNotMatch(clone, /setTimeout\(\(\) => openPaywall\('clone_day'\)/);
   assert.doesNotMatch(html, /clone-conversion-hotfix/);
 });
 

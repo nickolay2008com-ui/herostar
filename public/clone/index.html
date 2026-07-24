@@ -55,7 +55,7 @@
           <button class="ghost" id="restoreCloneAccess" type="button">У меня уже есть клон</button>
           <div class="telegram-login-slot hidden" id="restoreTelegramSlot"></div>
         </div>
-        <p class="microcopy">Telegram подключается перед первым ответом, чтобы сохранить клона, историю и оплаченный доступ.</p>
+        <p class="microcopy">Первые три ответа доступны без регистрации. Затем Telegram сохранит клона, историю и доступ на любом устройстве.</p>
         <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
       </div>
       <div class="clone-visual">
@@ -92,12 +92,18 @@
 
         <div id="dialogView" class="hidden dialog-layout">
           <div class="conversation">
-            <div class="conversation-head"><div><p class="eyebrow">Консультация нового формата</p><h2>Дайте клону ситуацию</h2><div class="allowance" id="questionAllowance">3 бесплатных вопроса</div></div><button class="ghost" id="newSituation">Новая ситуация</button></div>
+            <div class="conversation-head"><div><p class="eyebrow">Консультация нового формата</p><h2>Дайте клону ситуацию</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div><button class="ghost" id="newSituation">Новая ситуация</button></div>
             <div class="messages" id="messages"><article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Я готов. Опишите ситуацию, в которой мне нужно выбрать, ответить или действовать.</p></div></article></div>
             <div class="chips"><button>Войти ли в новый проект?</button><button>Как ответить человеку?</button><button>Рискнуть или сохранить стабильность?</button></div>
             <form id="questionForm" class="composer"><textarea id="question" rows="3" placeholder="Что произошло, какие варианты есть и что вызывает сомнение?" required></textarea><button class="primary" type="submit">Спросить клона</button></form>
-            <p class="composer-note">Перед первым ответом откроется быстрый вход через Telegram. Он нужен только для сохранения клона, ответа и доступа после оплаты.</p>
+            <p class="composer-note">Первые три ответа доступны сразу. Затем Telegram сохранит клона и откроет бесплатный базовый диалог без лимита сообщений.</p>
             <p class="error" id="dialogError"></p>
+            <section class="alignment-offer hidden" id="fullModeOffer">
+              <p class="eyebrow">Полная глубина карты</p>
+              <h3>Открыть весь характер Клона</h3>
+              <p>Бесплатный режим опирается на основные настройки карты. Полный режим соединяет планеты, дома, аспекты, оси и внутренние противоречия, поэтому ответ становится детальнее и яснее.</p>
+              <button class="primary wide" id="openFullModeOffer" type="button">Посмотреть полный режим</button>
+            </section>
             <section class="alignment-offer hidden" id="alignmentOffer">
               <p class="eyebrow">Следующий уровень</p>
               <h3>Сонастройка на 30 дней</h3>
@@ -131,13 +137,13 @@
     <section class="paywall-card">
       <button class="modal-close" id="closeClonePaywall" type="button" aria-label="Закрыть">×</button>
       <div class="paywall-mark">✦</div>
-      <p class="eyebrow" id="cloneOfferEyebrow">Первые три решения разобраны</p>
+      <p class="eyebrow" id="cloneOfferEyebrow">Полная глубина карты</p>
       <h2 id="clonePaywallTitle">День со Звёздным клоном</h2>
-      <p id="cloneOfferDescription">Разберите за 24 часа все важные ситуации в глубоком режиме. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.</p>
+      <p id="cloneOfferDescription">На 24 часа Клон соединит всю карту: планеты, дома, аспекты, оси и внутренние противоречия. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.</p>
       <div class="paywall-benefits" id="cloneOfferBenefits">
-        <span>✓ Глубокий алгоритм на 24 часа</span>
-        <span>✓ Все важные вопросы в разумном темпе</span>
-        <span>✓ Полная карта и Паспорт клона навсегда</span>
+        <span>✓ Вся карта: планеты, дома, аспекты и оси</span>
+        <span>✓ Связи, противоречия и альтернативные ходы</span>
+        <span>✓ Полный образ, карта и Паспорт клона навсегда</span>
       </div>
       <p class="offer-credit hidden" id="cloneOfferCredit"></p>
       <label class="receipt-field">Телефон или email для электронного чека<input id="cloneReceiptContact" autocomplete="email" placeholder="name@example.com или +7…"><small id="cloneReceiptHint">Контакт передаётся ЮKassa только для отправки чека.</small></label>

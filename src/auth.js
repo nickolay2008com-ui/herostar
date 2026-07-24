@@ -9,11 +9,11 @@ import {
   reserveCloneQuestion,
 } from './clone-quota.js';
 import { runRequestContext } from './request-context.js';
-import { decorateUserAccess, hasCloneAccessForChart } from './commerce.js';
+import { decorateUserAccess } from './commerce.js';
 
 const COOKIE_NAME = 'herostar_session';
 const METRIKA_INLINE_SCRIPT_HASH = "'sha256-C9Cumf0lnPcYdvKbnC3roPXPzPkdvVTbO7dG0AwnrSQ='";
-const CLONE_FREE_QUESTION_LIMIT = 3;
+const CLONE_ANONYMOUS_QUESTION_LIMIT = 3;
 // HeroStar — персональный проект. Публичный Telegram владельца используется как
 // безопасный резервный идентификатор, пока в Railway не закреплён числовой ID.
 const PROJECT_OWNER_TELEGRAM_USERNAMES = new Set(['ainicki']);
@@ -168,8 +168,10 @@ function clonePromptMarker(req) {
 }
 
 function canUseChartForClone(record, req) {
-  if (!record || !req.user) return false;
-  if (record.userId) return String(record.userId) === String(req.user.telegram_id);
+  if (!record) return false;
+  if (record.userId) {
+    return Boolean(req.user && String(record.userId) === String(req.user.telegram_id));
+  }
   const token = String(req.headers['x-chart-token'] || '');
   return Boolean(token && record.accessTokenHash && sha256(token) === record.accessTokenHash);
 }
@@ -191,12 +193,15 @@ function markCloneChartCreation(req, res) {
 }
 
 async function prepareCloneQuota(req, res) {
-  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user) return;
+  if (req.method !== 'POST' || req.path !== '/api/consult') return;
+  // После входа через Telegram бесплатный базовый режим не имеет продуктового
+  // лимита сообщений. Квота нужна только для трёх ответов до регистрации.
+  if (req.user) return;
+
   const chartId = String(req.body?.chartId || '').trim();
   if (!chartId) return;
   const record = await getChart(chartId);
   if (!canUseChartForClone(record, req)) return;
-  if (hasCloneAccessForChart(req.user, chartId)) return;
 
   const explicitlyClone = explicitCloneProduct(req) || clonePromptMarker(req);
   const registeredClone = await isCloneChart(chartId);
@@ -205,14 +210,14 @@ async function prepareCloneQuota(req, res) {
 
   const reservation = await reserveCloneQuestion({
     chartId,
-    userId: req.user.telegram_id,
-    limit: CLONE_FREE_QUESTION_LIMIT,
+    userId: null,
+    limit: CLONE_ANONYMOUS_QUESTION_LIMIT,
   });
   if (!reservation.allowed) {
     throw publicError(
-      'Три бесплатных решения использованы. Откройте День со Звёздным клоном, чтобы продолжить диалог в глубоком режиме.',
-      402,
-      'CLONE_FREE_LIMIT',
+      'Три ответа без регистрации уже использованы. Подключите Telegram, чтобы сохранить клона и продолжить разговор без лимита сообщений.',
+      401,
+      'CLONE_TELEGRAM_REQUIRED',
     );
   }
 

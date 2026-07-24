@@ -1,5 +1,5 @@
 const METRIKA_ID = 110937602;
-const FREE_QUESTIONS = 3;
+const FREE_PREAUTH_QUESTIONS = 3;
 const STORAGE_KEY = 'starClone';
 const ATTRIBUTION_KEY = 'starCloneAttribution';
 
@@ -233,11 +233,16 @@ function renderAllowance() {
     element.classList.add('unlimited');
     return;
   }
+  if (state.user) {
+    element.textContent = 'Бесплатный режим · сообщения без лимита';
+    element.classList.add('unlimited');
+    return;
+  }
   element.classList.remove('unlimited');
-  const remaining = Math.max(0, FREE_QUESTIONS - state.questionCount);
+  const remaining = Math.max(0, FREE_PREAUTH_QUESTIONS - state.questionCount);
   element.textContent = remaining
-    ? `${remaining} ${remaining === 1 ? 'бесплатное решение' : 'бесплатных решения'}`
-    : 'Бесплатные решения закончились';
+    ? `${remaining} ${remaining === 1 ? 'ответ' : 'ответа'} до сохранения в Telegram`
+    : 'Подключите Telegram, чтобы продолжить без лимита';
 }
 
 function setComposerBusy(busy) {
@@ -273,7 +278,9 @@ function renderCommerceUi() {
   const alignment = alignmentOffer();
   const access = currentAccess();
   const activeDay = access?.clonePlan === 'day' && access?.cloneAccessActive;
+  const showFullMode = Boolean(state.user && !access?.cloneAccessActive && state.questionCount >= 5);
   const showAlignment = Boolean(state.user && access?.clonePlan !== 'alignment' && (activeDay || alignment.credited));
+  $('#fullModeOffer')?.classList.toggle('hidden', !showFullMode);
   $('#alignmentOffer')?.classList.toggle('hidden', !showAlignment);
   if ($('#alignmentPrice')) $('#alignmentPrice').textContent = formatPrice(alignment.payableAmount || alignment.amount);
   if ($('#alignmentCreditNote')) {
@@ -289,14 +296,14 @@ function prepareOffer(offerCode = 'clone_day') {
   const alignment = alignmentOffer();
   const isAlignment = offerCode === 'clone_alignment';
   const offer = isAlignment ? alignment : day;
-  $('#cloneOfferEyebrow').textContent = isAlignment ? 'Продолжение после знакомства' : 'Первые три решения разобраны';
+  $('#cloneOfferEyebrow').textContent = isAlignment ? 'Продолжение после знакомства' : 'Полная глубина карты';
   $('#clonePaywallTitle').textContent = isAlignment ? 'Сонастройка на 30 дней' : 'День со Звёздным клоном';
   $('#cloneOfferDescription').textContent = isAlignment
     ? 'Ежедневно сверяйте реальные ситуации с клоном, получайте ключевые моменты карты и простые мини-задания в Telegram.'
-    : 'Разберите за 24 часа все важные ситуации в глубоком режиме. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
+    : 'На 24 часа Клон соединит всю карту: планеты, дома, аспекты, оси и внутренние противоречия. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
   $('#cloneOfferBenefits').innerHTML = (isAlignment
     ? ['✓ 30 дней глубоких вопросов клону', '✓ Ключевые моменты карты в Telegram', '✓ Простые мини-задания для проверки в жизни']
-    : ['✓ Глубокий алгоритм на 24 часа', '✓ Все важные вопросы в разумном темпе', '✓ Полная карта и Паспорт клона навсегда'])
+    : ['✓ Вся карта: планеты, дома, аспекты и оси', '✓ Связи, противоречия и альтернативные ходы', '✓ Полный образ, карта и Паспорт клона навсегда'])
     .map((item) => `<span>${item}</span>`).join('');
   const amount = isAlignment ? (offer.payableAmount || offer.amount) : offer.amount;
   $('#clonePrice').textContent = formatPrice(amount);
@@ -322,10 +329,7 @@ function closePaywall() {
 }
 
 function canAsk() {
-  if (currentCloneAccessActive()) return true;
-  if (state.questionCount < FREE_QUESTIONS) return true;
-  openPaywall('clone_day');
-  return false;
+  return Boolean(state.chartId);
 }
 
 function normalizedReceiptContact() {
@@ -502,6 +506,7 @@ async function askClone(question, pending, userElement) {
     questionLength: question.length,
     questionNumber: state.questionCount + 1,
   });
+  let waitingForTelegram = false;
   try {
     const data = await json('/api/consult', {
       method: 'POST',
@@ -522,22 +527,24 @@ async function askClone(question, pending, userElement) {
       answerLength: data.answer.length,
     });
     if (state.questionCount === 1) goal('clone_first_answer');
-    if (!currentCloneAccessActive() && state.questionCount >= FREE_QUESTIONS) {
+    if (!state.user && state.questionCount === FREE_PREAUTH_QUESTIONS) {
       goal('clone_third_answer');
-      setTimeout(() => openPaywall('clone_day'), 900);
+      setTimeout(showSavePromptAfterFreeAnswers, 700);
     }
   } catch (error) {
+    if (error.code === 'CLONE_TELEGRAM_REQUIRED') {
+      state.questionCount = FREE_PREAUTH_QUESTIONS;
+      renderAllowance();
+      waitingForTelegram = true;
+      showTelegramContinuation(pending, { question, userElement });
+      return;
+    }
     pending.remove();
     userElement?.remove();
     $('#question').value = question;
-    if (error.code === 'CLONE_FREE_LIMIT') {
-      state.questionCount = FREE_QUESTIONS;
-      renderAllowance();
-      openPaywall('clone_day');
-    }
     $('#dialogError').textContent = error.message;
   } finally {
-    setComposerBusy(false);
+    if (!waitingForTelegram) setComposerBusy(false);
   }
 }
 
@@ -603,6 +610,28 @@ function mountTelegramLogin(container) {
   callback.searchParams.set('state', `clone:${state.chartId || ''}`);
   script.dataset.authUrl = callback.toString();
   container.append(script);
+}
+
+function showTelegramContinuation(pending, request = null) {
+  state.pendingRequest = request;
+  pending.querySelector('p').textContent = request
+    ? 'Три ответа уже получены. Подключите Telegram, чтобы сохранить клона и продолжить бесплатный разговор без лимита сообщений.'
+    : 'Сохраните этого клона в Telegram. После входа бесплатный базовый диалог продолжится без лимита сообщений.';
+  let slot = pending.querySelector('.telegram-login-slot');
+  if (!slot) {
+    slot = document.createElement('div');
+    slot.className = 'telegram-login-slot';
+    slot.style.marginTop = '12px';
+    pending.querySelector('div').append(slot);
+  }
+  mountTelegramLogin(slot);
+  startAuthPoll(pending);
+}
+
+function showSavePromptAfterFreeAnswers() {
+  if (state.user || state.questionCount !== FREE_PREAUTH_QUESTIONS) return;
+  const prompt = message('clone', 'Сохраните этого клона в Telegram, чтобы продолжить разговор без лимита сообщений.', { persist: false });
+  showTelegramContinuation(prompt);
 }
 
 function applyChartView(data, savedName) {
@@ -871,15 +900,8 @@ $('#questionForm').addEventListener('submit', async (event) => {
     state.config = await loadConfig();
     state.user = state.config.user;
     renderAllowance();
-    if (!state.user) {
-      state.pendingRequest = { question, userElement };
-      pending.querySelector('p').textContent = 'Подключите Telegram — он сохранит клона, три бесплатных вопроса и историю разговора.';
-      const slot = document.createElement('div');
-      slot.className = 'telegram-login-slot';
-      slot.style.marginTop = '12px';
-      pending.querySelector('div').append(slot);
-      mountTelegramLogin(slot);
-      startAuthPoll(pending);
+    if (!state.user && state.questionCount >= FREE_PREAUTH_QUESTIONS) {
+      showTelegramContinuation(pending, { question, userElement });
       return;
     }
     await askClone(question, pending, userElement);
@@ -897,6 +919,7 @@ $('#clonePaywall').addEventListener('click', (event) => {
   if (event.target === $('#clonePaywall')) closePaywall();
 });
 $('#clonePayButton').addEventListener('click', startPayment);
+$('#openFullModeOffer')?.addEventListener('click', () => openPaywall('clone_day'));
 $('#openAlignmentOffer')?.addEventListener('click', () => openPaywall('clone_alignment'));
 $$('.side nav button').forEach((button) => button.addEventListener('click', () => setWorkspaceTab(button.dataset.tab || 'dialog')));
 

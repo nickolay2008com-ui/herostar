@@ -118,7 +118,7 @@ export async function reserveCloneQuestion({ chartId, userId, limit = 3 }) {
     if (active.length >= limit) {
       return { allowed: false, reservationId: null, used: active.length, limit, remaining: 0 };
     }
-    active.push({ id, chartId, userId: String(userId), status: 'reserved', createdAt: nowIso() });
+    active.push({ id, chartId, userId: userId ? String(userId) : null, status: 'reserved', createdAt: nowIso() });
     memoryReservations.set(chartId, active);
     return { allowed: true, reservationId: id, used: active.length, limit, remaining: Math.max(0, limit - active.length) };
   }
@@ -155,7 +155,7 @@ export async function reserveCloneQuestion({ chartId, userId, limit = 3 }) {
     await client.query(
       `INSERT INTO clone_question_reservations (id, chart_id, user_id, status)
        VALUES ($1, $2, $3, 'reserved')`,
-      [id, chartId, String(userId)],
+      [id, chartId, userId ? String(userId) : null],
     );
     await client.query('COMMIT');
     return { allowed: true, reservationId: id, used: used + 1, limit, remaining: Math.max(0, limit - used - 1) };

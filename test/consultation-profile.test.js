@@ -12,14 +12,17 @@ import {
 
 const serverSource = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
 
-test('бесплатный клон использует алгоритм диалога 23 июля 11:45', () => {
+test('бесплатный клон сохраняет механику диалога 23 июля и использует базовую проекцию карты', () => {
   const profile = resolveConsultationProfile({ product: 'clone', premium: false });
   const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
 
   assert.equal(profile.id, CLONE_FREE_PROFILE_ID);
-  assert.equal(profile.promptVersion, '2026-07-23.1145');
+  assert.equal(profile.promptVersion, '2026-07-24.free-unlimited-core');
+  assert.equal(profile.derivedFromPromptVersion, '2026-07-23.1145');
   assert.match(question, /Рассмотри описанную ситуацию не как прогноз поступка человека/);
-  assert.match(question, /2–4 конкретных фактора карты/);
+  assert.match(question, /2–3 конкретных базовых фактора/);
+  assert.equal(profile.chartDepth, 'core');
+  assert.deepEqual(profile.factorBudget, { min: 2, max: 3 });
   assert.match(question, /Ситуация: Войти ли в новый проект\?/);
 
   const prompt = consultationSystemPrompt('deep', 'clone', false);
@@ -37,11 +40,15 @@ test('платный клон сохраняет текущий серверны
   const prompt = consultationSystemPrompt('deep', 'clone', true);
   assert.match(prompt, /пять ключей HeroStar/);
   assert.match(prompt, /Режим «Звёздный клон» имеет приоритет/);
-  assert.match(prompt, /2–4 конкретных фактора карты/);
+  assert.match(prompt, /карту как единую сеть/);
+  assert.match(prompt, /3–6 наиболее значимых связей/);
+  assert.equal(profile.chartDepth, 'full');
+  assert.deepEqual(profile.factorBudget, { min: 3, max: 6 });
+  assert.equal(profile.historyLimit, 16);
 });
 
 test('уровень доступа выбирается только на сервере', () => {
-  assert.match(serverSource, /const premium = hasCloneAccessForChart\(req\.user, record\.id\)/);
+  assert.match(serverSource, /const premium = req\.user \? hasCloneAccessForChart\(req\.user, record\.id\) : false/);
   assert.match(serverSource, /answerConsultation\(\{[\s\S]*?product,[\s\S]*?premium,/);
 });
 

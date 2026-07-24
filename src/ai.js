@@ -7,7 +7,32 @@ import { buildFallbackPortrait } from './narrative.js';
 
 const REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
 
-function compactChart(chart) {
+function compactPlanet({ key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde }) {
+  return { key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde };
+}
+
+function compactChart(chart, profile = null) {
+  const full = profile?.chartDepth === 'full';
+  const corePlanetKeys = new Set(['sun', 'moon', 'mercury', 'venus', 'mars']);
+  const planets = (chart.planets || [])
+    .filter((planet) => full || corePlanetKeys.has(planet.key))
+    .map(compactPlanet);
+
+  if (!full) {
+    return {
+      version: chart.version,
+      person: chart.person,
+      birth: chart.birth,
+      system: chart.system,
+      angles: {
+        ascendant: chart.angles?.ascendant || null,
+        mc: chart.angles?.mc || null,
+      },
+      planets,
+      scope: 'core',
+    };
+  }
+
   return {
     version: chart.version,
     person: chart.person,
@@ -15,11 +40,10 @@ function compactChart(chart) {
     system: chart.system,
     houses: chart.houses,
     angles: chart.angles,
-    planets: chart.planets.map(({ key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde }) => ({
-      key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde,
-    })),
+    planets,
     northNode: chart.northNode,
     aspects: chart.aspects,
+    scope: 'full',
   };
 }
 
@@ -176,9 +200,11 @@ async function requestConsultation(client, {
             id: profile.id,
             promptVersion: profile.promptVersion,
             sourceCommit: profile.sourceCommit,
+            derivedFromPromptVersion: profile.derivedFromPromptVersion || null,
             factorBudget: profile.factorBudget,
+            chartDepth: profile.chartDepth,
           } : null,
-          chart: compactChart(chart),
+          chart: compactChart(chart, profile),
           portrait,
           history: history.slice(-(profile?.historyLimit || 8)),
           question: preparedQuestion,
