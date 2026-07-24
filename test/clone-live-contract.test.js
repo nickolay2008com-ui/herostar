@@ -53,7 +53,7 @@ test('clone live keeps anonymous value before Telegram and then continues throug
   assert.match(js, /callback\.searchParams\.set\('state',`clone:\$\{state\.chartId\|\|''\}`\)/);
   assert.match(js, /await claimChart\(\)/);
   assert.match(js, /if \(state\.user\) \{ await finishExistingLogin\(\)/);
-  assert.match(js, /contextSynced/);
+  assert.match(js, /prepared\.carriesContext\)\{state\.contextSynced=true;persist\(\);\}/);
 });
 
 test('clone live reads Placidus cusps from the real chart structure', () => {
@@ -63,7 +63,7 @@ test('clone live reads Placidus cusps from the real chart structure', () => {
   assert.match(js, /const RULERS/);
   assert.match(js, /strongestSupport/);
   assert.match(js, /CONTRAST_SIGN/);
-  assert.match(js, /Это не гарантия удачи/);
+  assert.match(html, /Это не гарантия удачи/);
 });
 
 test('clone live uses a quiet 24-hour trial with at least three completed answers', () => {
@@ -74,9 +74,10 @@ test('clone live uses a quiet 24-hour trial with at least three completed answer
   assert.match(quota, /experience = 'live'/);
 });
 
-test('payment return comes back to the live dialogue', () => {
+test('payment return comes back only to the matching live dialogue', () => {
   assert.match(js, /starCloneLiveReturn/);
   assert.match(gears, /LIVE_RETURN_KEY = 'starCloneLiveReturn'/);
+  assert.match(gears, /returnedChartId === liveChartId/);
   assert.match(gears, /location\.replace\(target\.toString\(\)\)/);
 });
 
