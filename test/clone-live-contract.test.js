@@ -8,6 +8,7 @@ import {
   consultationProfiles,
 } from '../src/consultation-profiles.js';
 
+// Этот контракт удерживает новый сценарий как единый продуктовый механизм.
 const html = readFileSync(new URL('../public/clone/live/index.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../public/clone-live.css', import.meta.url), 'utf8');
 const jsPath = new URL('../public/clone-live.js', import.meta.url);
