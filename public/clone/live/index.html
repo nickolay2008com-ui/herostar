@@ -6,11 +6,25 @@
   <meta name="theme-color" content="#080711">
   <meta name="description" content="Опишите ситуацию, создайте Звёздного клона и получите персональный разбор решения по натальной карте.">
   <meta name="yandex-metrika-id" content="110937602">
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110937602', 'ym');
+
+    ym(110937602, 'init', {ssr:true, webvisor:false, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+  </script>
+  <!-- /Yandex.Metrika counter -->
   <title>Живая карта решений — Звёздный клон</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/clone-live.css?v=20260725">
+  <link rel="stylesheet" href="/clone-live-safety.css?v=20260725">
 </head>
 <body>
+  <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
   <div class="ambient ambient-a"></div>
   <div class="ambient ambient-b"></div>
 
@@ -70,8 +84,12 @@
           <label>Точное время<input name="time" type="time" required></label>
         </div>
         <label class="place-field">Место рождения<input id="placeQuery" name="placeQuery" autocomplete="off" placeholder="Город и страна" required><input id="placeValue" name="place" type="hidden"><div class="place-results" id="placeResults"></div></label>
+        <label class="consent-check">
+          <input name="personalDataConsent" type="checkbox" required>
+          <span>Я даю отдельное согласие на обработку данных рождения для расчёта карты и сохранения результата. <a href="/consent" target="_blank">Текст согласия</a></span>
+        </label>
         <button class="primary" type="submit">Создать модель решения <span>✦</span></button>
-        <p class="legal-copy">Продолжая, вы соглашаетесь с <a href="/consent" target="_blank">обработкой данных</a> и <a href="/privacy" target="_blank">политикой конфиденциальности</a>.</p>
+        <p class="legal-copy">Подробнее: <a href="/privacy" target="_blank">политика конфиденциальности</a>.</p>
         <p class="error" id="birthError"></p>
       </form>
     </section>
