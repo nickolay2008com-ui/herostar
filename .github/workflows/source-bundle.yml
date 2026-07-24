@@ -13,9 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build source archive
-        run: tar --exclude=.git -czf source-bundle.tar.gz .
+        run: tar --exclude=.git -czf /tmp/source-bundle.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: source-bundle
-          path: source-bundle.tar.gz
+          path: /tmp/source-bundle.tar.gz
           retention-days: 1
