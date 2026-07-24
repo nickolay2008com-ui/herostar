@@ -1,0 +1,196 @@
+/* Mobile hardening for the Star Clone workspace.
+   The base stylesheet uses grid and flex items with their default min-width:auto.
+   On narrow screens the header and composer therefore expand the grid track beyond
+   the viewport. These rules let every nested item shrink and deliberately stack
+   the controls instead of merely hiding the overflow. */
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+main,
+.workspace,
+.panel,
+.dialog-layout,
+.conversation,
+.logic,
+.conversation-head,
+.conversation-head > div,
+.messages,
+.chips,
+.composer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.workspace {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.dialog-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+.topbar > *,
+.message > div {
+  min-width: 0;
+}
+
+.message > div,
+.message p,
+.composer-note,
+.logic p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.composer textarea {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .workspace,
+  .dialog-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel {
+    margin: 0;
+  }
+
+  .conversation,
+  .logic {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    height: 64px;
+    gap: 12px;
+    padding: 0 max(16px, env(safe-area-inset-left));
+  }
+
+  .brand {
+    flex: 0 0 auto;
+  }
+
+  .product {
+    min-width: 0;
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .conversation,
+  .logic {
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .conversation-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .conversation-head h2 {
+    margin: 5px 0 0;
+    font-size: clamp(26px, 8vw, 32px);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+  }
+
+  .conversation-head .ghost {
+    align-self: flex-start;
+  }
+
+  .messages {
+    min-height: 190px;
+    max-height: 42svh;
+    padding: 18px 0;
+  }
+
+  .message > div {
+    max-width: calc(100% - 44px);
+  }
+
+  .message.user > div {
+    max-width: 92%;
+  }
+
+  .chips {
+    width: 100%;
+    padding-bottom: 12px;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .composer {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .composer textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .composer .primary {
+    width: 100%;
+  }
+
+  .logic {
+    order: 2;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar {
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-left: max(14px, env(safe-area-inset-left));
+  }
+
+  .product i {
+    display: none;
+  }
+
+  .panel {
+    padding: 10px;
+  }
+
+  .conversation,
+  .logic {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.11em;
+  }
+
+  .conversation-head h2 {
+    font-size: 27px;
+  }
+
+  .allowance {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
