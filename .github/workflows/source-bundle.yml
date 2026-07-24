@@ -31,6 +31,7 @@ jobs:
           echo "4e5de6a355ed45b9c7b3932d30e684ee25c9055d234c960318471585c2ee3dca  /tmp/implementation.tar.gz" \
             | sha256sum -c -
           tar -xzf /tmp/implementation.tar.gz
+          base64 -d .github/implementation-fixes/clone-launch.test.js.b64 > test/clone-launch.test.js
 
           rm -f public/clone-conversion-hotfix.js
           rm -f public/clone-product-bridge.js
@@ -39,6 +40,7 @@ jobs:
           rm -rf .github/implementation-rem
           rm -rf .github/implementation-bundle
           rm -rf .github/implementation-tail
+          rm -rf .github/implementation-fixes
           rm -f .github/workflows/source-bundle.yml
 
       - name: Install dependencies
