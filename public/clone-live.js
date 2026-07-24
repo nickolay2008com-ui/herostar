@@ -349,11 +349,11 @@ function receiptContact(){
 async function startPayment(offerCode){
   if(!state.user){closePaywall();await mountTelegram();toast('Сначала сохраните клона через Telegram.');return;}
   if(!state.config?.paymentsConfigured){toast('Оплата временно недоступна. Связаться можно в Telegram @ainicki.');return;}
-  const contact=receiptContact();if(!contact)return;const button=offerCode==='clone_alignment'?$('#alignmentOffer'):$('#dayOffer');button.disabled=true;
+  const contact=receiptContact();if(!contact)return;const button=offerCode==='clone_alignment'?$('#alignmentOffer'):$('#dayOffer'];button.disabled=true;
   try{
-    const result=await json('/api/payments/create',{method:'POST',body:JSON.stringify({chartId:state.chartId,receiptContact:contact,product:'clone',offerCode})});
+    const result=await json('/api/payments/create',{method:'POST',body:JSON.stringify({chartId:state.chartId,receiptContact:contact,product:'clone_live',offerCode})});
     if(!result.confirmationUrl)throw new Error('ЮKassa не вернула ссылку оплаты.');
-    localStorage.setItem('starCloneLiveReturn','/clone/live/');location.href=result.confirmationUrl;
+    location.href=result.confirmationUrl;
   }catch(error){toast(error.message);button.disabled=false;}
 }
 
