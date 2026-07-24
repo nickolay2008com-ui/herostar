@@ -7,6 +7,7 @@
   ];
 
   let config = null;
+  let configResolved = false;
   let configLoading = null;
   let configLoadedAt = 0;
   let offerTimer = null;
@@ -114,7 +115,14 @@
     }
   }
 
+  function removeOfferForPremium() {
+    clearTimeout(offerTimer);
+    $('#postAnswerOffer')?.remove();
+    $('#clonePaywall')?.classList.add('hidden');
+  }
+
   function openOffer(automatic = false) {
+    if (config?.user?.premium) return;
     const paywall = $('#clonePaywall');
     if (!paywall) return;
     preparePaywallCopy();
@@ -142,7 +150,7 @@
   }
 
   function maybeShowFirstOffer() {
-    if (!completedAnswerExists()) return;
+    if (!configResolved || config?.user?.premium || !completedAnswerExists()) return;
     addPersistentOffer();
 
     const id = chartId() || 'unknown';
@@ -171,18 +179,24 @@
   }
 
   async function loadConfig({ force = false } = {}) {
-    if (!force && config && Date.now() - configLoadedAt < 3000) return config;
+    if (!force && configResolved && Date.now() - configLoadedAt < 3000) return config;
     if (configLoading) return configLoading;
 
     configLoading = fetch('/api/config')
       .then(async (response) => (response.ok ? response.json() : null))
       .then((value) => {
         config = value;
+        configResolved = Boolean(value);
         configLoadedAt = Date.now();
         updateTelegramExpectation();
+        if (config?.user?.premium) removeOfferForPremium();
+        else maybeShowFirstOffer();
         return config;
       })
-      .catch(() => null)
+      .catch(() => {
+        configResolved = false;
+        return null;
+      })
       .finally(() => {
         configLoading = null;
       });
