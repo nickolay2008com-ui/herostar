@@ -1,0 +1,242 @@
+name: Restore clone free 1145
+
+on:
+  push:
+    branches:
+      - codex/restore-clone-free-1145
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/restore-clone-free-1145
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Restore exact 11:45 answer mechanics
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function replaceExact(path, from, to) {
+            const source = fs.readFileSync(path, 'utf8');
+            if (!source.includes(from)) throw new Error(`Expected source fragment not found in ${path}`);
+            fs.writeFileSync(path, source.replace(from, to));
+          }
+
+          const profile = `export const CLONE_FREE_PROFILE_ID = 'clone-free-v1';
+          export const CLONE_PREMIUM_PROFILE_ID = 'clone-premium-v1';
+
+          const cloneFreeQuestionInstruction = \`Рассмотри описанную ситуацию не как прогноз поступка человека, а как решение самостоятельного персонажа «Звёздный клон», созданного по натальной карте. Всегда говори «клон поступил бы», не переноси вывод напрямую на пользователя. Структура: 1) кратко как бы поступил клон; 2) почему — 2–4 конкретных фактора карты (планета, знак, дом, стихия, аспект, ретроградность, ASC/DSC, MC/IC), только релевантные ситуации; 3) один уточняющий вопрос, только если он действительно меняет решение. Не утверждай научную точность и не давай директив пользователю.\`;
+
+          const clonePremiumSystemAddon = \`
+
+          Режим «Звёздный клон» имеет приоритет над общими правилами консультации. Звёздный клон — самостоятельная символическая модель, созданная по натальной карте, а не прогноз поступков пользователя. Не переноси решение клона на человека и не говори «вы поступите» или «вам следует». Формулируй: «ваш звёздный клон, вероятнее всего, поступил бы…».
+
+          В полном режиме рассматривай карту как единую сеть: личные и социальные планеты, высшие планеты, дома, аспекты, ретроградность, узлы, оси ASC/DSC и MC/IC, поддерживающие связи и внутренние противоречия. Не перечисляй всё подряд. Сначала дай ход клона, затем покажи 3–6 наиболее значимых связей и объясни, как они усиливают, ограничивают или меняют решение. При нескольких возможных ходах назови главный, альтернативный и условие, при котором выбор изменится. Если контекста мало, честно назови ограничение, но всё равно предложи наиболее вероятный ход модели. Не выдавай астрологию за научный прогноз.\`;
+
+          export const consultationProfiles = Object.freeze({
+            [CLONE_FREE_PROFILE_ID]: Object.freeze({
+              id: CLONE_FREE_PROFILE_ID,
+              promptVersion: '2026-07-23.1145',
+              sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1',
+              systemPromptAddon: '',
+              questionInstruction: cloneFreeQuestionInstruction,
+              factorBudget: Object.freeze({ min: 2, max: 4 }),
+              historyLimit: 8,
+              chartDepth: 'full',
+            }),
+            [CLONE_PREMIUM_PROFILE_ID]: Object.freeze({
+              id: CLONE_PREMIUM_PROFILE_ID,
+              promptVersion: '2026-07-24.current',
+              sourceCommit: '9040f9f5d396c48f782373327959a6968ebab6f3',
+              systemPromptAddon: clonePremiumSystemAddon,
+              questionInstruction: '',
+              factorBudget: Object.freeze({ min: 3, max: 6 }),
+              historyLimit: 16,
+              chartDepth: 'full',
+            }),
+          });
+
+          export function resolveConsultationProfile({ product, premium = false } = {}) {
+            if (product !== 'clone') return null;
+            return consultationProfiles[premium ? CLONE_PREMIUM_PROFILE_ID : CLONE_FREE_PROFILE_ID];
+          }
+
+          export function prepareConsultationQuestion(profile, question) {
+            const cleanQuestion = String(question || '').trim();
+            if (!profile?.questionInstruction) return cleanQuestion;
+            return \`\${profile.questionInstruction}\\n\\nСитуация: \${cleanQuestion}\`;
+          }
+          `;
+          fs.writeFileSync('src/consultation-profiles.js', profile.replace(/^          /gm, ''));
+
+          const oldUiDescription = 'На 24 часа Клон соединит всю карту: планеты, дома, аспекты, оси и внутренние противоречия. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
+          const newUiDescription = 'На 24 часа Клон перейдёт в глубокий режим: свяжет параметры полной карты в единую систему, покажет противоречия, альтернативные ходы и условия изменения решения. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
+          const oldBenefits = "['✓ Вся карта: планеты, дома, аспекты и оси', '✓ Связи, противоречия и альтернативные ходы', '✓ Полный образ, карта и Паспорт клона навсегда']";
+          const newBenefits = "['✓ Глубокий разбор 3–6 значимых связей', '✓ Противоречия, альтернативные ходы и условия выбора', '✓ Полный образ, карта и Паспорт клона навсегда']";
+          replaceExact('public/clone.js', oldUiDescription, newUiDescription);
+          replaceExact('public/clone.js', oldBenefits, newBenefits);
+
+          const oldInline = 'Бесплатный режим опирается на основные настройки карты. Полный режим соединяет планеты, дома, аспекты, оси и внутренние противоречия, поэтому ответ становится детальнее и яснее.';
+          const newInline = 'Бесплатный режим уже опирается на полную карту и выбирает 2–4 фактора, важные для текущей ситуации. Полный режим глубже связывает их между собой, показывает внутренние противоречия, альтернативные ходы и собирает цельный образ Клона.';
+          const oldHtmlBenefits = `<span>✓ Вся карта: планеты, дома, аспекты и оси</span>
+                  <span>✓ Связи, противоречия и альтернативные ходы</span>
+                  <span>✓ Полный образ, карта и Паспорт клона навсегда</span>`;
+          const newHtmlBenefits = `<span>✓ Глубокий разбор 3–6 значимых связей</span>
+                  <span>✓ Противоречия, альтернативные ходы и условия выбора</span>
+                  <span>✓ Полный образ, карта и Паспорт клона навсегда</span>`;
+          for (const path of ['public/clone.html', 'public/clone/index.html']) {
+            replaceExact(path, oldInline, newInline);
+            replaceExact(path, oldUiDescription, newUiDescription);
+            replaceExact(path, oldHtmlBenefits, newHtmlBenefits);
+          }
+
+          fs.writeFileSync('test/consultation-profile.test.js', `import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import test from 'node:test';
+
+          import { consultationSystemPrompt } from '../src/ai.js';
+          import {
+            CLONE_FREE_PROFILE_ID,
+            CLONE_PREMIUM_PROFILE_ID,
+            prepareConsultationQuestion,
+            resolveConsultationProfile,
+          } from '../src/consultation-profiles.js';
+
+          const serverSource = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
+
+          test('бесплатный клон точно использует механику диалога 23 июля 11:45', () => {
+            const profile = resolveConsultationProfile({ product: 'clone', premium: false });
+            const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
+
+            assert.equal(profile.id, CLONE_FREE_PROFILE_ID);
+            assert.equal(profile.promptVersion, '2026-07-23.1145');
+            assert.equal(profile.sourceCommit, 'ad915b2bf870b27552eaf185a842702987d80da1');
+            assert.match(question, /Рассмотри описанную ситуацию не как прогноз поступка человека/);
+            assert.match(question, /2–4 конкретных фактора карты/);
+            assert.match(question, /аспект, ретроградность, ASC\/DSC, MC\/IC/);
+            assert.equal(profile.chartDepth, 'full');
+            assert.deepEqual(profile.factorBudget, { min: 2, max: 4 });
+            assert.equal(profile.historyLimit, 8);
+            assert.match(question, /Ситуация: Войти ли в новый проект\?/);
+
+            const prompt = consultationSystemPrompt('deep', 'clone', false);
+            assert.match(prompt, /пять ключей HeroStar/);
+            assert.doesNotMatch(prompt, /Режим «Звёздный клон» имеет приоритет/);
+          });
+
+          test('платный клон сохраняет углублённый серверный алгоритм', () => {
+            const profile = resolveConsultationProfile({ product: 'clone', premium: true });
+            const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
+
+            assert.equal(profile.id, CLONE_PREMIUM_PROFILE_ID);
+            assert.equal(question, 'Войти ли в новый проект?');
+
+            const prompt = consultationSystemPrompt('deep', 'clone', true);
+            assert.match(prompt, /пять ключей HeroStar/);
+            assert.match(prompt, /Режим «Звёздный клон» имеет приоритет/);
+            assert.match(prompt, /карту как единую сеть/);
+            assert.match(prompt, /3–6 наиболее значимых связей/);
+            assert.equal(profile.chartDepth, 'full');
+            assert.deepEqual(profile.factorBudget, { min: 3, max: 6 });
+            assert.equal(profile.historyLimit, 16);
+          });
+
+          test('уровень доступа выбирается только на сервере', () => {
+            assert.match(serverSource, /const premium = req\.user \? hasCloneAccessForChart\(req\.user, record\.id\) : false/);
+            assert.match(serverSource, /answerConsultation\(\{[\s\S]*?product,[\s\S]*?premium,/);
+          });
+
+          test('обычная консультация HeroStar не получает профиль клона', () => {
+            assert.equal(resolveConsultationProfile({ product: 'herostar', premium: true }), null);
+            assert.match(consultationSystemPrompt('deep', 'herostar', true), /пять ключей HeroStar/);
+            assert.doesNotMatch(consultationSystemPrompt('deep', 'herostar', true), /Режим «Звёздный клон»/);
+          });
+          `.replace(/^          /gm, ''));
+
+          fs.writeFileSync('test/clone-free-unlimited.test.js', `// Бесплатный режим ограничивает только анонимное знакомство, а не разговор после сохранения.
+          import test from 'node:test';
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+
+          const read = (path) => readFile(new URL(\`../\${path}\`, import.meta.url), 'utf8');
+
+          test('анонимный пользователь получает три ответа, а Telegram снимает продуктовый лимит', async () => {
+            const [auth, server, clone] = await Promise.all([
+              read('src/auth.js'),
+              read('server.js'),
+              read('public/clone.js'),
+            ]);
+
+            assert.match(auth, /CLONE_ANONYMOUS_QUESTION_LIMIT = 3/);
+            assert.match(auth, /if \(req\.user\) return/);
+            assert.match(auth, /userId: null/);
+            assert.match(auth, /CLONE_TELEGRAM_REQUIRED/);
+            assert.match(server, /app\.post\('\/api\/consult', consultLimiter, async/);
+            assert.match(server, /if \(!req\.user && product !== 'clone'\)/);
+            assert.match(clone, /FREE_PREAUTH_QUESTIONS = 3/);
+            assert.match(clone, /Бесплатный режим · сообщения без лимита/);
+            assert.doesNotMatch(clone, /openPaywall\('clone_day'\);\s*return false/);
+          });
+
+          test('бесплатный профиль восстановлен из 11:45 и получает полную карту', async () => {
+            const [profiles, ai] = await Promise.all([
+              read('src/consultation-profiles.js'),
+              read('src/ai.js'),
+            ]);
+
+            assert.match(profiles, /promptVersion: '2026-07-23\.1145'/);
+            assert.match(profiles, /sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1'/);
+            assert.match(profiles, /2–4 конкретных фактора карты/);
+            assert.doesNotMatch(profiles, /chartDepth: 'core'/);
+            assert.equal([...profiles.matchAll(/chartDepth: 'full'/g)].length, 2);
+            assert.match(ai, /northNode: chart\.northNode/);
+            assert.match(ai, /aspects: chart\.aspects/);
+            assert.match(ai, /compactChart\(chart, profile\)/);
+          });
+
+          test('платное предложение показывается добровольно и честно объясняет углубление', async () => {
+            const [html, clone] = await Promise.all([
+              read('public/clone.html'),
+              read('public/clone.js'),
+            ]);
+
+            assert.match(html, /id="fullModeOffer"/);
+            assert.match(html, /Бесплатный режим уже опирается на полную карту/);
+            assert.match(html, /Глубокий разбор 3–6 значимых связей/);
+            assert.match(clone, /state\.questionCount >= 5/);
+            assert.match(clone, /openFullModeOffer/);
+          });
+          `.replace(/^          /gm, ''));
+          NODE
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Check syntax and canonical clone page
+        run: |
+          node --check src/consultation-profiles.js
+          node --check public/clone.js
+          node --check test/consultation-profile.test.js
+          node --check test/clone-free-unlimited.test.js
+          cmp public/clone.html public/clone/index.html
+
+      - name: Commit verified implementation
+        run: |
+          rm .github/workflows/restore-clone-free-1145.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/consultation-profiles.js public/clone.js public/clone.html public/clone/index.html test/consultation-profile.test.js test/clone-free-unlimited.test.js .github/workflows/restore-clone-free-1145.yml
+          git commit -m "Вернуть бесплатному Клону механику 2026-07-23.1145"
+          git push origin HEAD:codex/restore-clone-free-1145
