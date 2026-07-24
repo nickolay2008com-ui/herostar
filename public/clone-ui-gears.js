@@ -1,11 +1,20 @@
 (() => {
   const PENDING_KEY = 'starClonePendingQuestion';
   const LIVE_RETURN_KEY = 'starCloneLiveReturn';
+  const LIVE_STATE_KEY = 'starCloneLive';
   const params = new URLSearchParams(location.search);
   const authReturned = params.get('auth') === 'ok';
 
   const liveReturn = localStorage.getItem(LIVE_RETURN_KEY);
-  if (params.get('payment') === 'return' && liveReturn) {
+  let liveChartId = '';
+  try {
+    liveChartId = String(JSON.parse(localStorage.getItem(LIVE_STATE_KEY) || '{}').chartId || '');
+  } catch {
+    liveChartId = '';
+  }
+  const returnedChartId = String(params.get('chart') || '');
+  const belongsToLiveDialogue = Boolean(liveReturn && liveChartId && returnedChartId === liveChartId);
+  if (params.get('payment') === 'return' && belongsToLiveDialogue) {
     localStorage.removeItem(LIVE_RETURN_KEY);
     const target = new URL(liveReturn, location.origin);
     for (const [key, value] of params.entries()) target.searchParams.set(key, value);
