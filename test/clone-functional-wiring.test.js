@@ -15,10 +15,13 @@ test('оба публичных адреса клона отдают одну и
   assert.match(canonical, /id="questionForm"/);
   assert.match(canonical, /id="clonePaywall"/);
   assert.match(canonical, /id="clonePayButton"/);
-  assert.ok(canonical.indexOf('/clone-product-bridge.js') < canonical.indexOf('/clone.js'));
+  assert.match(canonical, /id="clonePassport"/);
+  assert.match(canonical, /id="alignmentOffer"/);
+  assert.doesNotMatch(canonical, /clone-product-bridge/);
+  assert.doesNotMatch(canonical, /clone-conversion-hotfix/);
 });
 
-test('клиент соединяет создание, Telegram, историю, квоту и оплату', async () => {
+test('клиент соединяет создание, Telegram, историю, квоту и два платных продукта', async () => {
   const clone = await read('public/clone.js');
 
   assert.match(clone, /json\('\/api\/charts'/);
@@ -29,19 +32,20 @@ test('клиент соединяет создание, Telegram, историю
   assert.match(clone, /CLONE_FREE_LIMIT/);
   assert.match(clone, /cloneUsage/);
   assert.match(clone, /json\('\/api\/payments\/create'/);
+  assert.match(clone, /offerCode,/);
+  assert.match(clone, /clone_day/);
+  assert.match(clone, /clone_alignment/);
   assert.match(clone, /verifyPaymentReturn/);
   assert.match(clone, /clone_payment_success/);
 });
 
-test('каждый денежный и продуктовый шаг сохраняет единый visitor id', async () => {
-  const bridge = await read('public/clone-product-bridge.js');
+test('каждый денежный и продуктовый шаг сохраняет единый visitor id без перехвата fetch', async () => {
+  const clone = await read('public/clone.js');
 
-  assert.match(bridge, /herostar_visitor_id/);
-  assert.match(bridge, /\/api\/charts/);
-  assert.match(bridge, /\/api\/consult/);
-  assert.match(bridge, /\/api\/payments\/create/);
-  assert.match(bridge, /headers\.set\('x-visitor-id', id\)/);
-  assert.match(bridge, /product: 'clone', visitorId: id/);
+  assert.match(clone, /herostar_visitor_id/);
+  assert.match(clone, /headers\['x-visitor-id'\] = visitorId\(\)/);
+  assert.match(clone, /product: 'clone'/);
+  assert.match(clone, /visitorId: visitorId\(\)/);
 });
 
 test('сервер содержит все звенья публичного и административного пути', async () => {
@@ -68,16 +72,20 @@ test('сервер содержит все звенья публичного и 
   assert.match(server, /requireUser/);
   assert.match(server, /requireAdmin/);
   assert.match(server, /express\.static\('public'/);
+  assert.match(server, /initCommerce/);
+  assert.match(server, /getCommerceState/);
 });
 
-test('серверная квота и ЮKassa замыкают бесплатный и платный контуры', async () => {
-  const [auth, quota, payments] = await Promise.all([
+test('серверная квота и ЮKassa замыкают бесплатный день и Сонастройку', async () => {
+  const [auth, quota, payments, commerce] = await Promise.all([
     read('src/auth.js'),
     read('src/clone-quota.js'),
     read('src/payments.js'),
+    read('src/commerce.js'),
   ]);
 
   assert.match(auth, /CLONE_FREE_QUESTION_LIMIT = 3/);
+  assert.match(auth, /cloneAccessActive/);
   assert.match(auth, /reserveCloneQuestion/);
   assert.match(auth, /completeCloneQuestion/);
   assert.match(auth, /releaseCloneQuestion/);
@@ -86,6 +94,9 @@ test('серверная квота и ЮKassa замыкают бесплатн
   assert.match(quota, /status IN \('reserved', 'completed'\)/);
   assert.match(payments, /currentRequestContext/);
   assert.match(payments, /\/clone\/\?payment=return&chart=/);
-  assert.match(payments, /product === 'clone'/);
-  assert.match(payments, /grantPremium/);
+  assert.match(payments, /applyPaymentEntitlement/);
+  assert.match(payments, /offer_code/);
+  assert.match(commerce, /clone_day/);
+  assert.match(commerce, /clone_alignment/);
+  assert.doesNotMatch(payments, /grantPremium/);
 });

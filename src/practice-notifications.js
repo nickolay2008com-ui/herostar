@@ -1,5 +1,5 @@
 const DEFAULT_CADENCE_HOURS = 24;
-const DEFAULT_FIRST_DELAY_MINUTES = 15;
+const DEFAULT_FIRST_DELAY_MINUTES = 30;
 const DEFAULT_CYCLE_INTERVAL_MS = 60_000;
 const TELEGRAM_POLL_TIMEOUT_SECONDS = 25;
 
@@ -34,16 +34,10 @@ function escapeTelegramHtml(value = '') {
     .replaceAll('>', '&gt;');
 }
 
-export function selectPracticeCards(portrait, openedCardIds = [], options = {}) {
-  const cards = Array.isArray(portrait?.cards) ? portrait.cards.filter((card) => card?.id) : [];
-  if (!cards.length) return [];
-
-  const opened = new Set(openedCardIds.map(String));
-  const selected = cards.filter((card) => opened.has(String(card.id)));
-  if (selected.length) return selected;
-
-  const freeCardCount = Math.max(1, Number(options.freeCardCount || 3));
-  return cards.slice(0, Math.min(freeCardCount, 1));
+export function selectPracticeCards(portrait, _openedCardIds = [], _options = {}) {
+  return Array.isArray(portrait?.cards)
+    ? portrait.cards.filter((card) => card?.id && !card.locked)
+    : [];
 }
 
 export function pickNextPracticeCard(cards, lastCardId = null) {
@@ -55,24 +49,24 @@ export function pickNextPracticeCard(cards, lastCardId = null) {
 
 export function buildPracticeMessage(card, deliveryCount = 0) {
   if (!card) return '';
-  const title = compactText(card.title || card.position || 'Открытый ресурс');
+  const title = compactText(card.title || card.position || 'Настройка клона');
   const position = compactText(card.position);
   const key = sentence(card.key || card.manifestation || card.lead);
-  const action = sentence(stripActionPrefix(card.action) || 'Заметьте один момент, когда этот ресурс уже включается естественно.');
+  const action = sentence(stripActionPrefix(card.action) || 'Заметьте один реальный момент, когда эта настройка уже проявляется естественно.');
   const bridges = [
-    'Сегодня не нужно менять себя целиком — достаточно проверить один естественный способ.',
-    'Возьмём не теорию, а один маленький опыт, который можно заметить уже сегодня.',
-    'Эта практика нужна не для идеального результата, а чтобы увидеть, как ресурс работает именно у вас.',
+    'Сегодня проверим одну настройку клона в обычной жизни, без попытки подогнать себя под карту.',
+    'Сонастройка строится на наблюдении: подходит, не подходит или работает только в определённых условиях.',
+    'Задача не стать клоном, а понять, какая часть его механики действительно даёт вам опору.',
   ];
   const bridge = bridges[Math.abs(Number(deliveryCount) || 0) % bridges.length];
 
   return [
-    `✦ <b>Практика по вашей карте: ${escapeTelegramHtml(title)}</b>`,
+    `✦ <b>Сонастройка: ${escapeTelegramHtml(title)}</b>`,
     position && position !== title ? `<i>${escapeTelegramHtml(position)}</i>` : '',
     escapeTelegramHtml(bridge),
-    key ? `<b>На что опереться</b>\n${escapeTelegramHtml(key)}` : '',
-    `<b>Маленький ход</b>\n${escapeTelegramHtml(action)}`,
-    'После просто отметьте: стало легче, яснее или ничего не изменилось. Любой результат полезен — это проверка, а не экзамен.',
+    key ? `<b>Ключевой момент</b>\n${escapeTelegramHtml(key)}` : '',
+    `<b>Мини-задание</b>\n${escapeTelegramHtml(action)}`,
+    '<b>Вечером отметьте для себя</b>\nПодошло · частично · не подошло · хочу уточнить.',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -83,10 +77,10 @@ function publicBaseUrl() {
   return railwayDomain ? `https://${railwayDomain.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : '';
 }
 
-function chartUrl(chartId) {
+function cloneUrl(chartId) {
   const baseUrl = publicBaseUrl();
   if (!baseUrl) return '';
-  return `${baseUrl}/?chart=${encodeURIComponent(chartId || '')}#map`;
+  return `${baseUrl}/clone/?chart=${encodeURIComponent(chartId || '')}`;
 }
 
 async function telegramRequest(token, method, payload = {}, timeoutMs = 35_000) {
@@ -108,9 +102,12 @@ async function telegramRequest(token, method, payload = {}, timeoutMs = 35_000) 
 
 function notificationKeyboard(subscription, enabled = true) {
   const rows = [];
-  const url = chartUrl(subscription.chart_id || subscription.chartId);
-  if (url) rows.push([{ text: 'Открыть мою карту', url }]);
-  rows.push([{ text: enabled ? 'Отключить уведомления' : 'Включить уведомления', callback_data: enabled ? 'practice:disable' : 'practice:enable' }]);
+  const url = cloneUrl(subscription.chart_id || subscription.chartId);
+  if (url) rows.push([{ text: 'Открыть Звёздного клона', url }]);
+  rows.push([{
+    text: enabled ? 'Приостановить Сонастройку' : 'Возобновить сообщения',
+    callback_data: enabled ? 'alignment:disable' : 'alignment:enable',
+  }]);
   return { inline_keyboard: rows };
 }
 
@@ -129,6 +126,7 @@ async function ensureSchema(pool) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE practice_subscriptions ADD COLUMN IF NOT EXISTS program TEXT NOT NULL DEFAULT 'clone_alignment';
     CREATE INDEX IF NOT EXISTS practice_subscriptions_due_idx
       ON practice_subscriptions(enabled, next_delivery_at)
       WHERE enabled = TRUE;
@@ -144,42 +142,63 @@ async function ensureSchema(pool) {
 async function syncSubscriptions(pool, firstDelayMinutes) {
   const inserted = await pool.query(
     `WITH latest AS (
-       SELECT DISTINCT ON (user_id) user_id, id AS chart_id
-       FROM charts
-       WHERE user_id IS NOT NULL
-       ORDER BY user_id, created_at DESC
+       SELECT DISTINCT ON (chart.user_id) chart.user_id, chart.id AS chart_id
+       FROM charts AS chart
+       JOIN users AS user_record ON user_record.telegram_id = chart.user_id
+       WHERE chart.user_id IS NOT NULL
+         AND user_record.clone_alignment_until > NOW()
+       ORDER BY chart.user_id, chart.created_at DESC
      )
-     INSERT INTO practice_subscriptions (user_id, chart_id, next_delivery_at)
-     SELECT user_id, chart_id, NOW() + ($1::text || ' minutes')::interval
+     INSERT INTO practice_subscriptions (user_id, chart_id, program, enabled, next_delivery_at)
+     SELECT user_id, chart_id, 'clone_alignment', TRUE, NOW() + ($1::text || ' minutes')::interval
      FROM latest
-     ON CONFLICT (user_id) DO NOTHING
+     ON CONFLICT (user_id) DO UPDATE SET
+       chart_id = EXCLUDED.chart_id,
+       program = 'clone_alignment',
+       enabled = CASE
+         WHEN practice_subscriptions.last_error = 'user_paused' OR practice_subscriptions.last_error LIKE 'blocked:%' THEN FALSE
+         ELSE TRUE
+       END,
+       updated_at = NOW()
      RETURNING user_id, chart_id, enabled, welcome_sent_at, next_delivery_at, delivery_count`,
     [String(firstDelayMinutes)],
   );
 
   await pool.query(`
-    WITH latest AS (
-      SELECT DISTINCT ON (user_id) user_id, id AS chart_id
-      FROM charts
-      WHERE user_id IS NOT NULL
-      ORDER BY user_id, created_at DESC
-    )
     UPDATE practice_subscriptions AS subscription
-    SET chart_id = latest.chart_id, updated_at = NOW()
-    FROM latest
-    WHERE subscription.user_id = latest.user_id
-      AND subscription.chart_id IS DISTINCT FROM latest.chart_id
+    SET enabled = FALSE,
+        locked_until = NULL,
+        updated_at = NOW()
+    WHERE subscription.program = 'clone_alignment'
+      AND NOT EXISTS (
+        SELECT 1 FROM users AS user_record
+        WHERE user_record.telegram_id = subscription.user_id
+          AND user_record.clone_alignment_until > NOW()
+      )
   `);
 
-  return inserted.rows;
+  return inserted.rows.filter((row) => !row.welcome_sent_at && row.enabled);
+}
+
+async function loadAlignmentStatus(pool, userId) {
+  const result = await pool.query(
+    `SELECT clone_alignment_until,
+            clone_alignment_until > NOW() AS active
+     FROM users WHERE telegram_id = $1 LIMIT 1`,
+    [String(userId)],
+  );
+  return result.rows[0] || { active: false, clone_alignment_until: null };
 }
 
 async function sendWelcome(pool, token, subscription) {
+  const status = await loadAlignmentStatus(pool, subscription.user_id);
+  if (!status.active) return;
+  const until = new Date(status.clone_alignment_until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   const text = [
-    '✦ <b>Карта сохранена. Теперь начнём применять её в жизни.</b>',
-    'HeroStar будет присылать не чаще одного раза в день:',
-    '• один уже открытый ресурс;\n• короткое практическое объяснение;\n• маленький проверяемый ход.',
-    'Без прогнозов и давления. Уведомления можно отключить кнопкой под любым сообщением или командой /stop.',
+    '✦ <b>Сонастройка со Звёздным клоном началась.</b>',
+    `До ${escapeTelegramHtml(until)} вы будете получать один ключевой момент карты и одно простое мини-задание в день.`,
+    'Задача месяца — не следовать клону вслепую, а проверить его настройки в реальных ситуациях и собрать то, что действительно помогает.',
+    'Сообщения можно приостановить кнопкой ниже или командой /stop. Оплата не продлевается автоматически.',
   ].join('\n\n');
 
   try {
@@ -205,24 +224,27 @@ async function sendWelcome(pool, token, subscription) {
            next_delivery_at = NOW() + INTERVAL '1 hour',
            updated_at = NOW()
        WHERE user_id = $1`,
-      [subscription.user_id, blocked, compactText(error.message).slice(0, 500)],
+      [subscription.user_id, blocked, `${blocked ? 'blocked:' : ''}${compactText(error.message)}`.slice(0, 500)],
     );
-    console.error('HeroStar welcome notification failed:', error.message);
+    console.error('HeroStar alignment welcome failed:', error.message);
   }
 }
 
 async function claimDueSubscriptions(pool, limit = 20) {
   const result = await pool.query(
     `WITH due AS (
-       SELECT user_id
-       FROM practice_subscriptions
-       WHERE enabled = TRUE
-         AND welcome_sent_at IS NOT NULL
-         AND next_delivery_at <= NOW()
-         AND (locked_until IS NULL OR locked_until < NOW())
-       ORDER BY next_delivery_at ASC
+       SELECT subscription.user_id
+       FROM practice_subscriptions AS subscription
+       JOIN users AS user_record ON user_record.telegram_id = subscription.user_id
+       WHERE subscription.enabled = TRUE
+         AND subscription.program = 'clone_alignment'
+         AND user_record.clone_alignment_until > NOW()
+         AND subscription.welcome_sent_at IS NOT NULL
+         AND subscription.next_delivery_at <= NOW()
+         AND (subscription.locked_until IS NULL OR subscription.locked_until < NOW())
+       ORDER BY subscription.next_delivery_at ASC
        LIMIT $1
-       FOR UPDATE SKIP LOCKED
+       FOR UPDATE OF subscription SKIP LOCKED
      )
      UPDATE practice_subscriptions AS subscription
      SET locked_until = NOW() + INTERVAL '5 minutes', updated_at = NOW()
@@ -236,29 +258,19 @@ async function claimDueSubscriptions(pool, limit = 20) {
 
 async function loadPracticeContext(pool, subscription) {
   const result = await pool.query(
-    `SELECT chart.portrait_data,
-            user_record.premium_until,
-            ARRAY(
-              SELECT DISTINCT event.metadata->>'cardId'
-              FROM analytics_events AS event
-              WHERE event.chart_id = chart.id
-                AND event.event_type = 'card_opened'
-                AND COALESCE(event.metadata->>'locked', 'false') = 'false'
-                AND event.metadata->>'cardId' IS NOT NULL
-              ORDER BY event.metadata->>'cardId'
-            ) AS opened_card_ids
+    `SELECT chart.portrait_data, user_record.clone_alignment_until
      FROM charts AS chart
      JOIN users AS user_record ON user_record.telegram_id = chart.user_id
-     WHERE chart.id = $1 AND chart.user_id = $2
+     WHERE chart.id = $1
+       AND chart.user_id = $2
+       AND user_record.clone_alignment_until > NOW()
      LIMIT 1`,
     [subscription.chart_id, subscription.user_id],
   );
   if (!result.rows[0]) return null;
-  const row = result.rows[0];
   return {
-    portrait: row.portrait_data,
-    openedCardIds: row.opened_card_ids || [],
-    premium: Boolean(row.premium_until && new Date(row.premium_until).getTime() > Date.now()),
+    portrait: result.rows[0].portrait_data,
+    alignmentUntil: result.rows[0].clone_alignment_until,
   };
 }
 
@@ -271,20 +283,23 @@ async function releaseWithRetry(pool, subscription, error, blocked = false) {
          last_error = $3,
          updated_at = NOW()
      WHERE user_id = $1`,
-    [subscription.user_id, blocked, compactText(error?.message || error).slice(0, 500)],
+    [subscription.user_id, blocked, `${blocked ? 'blocked:' : ''}${compactText(error?.message || error)}`.slice(0, 500)],
   );
 }
 
 async function deliverPractice(pool, token, subscription, options) {
   try {
     const context = await loadPracticeContext(pool, subscription);
-    if (!context) throw new Error('Карта для практики не найдена.');
-    const cards = selectPracticeCards(context.portrait, context.openedCardIds, {
-      premium: context.premium,
-      freeCardCount: options.freeCardCount,
-    });
+    if (!context) {
+      await pool.query(
+        `UPDATE practice_subscriptions SET enabled = FALSE, locked_until = NULL, updated_at = NOW() WHERE user_id = $1`,
+        [subscription.user_id],
+      );
+      return;
+    }
+    const cards = selectPracticeCards(context.portrait);
     const card = pickNextPracticeCard(cards, subscription.last_card_id);
-    if (!card) throw new Error('В карте пока нет доступных практик.');
+    if (!card) throw new Error('В карте пока нет доступных настроек для Сонастройки.');
 
     await telegramRequest(token, 'sendMessage', {
       chat_id: subscription.user_id,
@@ -308,14 +323,13 @@ async function deliverPractice(pool, token, subscription, options) {
   } catch (error) {
     const blocked = Number(error.status) === 403 || Number(error.errorCode) === 403;
     await releaseWithRetry(pool, subscription, error, blocked);
-    console.error('HeroStar practice notification failed:', error.message);
+    console.error('HeroStar alignment notification failed:', error.message);
   }
 }
 
 async function runDeliveryCycle(pool, token, options) {
   const inserted = await syncSubscriptions(pool, options.firstDelayMinutes);
   for (const subscription of inserted) await sendWelcome(pool, token, subscription);
-
   const due = await claimDueSubscriptions(pool, options.batchSize);
   for (const subscription of due) await deliverPractice(pool, token, subscription, options);
 }
@@ -343,32 +357,45 @@ async function latestChartForUser(pool, userId) {
 }
 
 async function setSubscriptionEnabled(pool, userId, enabled) {
+  const status = await loadAlignmentStatus(pool, userId);
+  if (!status.active) return { subscription: null, active: false, until: status.clone_alignment_until };
   const chartId = await latestChartForUser(pool, userId);
-  if (!chartId) return null;
+  if (!chartId) return { subscription: null, active: true, until: status.clone_alignment_until };
   const result = await pool.query(
-    `INSERT INTO practice_subscriptions (user_id, chart_id, enabled, next_delivery_at)
-     VALUES ($1, $2, $3, NOW())
+    `INSERT INTO practice_subscriptions (user_id, chart_id, program, enabled, next_delivery_at, last_error)
+     VALUES ($1, $2, 'clone_alignment', $3, NOW(), CASE WHEN $3 THEN NULL ELSE 'user_paused' END)
      ON CONFLICT (user_id) DO UPDATE SET
        chart_id = EXCLUDED.chart_id,
+       program = 'clone_alignment',
        enabled = EXCLUDED.enabled,
        locked_until = NULL,
        next_delivery_at = CASE WHEN EXCLUDED.enabled THEN NOW() ELSE practice_subscriptions.next_delivery_at END,
-       last_error = NULL,
+       last_error = CASE WHEN EXCLUDED.enabled THEN NULL ELSE 'user_paused' END,
        updated_at = NOW()
      RETURNING *`,
     [String(userId), chartId, Boolean(enabled)],
   );
-  return result.rows[0] || null;
+  return { subscription: result.rows[0] || null, active: true, until: status.clone_alignment_until };
 }
 
-async function sendControlConfirmation(token, userId, subscription, enabled) {
+async function sendControlConfirmation(token, userId, result, enabled) {
+  if (!result.active) {
+    const baseUrl = publicBaseUrl();
+    await telegramRequest(token, 'sendMessage', {
+      chat_id: String(userId),
+      text: baseUrl
+        ? `Сонастройка сейчас не активна. Открыть программу можно в HeroStar: ${baseUrl}/clone/`
+        : 'Сонастройка сейчас не активна. Открыть программу можно на странице Звёздного клона.',
+    });
+    return;
+  }
   const text = enabled
-    ? '✦ Уведомления снова включены. Следующая небольшая практика придёт по вашей карте.'
-    : 'Уведомления отключены. Карта и все разборы сохранены. Вернуть практики можно командой /start.';
+    ? '✦ Сообщения Сонастройки снова включены. Следующий ключевой момент придёт по вашей карте.'
+    : 'Сообщения Сонастройки приостановлены. Клон, карта и история сохранены. Вернуть сообщения можно командой /start.';
   await telegramRequest(token, 'sendMessage', {
     chat_id: String(userId),
     text,
-    reply_markup: subscription ? notificationKeyboard(subscription, enabled) : undefined,
+    reply_markup: result.subscription ? notificationKeyboard(result.subscription, enabled) : undefined,
   });
 }
 
@@ -376,14 +403,14 @@ async function handleTelegramUpdate(pool, token, update) {
   const callback = update.callback_query;
   if (callback) {
     const userId = callback.from?.id;
-    const enabled = callback.data === 'practice:enable';
-    if (userId && (enabled || callback.data === 'practice:disable')) {
-      const subscription = await setSubscriptionEnabled(pool, userId, enabled);
+    const enabled = callback.data === 'alignment:enable';
+    if (userId && (enabled || callback.data === 'alignment:disable')) {
+      const result = await setSubscriptionEnabled(pool, userId, enabled);
       await telegramRequest(token, 'answerCallbackQuery', {
         callback_query_id: callback.id,
-        text: enabled ? 'Уведомления включены' : 'Уведомления отключены',
+        text: enabled ? 'Сообщения включены' : 'Сообщения приостановлены',
       }).catch(() => {});
-      await sendControlConfirmation(token, userId, subscription, enabled).catch(() => {});
+      await sendControlConfirmation(token, userId, result, enabled).catch(() => {});
     }
     return;
   }
@@ -394,34 +421,30 @@ async function handleTelegramUpdate(pool, token, update) {
   if (!userId || !text.startsWith('/')) return;
 
   if (['/stop', '/off', '/pause'].includes(text)) {
-    const subscription = await setSubscriptionEnabled(pool, userId, false);
-    await sendControlConfirmation(token, userId, subscription, false);
+    const result = await setSubscriptionEnabled(pool, userId, false);
+    await sendControlConfirmation(token, userId, result, false);
     return;
   }
 
   if (['/start', '/on', '/resume'].includes(text)) {
-    const subscription = await setSubscriptionEnabled(pool, userId, true);
-    if (!subscription) {
-      const baseUrl = publicBaseUrl();
-      await telegramRequest(token, 'sendMessage', {
-        chat_id: String(userId),
-        text: baseUrl
-          ? `Сначала создайте и сохраните карту HeroStar: ${baseUrl}`
-          : 'Сначала создайте и сохраните карту HeroStar на сайте.',
-      });
-      return;
-    }
-    await sendControlConfirmation(token, userId, subscription, true);
+    const result = await setSubscriptionEnabled(pool, userId, true);
+    await sendControlConfirmation(token, userId, result, true);
     return;
   }
 
   if (text === '/status') {
-    const result = await pool.query('SELECT * FROM practice_subscriptions WHERE user_id = $1', [String(userId)]);
-    const subscription = result.rows[0] || null;
+    const status = await loadAlignmentStatus(pool, userId);
+    const subscription = await pool.query('SELECT * FROM practice_subscriptions WHERE user_id = $1', [String(userId)]);
+    const current = subscription.rows[0] || null;
+    const until = status.clone_alignment_until
+      ? new Date(status.clone_alignment_until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+      : null;
     await telegramRequest(token, 'sendMessage', {
       chat_id: String(userId),
-      text: subscription?.enabled ? 'Практические уведомления включены.' : 'Практические уведомления отключены.',
-      reply_markup: subscription ? notificationKeyboard(subscription, Boolean(subscription.enabled)) : undefined,
+      text: status.active
+        ? `Сонастройка активна до ${until}. Сообщения ${current?.enabled ? 'включены' : 'приостановлены'}. Автопродления нет.`
+        : 'Сонастройка сейчас не активна.',
+      reply_markup: current ? notificationKeyboard(current, Boolean(current.enabled)) : undefined,
     });
   }
 }
@@ -435,7 +458,6 @@ async function pollTelegramUpdates(pool, token, signal) {
         timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
         allowed_updates: ['message', 'callback_query'],
       }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
-
       for (const update of updates || []) {
         await handleTelegramUpdate(pool, token, update);
         offset = Math.max(offset, Number(update.update_id) + 1);
@@ -456,7 +478,7 @@ export async function startPracticeNotifications() {
     const databaseUrl = compactText(process.env.DATABASE_URL);
     const token = compactText(process.env.TELEGRAM_BOT_TOKEN);
     if (!enabled || !databaseUrl || !token) {
-      console.warn('Практические Telegram-уведомления не запущены: нужен DATABASE_URL и TELEGRAM_BOT_TOKEN.');
+      console.warn('Telegram-Сонастройка не запущена: нужен DATABASE_URL и TELEGRAM_BOT_TOKEN.');
       return { stop: async () => {} };
     }
 
@@ -474,7 +496,6 @@ export async function startPracticeNotifications() {
       cadenceHours: boundedNumber(process.env.PRACTICE_NOTIFICATION_HOURS, DEFAULT_CADENCE_HOURS, 1, 168),
       firstDelayMinutes: boundedNumber(process.env.PRACTICE_FIRST_DELAY_MINUTES, DEFAULT_FIRST_DELAY_MINUTES, 1, 1440),
       cycleIntervalMs: boundedNumber(process.env.PRACTICE_CYCLE_INTERVAL_MS, DEFAULT_CYCLE_INTERVAL_MS, 15_000, 3_600_000),
-      freeCardCount: boundedNumber(process.env.FREE_CARD_COUNT, 3, 1, 11),
       batchSize: boundedNumber(process.env.PRACTICE_BATCH_SIZE, 20, 1, 100),
     };
 
@@ -485,7 +506,7 @@ export async function startPracticeNotifications() {
       try {
         await runDeliveryCycle(pool, token, options);
       } catch (error) {
-        console.error('HeroStar practice cycle failed:', error);
+        console.error('HeroStar alignment cycle failed:', error);
       } finally {
         cycleRunning = false;
       }
@@ -497,7 +518,7 @@ export async function startPracticeNotifications() {
     const controller = new AbortController();
     void pollTelegramUpdates(pool, token, controller.signal);
 
-    console.log(`HeroStar practice notifications started: every ${options.cadenceHours}h.`);
+    console.log(`HeroStar alignment notifications started: every ${options.cadenceHours}h.`);
     return {
       async stop() {
         clearInterval(interval);

@@ -12,7 +12,7 @@ import {
 } from '../src/clone-quota.js';
 
 const cloneHtmlUrl = new URL('../public/clone.html', import.meta.url);
-const bridgeUrl = new URL('../public/clone-product-bridge.js', import.meta.url);
+const cloneScriptUrl = new URL('../public/clone.js', import.meta.url);
 const authUrl = new URL('../src/auth.js', import.meta.url);
 const paymentsUrl = new URL('../src/payments.js', import.meta.url);
 
@@ -51,20 +51,19 @@ test('созданная карта навсегда определяется с
 });
 
 test('клиент маркирует создание карты, консультацию и оплату как продукт clone', async () => {
-  const [html, bridge] = await Promise.all([
+  const [html, clone] = await Promise.all([
     readFile(cloneHtmlUrl, 'utf8'),
-    readFile(bridgeUrl, 'utf8'),
+    readFile(cloneScriptUrl, 'utf8'),
   ]);
-  assert.ok(html.indexOf('/clone-product-bridge.js') < html.indexOf('/clone.js'));
-  assert.match(bridge, /\/api\/charts/);
-  assert.match(bridge, /\/api\/consult/);
-  assert.match(bridge, /\/api\/payments\/create/);
-  assert.match(bridge, /product:\s*'clone'/);
+  assert.doesNotMatch(html, /clone-product-bridge\.js/);
+  assert.match(clone, /\/api\/charts/);
+  assert.match(clone, /\/api\/consult/);
+  assert.match(clone, /\/api\/payments\/create/);
+  assert.match(clone, /product:\s*'clone'/);
 });
 
 test('начало оплаты сохраняется через разрешённый публичный тип события', async () => {
-  const [bridge, clone] = await Promise.all([readFile(bridgeUrl, 'utf8'), readFile(new URL('../public/clone.js', import.meta.url), 'utf8')]);
-  assert.doesNotMatch(bridge, /clone_payment_started/);
+  const clone = await readFile(cloneScriptUrl, 'utf8');
   assert.match(clone, /track\('paywall_opened', 'clone_payment_started'/);
   assert.match(clone, /stage:\s*'payment_started'/);
 });
@@ -82,5 +81,5 @@ test('лимит привязан к карте на сервере, а опла
   assert.match(auth, /CLONE_FREE_LIMIT/);
   assert.match(payments, /currentRequestContext/);
   assert.match(payments, /\/clone\/\?payment=return/);
-  assert.match(payments, /metadata:\s*\{\s*user_id:[^}]+product/);
+  assert.match(payments, /const metadata = \{[\s\S]*user_id:[\s\S]*product:/);
 });

@@ -9,6 +9,7 @@ import {
   reserveCloneQuestion,
 } from './clone-quota.js';
 import { runRequestContext } from './request-context.js';
+import { decorateUserAccess } from './commerce.js';
 
 const COOKIE_NAME = 'herostar_session';
 const METRIKA_INLINE_SCRIPT_HASH = "'sha256-jp2EkOkNiGIs4JfVpE2oclfqqUq75ROwSo88kh7TP5k='";
@@ -190,7 +191,7 @@ function markCloneChartCreation(req, res) {
 }
 
 async function prepareCloneQuota(req, res) {
-  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user || req.user.premium) return;
+  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user || req.user.cloneAccessActive) return;
   const chartId = String(req.body?.chartId || '').trim();
   if (!chartId) return;
   const record = await getChart(chartId);
@@ -208,7 +209,7 @@ async function prepareCloneQuota(req, res) {
   });
   if (!reservation.allowed) {
     throw publicError(
-      'Три бесплатных вопроса использованы. Откройте полный доступ, чтобы продолжить диалог с клоном.',
+      'Три бесплатных решения использованы. Откройте День со Звёздным клоном, чтобы продолжить диалог в глубоком режиме.',
       402,
       'CLONE_FREE_LIMIT',
     );
@@ -288,12 +289,13 @@ export async function attachUser(req, res, next) {
     allowMetrikaDocumentEmbedding(req, res);
     const cookies = parseCookies(req.headers.cookie || '');
     const session = decodeSession(cookies[COOKIE_NAME]);
-    req.user = session?.sub ? await getUser(session.sub) : null;
+    req.user = session?.sub ? await decorateUserAccess(await getUser(session.sub)) : null;
     req.isAdmin = isAdminUser(req.user);
     markCloneChartCreation(req, res);
     await prepareCloneQuota(req, res);
     const product = String(req.body?.product || '').trim().toLowerCase();
-    return runRequestContext({ product, path: req.path }, next);
+    const offerCode = String(req.body?.offerCode || '').trim().toLowerCase();
+    return runRequestContext({ product, path: req.path, offerCode }, next);
   } catch (error) {
     return next(error);
   }
