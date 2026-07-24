@@ -18,38 +18,19 @@ jobs:
           ref: codex/clone-stage-a-safety
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - name: Reconstruct audit payload
+        run: |
+          set -euo pipefail
+          ls -l .github/stage-a-payload
+          cat .github/stage-a-payload/part-* > /tmp/stage-a.b64
+          wc -c /tmp/stage-a.b64
+          base64 -d /tmp/stage-a.b64 > /tmp/stage-a.tar.gz
+          sha256sum /tmp/stage-a.tar.gz
+
+      - uses: actions/upload-artifact@v4
         with:
-          node-version: 20
-
-      - name: Reconstruct approved implementation
-        run: |
-          set -euo pipefail
-          cat .github/stage-a-payload/part-* | base64 -d > /tmp/stage-a.tar.gz
-          echo "19375b7eb018706b9891479d540fd9ffda47fe3a048687d6501585dccf344489  /tmp/stage-a.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/stage-a.tar.gz -C .
-          rm -rf .github/stage-a-payload
-          rm -f .github/workflows/apply-clone-stage-a.yml
-
-      - name: Install dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
-
-      - name: Run full test suite
-        run: npm test
-
-      - name: Check syntax and canonical clone page
-        run: |
-          set -euo pipefail
-          node --check server.js
-          for file in public/*.js src/*.js test/*.js; do node --check "$file"; done
-          cmp -s public/clone.html public/clone/index.html
-          git diff --check
-
-      - name: Commit stage A
-        run: |
-          set -euo pipefail
-          git config user.name "HeroStar CI"
-          git config user.email "actions@github.com"
-          git add -A
-          git commit -m "Закрыть этап A безопасности Звёздного клона"
-          git push origin HEAD:codex/clone-stage-a-safety
+          name: stage-a-reconstructed
+          path: |
+            /tmp/stage-a.b64
+            /tmp/stage-a.tar.gz
+          retention-days: 1
