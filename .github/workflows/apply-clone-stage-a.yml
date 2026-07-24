@@ -21,39 +21,29 @@ jobs:
           ref: codex/clone-stage-a-safety
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - name: Diagnose approved Stage A patch
+        run: |
+          set -u
+          cat .github/stage-a-patch/chunk-* | base64 -d > /tmp/stage-a.patch.xz 2>/tmp/base64.err
+          echo "base64_rc=$?" > /tmp/stage-a-diagnostic.txt
+          sha256sum /tmp/stage-a.patch.xz >> /tmp/stage-a-diagnostic.txt
+          wc -c /tmp/stage-a.patch.xz >> /tmp/stage-a-diagnostic.txt
+          xz -t /tmp/stage-a.patch.xz 2>/tmp/xz.err
+          echo "xz_rc=$?" >> /tmp/stage-a-diagnostic.txt
+          if xz -dc /tmp/stage-a.patch.xz > /tmp/stage-a.patch 2>>/tmp/xz.err; then
+            git apply --3way --check /tmp/stage-a.patch > /tmp/apply.out 2>/tmp/apply.err
+            echo "apply_rc=$?" >> /tmp/stage-a-diagnostic.txt
+          else
+            echo "apply_rc=not_run" >> /tmp/stage-a-diagnostic.txt
+          fi
+          cat /tmp/base64.err /tmp/xz.err /tmp/apply.out /tmp/apply.err >> /tmp/stage-a-diagnostic.txt 2>/dev/null || true
+          cat /tmp/stage-a-diagnostic.txt
+
+      - uses: actions/upload-artifact@v4
         with:
-          node-version: 20
-
-      - name: Verify and apply approved Stage A patch
-        run: |
-          set -euo pipefail
-          cat .github/stage-a-patch/chunk-* | base64 -d > /tmp/stage-a.patch.xz
-          echo "7c1d7010d7bdc70e449101de86a0479cb7a172bdafb5a698eece44ce506f8091  /tmp/stage-a.patch.xz" | sha256sum -c -
-          xz -dc /tmp/stage-a.patch.xz > /tmp/stage-a.patch
-          git apply --3way --whitespace=nowarn /tmp/stage-a.patch
-          rm -rf .github/stage-a-patch .github/stage-a-payload .github/stage-a-payload-v2
-          rm -f .github/workflows/apply-clone-stage-a.yml
-
-      - name: Install dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
-
-      - name: Run full test suite
-        run: npm test
-
-      - name: Check syntax and canonical clone page
-        run: |
-          set -euo pipefail
-          node --check server.js
-          for file in public/*.js src/*.js test/*.js; do node --check "$file"; done
-          cmp -s public/clone.html public/clone/index.html
-          git diff --check
-
-      - name: Commit Stage A
-        run: |
-          set -euo pipefail
-          git config user.name "HeroStar CI"
-          git config user.email "actions@github.com"
-          git add -A
-          git commit -m "Закрыть этап A безопасности Звёздного клона"
-          git push origin HEAD:codex/clone-stage-a-safety
+          name: stage-a-patch-diagnostic
+          path: |
+            /tmp/stage-a.patch.xz
+            /tmp/stage-a.patch
+            /tmp/stage-a-diagnostic.txt
+          retention-days: 1
