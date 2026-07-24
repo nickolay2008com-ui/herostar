@@ -16,9 +16,15 @@ test('оферта и возвраты остаются рядом с оплат
   assert.match(html, /href="\/refunds"/);
 });
 
-test('платёжный endpoint требует Telegram-пользователя и настройки ЮKassa', () => {
+test('платёжный endpoint требует Telegram-пользователя и полную production-готовность', () => {
   const server = read('server.js');
+  const readiness = read('src/production-readiness.js');
   assert.match(server, /app\.post\('\/api\/payments\/create', requireUser/);
-  assert.match(server, /YOOKASSA_SHOP_ID/);
-  assert.match(server, /YOOKASSA_SECRET_KEY/);
+  assert.match(server, /requirePaymentReadiness/);
+  assert.match(readiness, /YOOKASSA_SHOP_ID/);
+  assert.match(readiness, /YOOKASSA_SECRET_KEY/);
+  assert.match(readiness, /LEGAL_DETAILS/);
+  assert.match(readiness, /DATABASE_URL/);
+  assert.match(readiness, /SESSION_SECRET/);
+  assert.match(readiness, /APP_URL_HTTPS/);
 });

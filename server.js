@@ -15,6 +15,9 @@ import {
   getAdminOverview,
   listAdminCharts,
   getAdminChartDetails,
+  savePersonalDataConsent,
+  linkPersonalDataConsentToChart,
+  listUserCloneCharts,
 } from './src/store.js';
 import {
   attachUser,
@@ -25,13 +28,16 @@ import {
   requireAdmin,
   isAdminUser,
 } from './src/auth.js';
-import { createPayment, processWebhook } from './src/payments.js';
+import { createPayment, processWebhook, refreshPaymentStatus } from './src/payments.js';
 import { searchPlaces, unpackSelectedPlace } from './src/places.js';
 import { getLegalConfig, renderLegalPage } from './src/legal.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
 import { historyForProduct } from './src/consultation-history.js';
-import { getCommerceState, initCommerce } from './src/commerce.js';
+import { getCommerceState, hasCloneAccessForChart, initCommerce } from './src/commerce.js';
 import { buildClonePassport } from './src/clone-passport.js';
+import { isCloneChart } from './src/clone-quota.js';
+import { requirePersonalDataConsent } from './src/consent.js';
+import { getPaymentReadiness, requirePaymentReadiness } from './src/production-readiness.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -113,10 +119,22 @@ function isUuid(value) {
 
 function cleanMetadata(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const sensitiveKeys = /^(question|answer|prompt|message|content|text)$/i;
+  const sanitize = (input, depth = 0) => {
+    if (depth > 4 || input === null || input === undefined) return input;
+    if (Array.isArray(input)) return input.slice(0, 50).map((item) => sanitize(item, depth + 1));
+    if (typeof input !== 'object') return input;
+    return Object.fromEntries(
+      Object.entries(input)
+        .filter(([key]) => !sensitiveKeys.test(key))
+        .map(([key, item]) => [key, sanitize(item, depth + 1)]),
+    );
+  };
   try {
-    const serialized = JSON.stringify(value);
+    const sanitized = sanitize(value);
+    const serialized = JSON.stringify(sanitized);
     if (serialized.length <= 6000) return JSON.parse(serialized);
-    return { truncated: true, preview: serialized.slice(0, 5600) };
+    return { truncated: true };
   } catch {
     return null;
   }
@@ -247,7 +265,7 @@ function redactPortrait(portrait, unlocked) {
 
 function presentChart(record, req, { forceUnlocked = false } = {}) {
   const mapUnlocked = Boolean(req.user?.mapUnlocked);
-  const cloneAccessActive = Boolean(req.user?.cloneAccessActive);
+  const cloneAccessActive = hasCloneAccessForChart(req.user, record.id);
   const passportUnlocked = Boolean(req.user?.clonePassportUnlocked);
   const unlocked = forceUnlocked || mapUnlocked;
   return {
@@ -265,6 +283,7 @@ function presentChart(record, req, { forceUnlocked = false } = {}) {
       clonePlan: req.user?.clonePlan || 'free',
       cloneAccessUntil: req.user?.cloneAccessUntil || null,
       cloneAlignmentUntil: req.user?.cloneAlignmentUntil || null,
+      cloneAlignmentChartId: req.user?.cloneAlignmentChartId || null,
       freeCardCount,
       requiresTelegram: !req.user,
     },
@@ -285,12 +304,15 @@ app.get('/api/public/stats', async (_req, res, next) => {
 app.get('/api/config', async (req, res, next) => {
   try {
     const telegram = await telegramConfiguration();
-    const commerce = await getCommerceState(req.user);
+    const requestedChartId = isUuid(req.query.chartId) ? String(req.query.chartId) : null;
+    const commerce = await getCommerceState(req.user, new Date(), requestedChartId);
+    const paymentReadiness = getPaymentReadiness();
     res.json({
       telegramBotUsername: telegram.username,
       telegramConfigured: telegram.configured,
       telegramConfigurationIssue: telegram.issue,
-      paymentsConfigured: Boolean(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY),
+      paymentsConfigured: paymentReadiness.ready,
+      paymentConfigurationIssues: req.isAdmin ? paymentReadiness.issues : [],
       openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
       adminConfigured: true,
       demoMode,
@@ -314,6 +336,7 @@ app.get('/api/config', async (req, res, next) => {
             clonePlan: req.user.clonePlan,
             cloneAccessUntil: req.user.cloneAccessUntil,
             cloneAlignmentUntil: req.user.cloneAlignmentUntil,
+            cloneAlignmentChartId: req.user.cloneAlignmentChartId,
             admin: isAdminUser(req.user),
           }
         : null,
@@ -374,6 +397,7 @@ app.post('/api/events', eventLimiter, async (req, res, next) => {
 app.post('/api/charts', generationLimiter, async (req, res, next) => {
   try {
     const isDemo = Boolean(req.body.demo) && demoMode;
+    const consent = requirePersonalDataConsent(req.body, { demo: isDemo });
     const birthInput = isDemo
       ? {
           name: 'Демо-профиль',
@@ -385,9 +409,21 @@ app.post('/api/charts', generationLimiter, async (req, res, next) => {
         }
       : { ...req.body, ...unpackSelectedPlace(req.body.place) };
 
+    const id = crypto.randomUUID();
+    const consentRequestId = consent ? crypto.randomUUID() : null;
+    if (consent) {
+      await savePersonalDataConsent({
+        requestId: consentRequestId,
+        visitorId: visitorIdFrom(req),
+        userId: req.user?.telegram_id || null,
+        version: consent.version,
+        documentUrl: consent.documentUrl,
+        source: req.body.product === 'clone' ? 'clone_birth_form' : 'herostar_birth_form',
+      });
+    }
+
     const chart = await calculateNatalChart(birthInput);
     const { portrait, source } = await generatePortrait(chart);
-    const id = crypto.randomUUID();
     const accessToken = randomToken();
     const record = {
       id,
@@ -399,6 +435,7 @@ app.post('/api/charts', generationLimiter, async (req, res, next) => {
       source,
     };
     await saveChart(record);
+    if (consentRequestId) await linkPersonalDataConsentToChart(consentRequestId, id);
     await safeTrack({
       eventType: 'chart_created',
       visitorId: visitorIdFrom(req),
@@ -429,6 +466,15 @@ app.get('/api/charts/:id', async (req, res, next) => {
       chartId: record.id,
     });
     res.json(presentChart(record, req));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/me/charts', requireUser, async (req, res, next) => {
+  try {
+    const items = await listUserCloneCharts(req.user.telegram_id, req.query.limit);
+    res.json({ items });
   } catch (error) {
     next(error);
   }
@@ -489,7 +535,7 @@ app.post('/api/consult', consultLimiter, requireUser, async (req, res, next) => 
       content: message.content,
     }));
 
-    const premium = Boolean(req.user?.cloneAccessActive);
+    const premium = hasCloneAccessForChart(req.user, record.id);
     const answer = await answerConsultation({
       chart: record.chartData,
       portrait: record.portraitData,
@@ -563,12 +609,15 @@ app.post('/api/logout', (req, res) => {
 
 app.post('/api/payments/create', requireUser, async (req, res, next) => {
   try {
-    if (!(process.env.YOOKASSA_SHOP_ID && process.env.YOOKASSA_SECRET_KEY)) {
-      throw publicError('Оплата временно недоступна. Попробуйте позже.', 503, 'PAYMENTS_NOT_CONFIGURED');
-    }
-    const chartId = String(req.body.chartId || '');
+    requirePaymentReadiness();
+    const chartId = String(req.body.chartId || '').trim();
+    const offerCode = String(req.body.offerCode || '').trim().toLowerCase();
+    const cloneOffer = offerCode === 'clone_day' || offerCode === 'clone_alignment' || String(req.body.product || '').trim().toLowerCase() === 'clone';
+    if (chartId && !isUuid(chartId)) throw publicError('Некорректный ID карты.', 400, 'INVALID_CHART_ID');
+    if (cloneOffer && !chartId) throw publicError('Выберите Звёздного клона для покупки.', 400, 'CLONE_CHART_REQUIRED');
     const record = chartId ? await getChart(chartId) : null;
     if (chartId && !record) throw publicError('Карта не найдена.', 404);
+    if (cloneOffer && !(await isCloneChart(chartId))) throw publicError('Эта карта не является Звёздным клоном.', 400, 'CLONE_CHART_REQUIRED');
     if (record && !canAccessRecord(record, req) && record.userId) throw publicError('Нет доступа к карте.', 403);
     if (record && !record.userId) {
       if (!hasAnonymousAccess(record, req.headers['x-chart-token'])) throw publicError('Нужен ключ карты.', 403);
@@ -581,7 +630,25 @@ app.post('/api/payments/create', requireUser, async (req, res, next) => {
       receiptContact: req.body.receiptContact,
       offerCode: req.body.offerCode,
     });
-    res.json({ paymentId: payment.id, confirmationUrl: payment.confirmation?.confirmation_url });
+    res.json({ paymentId: payment.id, paymentRef: payment.returnRef, confirmationUrl: payment.confirmation?.confirmation_url });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/payments/status', requireUser, async (req, res, next) => {
+  try {
+    const paymentId = String(req.query.paymentId || '').trim().slice(0, 120) || null;
+    const returnRef = String(req.query.ref || '').trim() || null;
+    if (returnRef && !isUuid(returnRef)) throw publicError('Некорректная ссылка платежа.', 400, 'INVALID_PAYMENT_REFERENCE');
+    if (!paymentId && !returnRef) throw publicError('Укажите платёж для проверки.', 400, 'PAYMENT_REFERENCE_REQUIRED');
+    const status = await refreshPaymentStatus({
+      paymentId,
+      returnRef,
+      userId: req.user.telegram_id,
+    });
+    const commerce = await getCommerceState(req.user, new Date(), status.chartId);
+    res.json({ ...status, access: commerce.access, offers: commerce.offers });
   } catch (error) {
     next(error);
   }
@@ -596,8 +663,13 @@ app.post('/api/payments/webhook', async (req, res, next) => {
   }
 });
 
-app.get('/payment/return', (_req, res) => {
-  res.redirect('/?payment=return#map');
+app.get('/payment/return', (req, res) => {
+  const params = new URLSearchParams({ payment: 'return' });
+  const chartId = String(req.query.chart || '').trim();
+  const paymentRef = String(req.query.payment_ref || '').trim();
+  if (isUuid(chartId)) params.set('chart', chartId);
+  if (isUuid(paymentRef)) params.set('payment_ref', paymentRef);
+  res.redirect(`/?${params.toString()}#map`);
 });
 
 for (const kind of ['privacy', 'consent', 'terms', 'offer', 'refunds']) {

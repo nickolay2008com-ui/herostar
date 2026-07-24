@@ -9,10 +9,10 @@ import {
   reserveCloneQuestion,
 } from './clone-quota.js';
 import { runRequestContext } from './request-context.js';
-import { decorateUserAccess } from './commerce.js';
+import { decorateUserAccess, hasCloneAccessForChart } from './commerce.js';
 
 const COOKIE_NAME = 'herostar_session';
-const METRIKA_INLINE_SCRIPT_HASH = "'sha256-jp2EkOkNiGIs4JfVpE2oclfqqUq75ROwSo88kh7TP5k='";
+const METRIKA_INLINE_SCRIPT_HASH = "'sha256-C9Cumf0lnPcYdvKbnC3roPXPzPkdvVTbO7dG0AwnrSQ='";
 const CLONE_FREE_QUESTION_LIMIT = 3;
 // HeroStar — персональный проект. Публичный Telegram владельца используется как
 // безопасный резервный идентификатор, пока в Railway не закреплён числовой ID.
@@ -191,11 +191,12 @@ function markCloneChartCreation(req, res) {
 }
 
 async function prepareCloneQuota(req, res) {
-  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user || req.user.cloneAccessActive) return;
+  if (req.method !== 'POST' || req.path !== '/api/consult' || !req.user) return;
   const chartId = String(req.body?.chartId || '').trim();
   if (!chartId) return;
   const record = await getChart(chartId);
   if (!canUseChartForClone(record, req)) return;
+  if (hasCloneAccessForChart(req.user, chartId)) return;
 
   const explicitlyClone = explicitCloneProduct(req) || clonePromptMarker(req);
   const registeredClone = await isCloneChart(chartId);
