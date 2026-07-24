@@ -311,17 +311,23 @@ async function mountTelegram() {
   script.dataset.authUrl=callback.toString();slot.innerHTML='<span>После входа экран продолжит работу автоматически.</span>';slot.prepend(script);startAuthPoll();
 }
 
-function contextQuestion(question) {
-  if(state.contextSynced)return question;state.contextSynced=true;persist();
-  return `Это продолжение уже полученного разбора Живой карты решений.\n\nИсходная ситуация: ${state.situation}\n\nПервый вывод: ${state.demo?.compactSummary||''}\n\nНовая реплика человека: ${question}\n\nНе начинай разбор заново. Продолжи диалог, учитывая исходную ситуацию и найденную логику.`;
+function preparedQuestion(question) {
+  if(state.contextSynced)return { text: question, carriesContext: false };
+  return {
+    text:`Это продолжение уже полученного разбора Живой карты решений.\n\nИсходная ситуация: ${state.situation}\n\nПервый вывод: ${state.demo?.compactSummary||''}\n\nНовая реплика человека: ${question}\n\nНе начинай разбор заново. Продолжи диалог, учитывая исходную ситуацию и найденную логику.`,
+    carriesContext: true,
+  };
 }
 
 async function ask(question) {
   if(state.asking)return;setAsking(true);$('#dialogueError').textContent='';
   addMessage('user',question);const pending=addMessage('clone','Сопоставляю новое обстоятельство с картой и предыдущим выводом…');
+  const prepared=preparedQuestion(question);
   try{
-    const result=await json('/api/consult',{method:'POST',body:JSON.stringify({chartId:state.chartId,question:contextQuestion(question),product:'clone',experience:'live'})});
-    pending.querySelector('p').textContent=result.answer;track('consultant_opened','clone_live_dialogue_answered',{answerLength:String(result.answer||'').length});
+    const result=await json('/api/consult',{method:'POST',body:JSON.stringify({chartId:state.chartId,question:prepared.text,product:'clone',experience:'live'})});
+    pending.querySelector('p').textContent=result.answer;
+    if(prepared.carriesContext){state.contextSynced=true;persist();}
+    track('consultant_opened','clone_live_dialogue_answered',{answerLength:String(result.answer||'').length});
   }catch(error){pending.remove();if(error.code==='CLONE_FREE_LIMIT')openPaywall();else $('#dialogueError').textContent=error.message;}
   finally{setAsking(false);}
 }
