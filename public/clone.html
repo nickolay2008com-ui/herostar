@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#090814">
-  <meta name="description" content="Создайте Звёздного клона по натальной карте и задайте ему 3 вопроса бесплатно. Узнайте, как поступила бы такая конфигурация звёзд и почему.">
+  <meta name="description" content="Создайте Звёздного клона по натальной карте. Опишите реальную ситуацию — клон выберет свой ход и объяснит, какие элементы карты на него повлияли.">
   <meta name="yandex-metrika-id" content="110937602">
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
@@ -22,6 +22,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/clone.css">
   <link rel="stylesheet" href="/clone-mobile.css?v=20260724">
+  <link rel="stylesheet" href="/clone-hero-v2.css?v=20260724">
 </head>
 <body>
   <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
@@ -36,29 +37,31 @@
       <div class="hero-copy">
         <p class="eyebrow">Астрологическая модель решений</p>
         <h1>Как бы поступил<br><em>ваш клон по звёздам?</em></h1>
-        <p class="lead">Создайте персонажа по натальной карте. Дайте ему реальную ситуацию — и узнайте, какое решение выбрала бы такая конфигурация звёзд и почему.</p>
+        <p class="lead">Создайте персонажа по натальной карте. Опишите реальную ситуацию — клон выберет свой ход и объяснит, какие элементы карты на него повлияли.</p>
+        <div class="process-flow" aria-label="Как работает Звёздный клон">
+          <span class="process-step">Ситуация</span>
+          <span class="process-arrow" aria-hidden="true">→</span>
+          <span class="process-step">Выбор клона</span>
+          <span class="process-arrow" aria-hidden="true">→</span>
+          <span class="process-step">Объяснение по карте</span>
+        </div>
         <div class="proof-strip" aria-label="Что входит бесплатно">
           <div><strong>3</strong><span>вопроса бесплатно</span></div>
           <div><strong>Плацидус</strong><span>полный расчёт карты</span></div>
           <div><strong>Почему</strong><span>объяснение решения</span></div>
         </div>
-        <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
         <button class="primary" data-go-create>Создать звёздного клона</button>
         <div class="restore-access">
           <button class="ghost" id="restoreCloneAccess" type="button">У меня уже есть клон</button>
           <div class="telegram-login-slot hidden" id="restoreTelegramSlot"></div>
         </div>
         <p class="microcopy">Telegram подключается перед первым ответом, чтобы сохранить клона, историю и оплаченный доступ.</p>
+        <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
       </div>
       <div class="clone-visual">
         <div class="halo" aria-hidden="true"></div><div class="silhouette" aria-hidden="true"><span>✦</span></div>
-        <div class="signal s1">Марс · действие</div><div class="signal s2">Луна · реакция</div><div class="signal s3">ASC · вход в ситуацию</div>
-        <article class="example-card">
-          <small>Пример ситуации</small>
-          <p>«Мне предлагают новый проект, но условия пока неясны»</p>
-          <strong>Клон сначала уточнил бы роли и предложил пробный этап.</strong>
-          <span>Почему: Марс · 2 дом · Асцендент · земная стихия</span>
-        </article>
+        <div class="signal s1">Марс · как действует</div><div class="signal s2">Луна · как реагирует</div><div class="signal s3">ASC · как входит в ситуацию</div>
+        <p class="visual-caption">Из элементов карты собирается самостоятельный характер решений.</p>
       </div>
     </section>
 
