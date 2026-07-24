@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
 
+const LIVE_TRIAL_MS = 24 * 60 * 60 * 1000;
+const LIVE_MIN_ANSWERS = 3;
 const memoryReservations = new Map();
 const memoryCloneCharts = new Set();
 let pool = null;
@@ -39,11 +41,16 @@ async function database() {
         chart_id UUID NOT NULL REFERENCES charts(id) ON DELETE CASCADE,
         user_id TEXT REFERENCES users(telegram_id) ON DELETE SET NULL,
         status TEXT NOT NULL CHECK (status IN ('reserved', 'completed')),
+        experience TEXT NOT NULL DEFAULT 'standard',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         completed_at TIMESTAMPTZ
       );
+      ALTER TABLE clone_question_reservations
+        ADD COLUMN IF NOT EXISTS experience TEXT NOT NULL DEFAULT 'standard';
       CREATE INDEX IF NOT EXISTS clone_question_reservations_chart_idx
         ON clone_question_reservations(chart_id, status, created_at);
+      CREATE INDEX IF NOT EXISTS clone_question_reservations_experience_idx
+        ON clone_question_reservations(chart_id, experience, status, completed_at);
     `);
   }
   await initPromise;
@@ -64,6 +71,36 @@ function legacyCloneQuestionSql() {
         OR (content ILIKE '%Звёздный клон%' AND content ILIKE '%Ситуация:%')
       )
   `;
+}
+
+async function liveExperienceForChart(client, chartId) {
+  const result = await client.query(
+    `SELECT 1
+     FROM analytics_events
+     WHERE chart_id = $1
+       AND (
+         COALESCE(metadata->>'product', '') = 'clone_live'
+         OR COALESCE(metadata->>'action', '') LIKE 'clone_live_%'
+       )
+     LIMIT 1`,
+    [chartId],
+  );
+  return Boolean(result.rows[0]);
+}
+
+function liveTrialState({ completed, firstCompletedAt, now = new Date() }) {
+  const first = firstCompletedAt ? new Date(firstCompletedAt) : null;
+  const expiresAt = first ? new Date(first.getTime() + LIVE_TRIAL_MS) : null;
+  const timeOpen = !expiresAt || expiresAt.getTime() > now.getTime();
+  const minimumOpen = completed < LIVE_MIN_ANSWERS;
+  return {
+    allowed: timeOpen || minimumOpen,
+    completed,
+    minimum: LIVE_MIN_ANSWERS,
+    expiresAt: expiresAt?.toISOString() || null,
+    timeOpen,
+    minimumOpen,
+  };
 }
 
 export async function registerCloneChart(chartId) {
@@ -95,18 +132,45 @@ export async function getCloneQuestionUsage(chartId, limit = 3) {
     return { used, limit, remaining: Math.max(0, limit - used) };
   }
 
-  const [reservationResult, legacyResult] = await Promise.all([
-    db.query(
-      `SELECT COUNT(*)::int AS total
-       FROM clone_question_reservations
-       WHERE chart_id = $1
-         AND (status = 'completed' OR created_at >= NOW() - INTERVAL '15 minutes')`,
-      [chartId],
-    ),
-    db.query(legacyCloneQuestionSql(), [chartId]),
-  ]);
-  const used = Number(reservationResult.rows[0]?.total || 0) + Number(legacyResult.rows[0]?.total || 0);
-  return { used, limit, remaining: Math.max(0, limit - used) };
+  const client = await db.connect();
+  try {
+    const live = await liveExperienceForChart(client, chartId);
+    if (live) {
+      const result = await client.query(
+        `SELECT COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
+                MIN(completed_at) FILTER (WHERE status = 'completed') AS first_completed_at
+         FROM clone_question_reservations
+         WHERE chart_id = $1 AND experience = 'live'`,
+        [chartId],
+      );
+      const completed = Number(result.rows[0]?.completed || 0);
+      const trial = liveTrialState({ completed, firstCompletedAt: result.rows[0]?.first_completed_at });
+      return {
+        used: completed,
+        limit: LIVE_MIN_ANSWERS,
+        remaining: Math.max(0, LIVE_MIN_ANSWERS - completed),
+        mode: 'live',
+        trialExpiresAt: trial.expiresAt,
+        trialOpen: trial.allowed,
+      };
+    }
+
+    const [reservationResult, legacyResult] = await Promise.all([
+      client.query(
+        `SELECT COUNT(*)::int AS total
+         FROM clone_question_reservations
+         WHERE chart_id = $1
+           AND experience = 'standard'
+           AND (status = 'completed' OR created_at >= NOW() - INTERVAL '15 minutes')`,
+        [chartId],
+      ),
+      client.query(legacyCloneQuestionSql(), [chartId]),
+    ]);
+    const used = Number(reservationResult.rows[0]?.total || 0) + Number(legacyResult.rows[0]?.total || 0);
+    return { used, limit, remaining: Math.max(0, limit - used), mode: 'standard' };
+  } finally {
+    client.release();
+  }
 }
 
 export async function reserveCloneQuestion({ chartId, userId, limit = 3 }) {
@@ -116,11 +180,11 @@ export async function reserveCloneQuestion({ chartId, userId, limit = 3 }) {
   if (!db) {
     const active = activeMemoryReservations(chartId);
     if (active.length >= limit) {
-      return { allowed: false, reservationId: null, used: active.length, limit, remaining: 0 };
+      return { allowed: false, reservationId: null, used: active.length, limit, remaining: 0, mode: 'standard' };
     }
-    active.push({ id, chartId, userId: String(userId), status: 'reserved', createdAt: nowIso() });
+    active.push({ id, chartId, userId: String(userId), status: 'reserved', experience: 'standard', createdAt: nowIso() });
     memoryReservations.set(chartId, active);
-    return { allowed: true, reservationId: id, used: active.length, limit, remaining: Math.max(0, limit - active.length) };
+    return { allowed: true, reservationId: id, used: active.length, limit, remaining: Math.max(0, limit - active.length), mode: 'standard' };
   }
 
   const client = await db.connect();
@@ -138,10 +202,54 @@ export async function reserveCloneQuestion({ chartId, userId, limit = 3 }) {
       [chartId],
     );
 
+    const live = await liveExperienceForChart(client, chartId);
+    if (live) {
+      const result = await client.query(
+        `SELECT COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
+                COUNT(*) FILTER (WHERE status = 'reserved')::int AS active,
+                MIN(completed_at) FILTER (WHERE status = 'completed') AS first_completed_at
+         FROM clone_question_reservations
+         WHERE chart_id = $1 AND experience = 'live'`,
+        [chartId],
+      );
+      const completed = Number(result.rows[0]?.completed || 0);
+      const active = Number(result.rows[0]?.active || 0);
+      const trial = liveTrialState({ completed, firstCompletedAt: result.rows[0]?.first_completed_at });
+      if (!trial.allowed || active >= 1) {
+        await client.query('ROLLBACK');
+        return {
+          allowed: false,
+          reservationId: null,
+          used: completed,
+          limit: LIVE_MIN_ANSWERS,
+          remaining: Math.max(0, LIVE_MIN_ANSWERS - completed),
+          mode: 'live',
+          busy: active >= 1,
+          trialExpiresAt: trial.expiresAt,
+        };
+      }
+
+      await client.query(
+        `INSERT INTO clone_question_reservations (id, chart_id, user_id, status, experience)
+         VALUES ($1, $2, $3, 'reserved', 'live')`,
+        [id, chartId, String(userId)],
+      );
+      await client.query('COMMIT');
+      return {
+        allowed: true,
+        reservationId: id,
+        used: completed + 1,
+        limit: LIVE_MIN_ANSWERS,
+        remaining: Math.max(0, LIVE_MIN_ANSWERS - completed - 1),
+        mode: 'live',
+        trialExpiresAt: trial.expiresAt,
+      };
+    }
+
     const reservationResult = await client.query(
       `SELECT COUNT(*)::int AS total
        FROM clone_question_reservations
-       WHERE chart_id = $1 AND status IN ('reserved', 'completed')`,
+       WHERE chart_id = $1 AND experience = 'standard' AND status IN ('reserved', 'completed')`,
       [chartId],
     );
     const legacyResult = await client.query(legacyCloneQuestionSql(), [chartId]);
@@ -149,16 +257,16 @@ export async function reserveCloneQuestion({ chartId, userId, limit = 3 }) {
 
     if (used >= limit) {
       await client.query('ROLLBACK');
-      return { allowed: false, reservationId: null, used, limit, remaining: 0 };
+      return { allowed: false, reservationId: null, used, limit, remaining: 0, mode: 'standard' };
     }
 
     await client.query(
-      `INSERT INTO clone_question_reservations (id, chart_id, user_id, status)
-       VALUES ($1, $2, $3, 'reserved')`,
+      `INSERT INTO clone_question_reservations (id, chart_id, user_id, status, experience)
+       VALUES ($1, $2, $3, 'reserved', 'standard')`,
       [id, chartId, String(userId)],
     );
     await client.query('COMMIT');
-    return { allowed: true, reservationId: id, used: used + 1, limit, remaining: Math.max(0, limit - used - 1) };
+    return { allowed: true, reservationId: id, used: used + 1, limit, remaining: Math.max(0, limit - used - 1), mode: 'standard' };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     throw error;
