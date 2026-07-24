@@ -53,15 +53,15 @@ export function offerCatalog(env = process.env) {
       code: OFFER_CODES.CLONE_DAY,
       product: 'clone',
       title: '7 дней со Звёздным клоном',
-      amount: money(env.CLONE_WEEK_PRICE ?? env.CLONE_DAY_PRICE, 490),
+      amount: money(env.CLONE_WEEK_PRICE, 490),
       durationHours: 7 * 24,
     },
     [OFFER_CODES.CLONE_ALIGNMENT]: {
       code: OFFER_CODES.CLONE_ALIGNMENT,
       product: 'clone',
       title: '30 дней + полная карта HeroStar',
-      amount: money(env.CLONE_MONTH_PRICE ?? env.CLONE_ALIGNMENT_PRICE, 990),
-      upgradeAmount: money(env.CLONE_MONTH_UPGRADE_PRICE ?? env.CLONE_ALIGNMENT_UPGRADE_PRICE, 500),
+      amount: money(env.CLONE_MONTH_PRICE, 990),
+      upgradeAmount: money(env.CLONE_MONTH_UPGRADE_PRICE, 500),
       durationDays: 30,
     },
   });
@@ -115,8 +115,6 @@ export function normalizeAccess(user, now = new Date()) {
 
   return {
     ...user,
-    // Внутренний alias нужен для существующей квоты и выбора AI-профиля.
-    // В публичном API отдельно показываются карта и временный диалог.
     premium: cloneAccessActive,
     legacyPremiumActive: legacyActive,
     mapUnlocked,
@@ -153,9 +151,7 @@ async function getDbAccess(userId) {
 
 export async function decorateUserAccess(user, now = new Date()) {
   if (!user?.telegram_id) return user || null;
-  const stored = pool
-    ? await getDbAccess(user.telegram_id)
-    : rowForUser(user);
+  const stored = pool ? await getDbAccess(user.telegram_id) : rowForUser(user);
   return normalizeAccess({ ...user, ...(stored || {}) }, now);
 }
 
@@ -374,8 +370,6 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     if (offerCode === OFFER_CODES.FULL_MAP) {
       access.full_map_unlocked = true;
     } else if (offerCode === OFFER_CODES.CLONE_DAY) {
-      access.full_map_unlocked = true;
-      access.clone_passport_unlocked = true;
       access.clone_access_until = addDuration(access.clone_access_until, CLONE_ACCESS_MS).toISOString();
     } else if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
       if (!chartId) throw new Error('Alignment entitlement requires a chart.');
@@ -421,9 +415,7 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     } else if (effectiveOffer === OFFER_CODES.CLONE_DAY) {
       await client.query(
         `UPDATE users
-         SET full_map_unlocked = TRUE,
-             clone_passport_unlocked = TRUE,
-             clone_access_until = GREATEST(COALESCE(clone_access_until, NOW()), NOW()) + INTERVAL '7 days'
+         SET clone_access_until = GREATEST(COALESCE(clone_access_until, NOW()), NOW()) + INTERVAL '7 days'
          WHERE telegram_id = $1`,
         [String(userId)],
       );
