@@ -1,12 +1,14 @@
+import { currentRequestContext } from './request-context.js';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
-const CLONE_ACCESS_MS = 7 * DAY_MS;
 const ALIGNMENT_MS = 30 * DAY_MS;
 
 export const OFFER_CODES = Object.freeze({
   FULL_MAP: 'herostar_full_map',
-  // Код сохраняется для обратной совместимости с уже созданными платежами.
   CLONE_DAY: 'clone_day',
   CLONE_ALIGNMENT: 'clone_alignment',
+  CLONE_LIVE_WEEK: 'clone_live_week',
+  CLONE_LIVE_MONTH: 'clone_live_month',
 });
 
 let pool = null;
@@ -52,12 +54,27 @@ export function offerCatalog(env = process.env) {
     [OFFER_CODES.CLONE_DAY]: {
       code: OFFER_CODES.CLONE_DAY,
       product: 'clone',
+      title: 'День со Звёздным клоном',
+      amount: money(env.CLONE_DAY_PRICE, 499),
+      durationHours: 24,
+    },
+    [OFFER_CODES.CLONE_ALIGNMENT]: {
+      code: OFFER_CODES.CLONE_ALIGNMENT,
+      product: 'clone',
+      title: 'Сонастройка со Звёздным клоном',
+      amount: money(env.CLONE_ALIGNMENT_PRICE, 1499),
+      upgradeAmount: money(env.CLONE_ALIGNMENT_UPGRADE_PRICE, 1000),
+      durationDays: 30,
+    },
+    [OFFER_CODES.CLONE_LIVE_WEEK]: {
+      code: OFFER_CODES.CLONE_LIVE_WEEK,
+      product: 'clone',
       title: '7 дней со Звёздным клоном',
       amount: money(env.CLONE_WEEK_PRICE, 490),
       durationHours: 7 * 24,
     },
-    [OFFER_CODES.CLONE_ALIGNMENT]: {
-      code: OFFER_CODES.CLONE_ALIGNMENT,
+    [OFFER_CODES.CLONE_LIVE_MONTH]: {
+      code: OFFER_CODES.CLONE_LIVE_MONTH,
       product: 'clone',
       title: '30 дней + полная карта HeroStar',
       amount: money(env.CLONE_MONTH_PRICE, 990),
@@ -155,70 +172,82 @@ export async function decorateUserAccess(user, now = new Date()) {
   return normalizeAccess({ ...user, ...(stored || {}) }, now);
 }
 
-async function eligibleDayPayment(userId, chartId = null, now = new Date()) {
+async function eligibleCreditPayment(userId, chartId, offerCode, maxAgeMs, now = new Date()) {
   if (!userId) return null;
   if (!pool) {
     return [...memoryPayments.values()]
       .filter((payment) => payment.userId === String(userId)
         && (!chartId || String(payment.chartId || '') === String(chartId))
-        && payment.offerCode === OFFER_CODES.CLONE_DAY
+        && payment.offerCode === offerCode
         && payment.status === 'succeeded'
         && payment.entitlementAppliedAt
-        && new Date(payment.entitlementAppliedAt).getTime() >= now.getTime() - CLONE_ACCESS_MS
+        && new Date(payment.entitlementAppliedAt).getTime() >= now.getTime() - maxAgeMs
         && ![...memoryPayments.values()].some((candidate) => candidate.creditSourcePaymentId === payment.id && ['checkout_reserved', 'pending', 'waiting_for_capture', 'succeeded'].includes(candidate.status)))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
   }
 
+  const intervalHours = Math.max(1, Math.ceil(maxAgeMs / (60 * 60 * 1000)));
   const result = await pool.query(
-    `SELECT day.id, day.created_at
-     FROM payments AS day
-     WHERE day.user_id = $1
-       AND ($3::uuid IS NULL OR day.chart_id = $3::uuid)
-       AND day.offer_code = $2
-       AND day.status = 'succeeded'
-       AND day.entitlement_applied_at IS NOT NULL
-       AND day.entitlement_applied_at >= NOW() - INTERVAL '7 days'
+    `SELECT source.id, source.created_at
+     FROM payments AS source
+     WHERE source.user_id = $1
+       AND ($3::uuid IS NULL OR source.chart_id = $3::uuid)
+       AND source.offer_code = $2
+       AND source.status = 'succeeded'
+       AND source.entitlement_applied_at IS NOT NULL
+       AND source.entitlement_applied_at >= NOW() - ($4::text || ' hours')::interval
        AND NOT EXISTS (
          SELECT 1 FROM payments AS upgrade
-         WHERE upgrade.credit_source_payment_id = day.id
+         WHERE upgrade.credit_source_payment_id = source.id
            AND upgrade.status IN ('checkout_reserved', 'pending', 'waiting_for_capture', 'succeeded')
        )
-     ORDER BY day.created_at DESC
+     ORDER BY source.created_at DESC
      LIMIT 1`,
-    [String(userId), OFFER_CODES.CLONE_DAY, chartId || null],
+    [String(userId), offerCode, chartId || null, String(intervalHours)],
   );
   return result.rows[0] || null;
+}
+
+function liveExperienceRequested() {
+  const context = currentRequestContext?.() || {};
+  return String(context.product || '').toLowerCase() === 'clone_live'
+    || String(context.experience || '').toLowerCase() === 'live';
 }
 
 export async function getCommerceState(user, now = new Date(), chartId = null) {
   const access = await decorateUserAccess(user, now);
   const catalog = offerCatalog();
-  if (!access) {
-    return {
-      access: null,
-      offers: {
-        day: { ...catalog[OFFER_CODES.CLONE_DAY], available: true },
-        alignment: { ...catalog[OFFER_CODES.CLONE_ALIGNMENT], payableAmount: catalog[OFFER_CODES.CLONE_ALIGNMENT].amount, credited: false },
-      },
-    };
-  }
+  const live = liveExperienceRequested();
+  const entryCode = live ? OFFER_CODES.CLONE_LIVE_WEEK : OFFER_CODES.CLONE_DAY;
+  const extendedCode = live ? OFFER_CODES.CLONE_LIVE_MONTH : OFFER_CODES.CLONE_ALIGNMENT;
+  const entryOffer = catalog[entryCode];
+  const extendedOffer = catalog[extendedCode];
+  const creditPayment = access
+    ? await eligibleCreditPayment(
+      access.telegram_id,
+      chartId,
+      entryCode,
+      Number(entryOffer.durationHours || 24) * 60 * 60 * 1000,
+      now,
+    )
+    : null;
 
-  const creditPayment = await eligibleDayPayment(access.telegram_id, chartId, now);
-  const alignment = catalog[OFFER_CODES.CLONE_ALIGNMENT];
   return {
     access,
     offers: {
       day: {
-        ...catalog[OFFER_CODES.CLONE_DAY],
-        available: !hasCloneAccessForChart(access, chartId, now),
+        ...entryOffer,
+        available: !access || !hasCloneAccessForChart(access, chartId, now),
       },
       alignment: {
-        ...alignment,
-        payableAmount: creditPayment ? alignment.upgradeAmount : alignment.amount,
+        ...extendedOffer,
+        payableAmount: creditPayment ? extendedOffer.upgradeAmount : extendedOffer.amount,
         credited: Boolean(creditPayment),
-        creditAmount: creditPayment ? catalog[OFFER_CODES.CLONE_DAY].amount : 0,
+        creditAmount: creditPayment ? entryOffer.amount : 0,
         creditSourcePaymentId: creditPayment?.id || null,
       },
+      liveWeek: catalog[OFFER_CODES.CLONE_LIVE_WEEK],
+      liveMonth: catalog[OFFER_CODES.CLONE_LIVE_MONTH],
     },
   };
 }
@@ -226,7 +255,10 @@ export async function getCommerceState(user, now = new Date(), chartId = null) {
 export async function resolveOffer({ user, offerCode, product, chartId = null }) {
   const catalog = offerCatalog();
   const normalized = String(offerCode || '').trim().toLowerCase();
-  const code = normalized || (product === 'clone' ? OFFER_CODES.CLONE_DAY : OFFER_CODES.FULL_MAP);
+  const defaultCode = product === 'clone'
+    ? (liveExperienceRequested() ? OFFER_CODES.CLONE_LIVE_WEEK : OFFER_CODES.CLONE_DAY)
+    : OFFER_CODES.FULL_MAP;
+  const code = normalized || defaultCode;
   const offer = catalog[code];
   if (!offer) {
     const error = new Error('Неизвестное предложение оплаты.');
@@ -235,7 +267,6 @@ export async function resolveOffer({ user, offerCode, product, chartId = null })
     error.expose = true;
     throw error;
   }
-
   if (offer.product !== product) {
     const error = new Error('Предложение не относится к выбранному продукту.');
     error.status = 400;
@@ -251,10 +282,10 @@ export async function resolveOffer({ user, offerCode, product, chartId = null })
     throw error;
   }
 
-  if (code === OFFER_CODES.CLONE_DAY) {
+  if ([OFFER_CODES.CLONE_DAY, OFFER_CODES.CLONE_LIVE_WEEK].includes(code)) {
     const state = await getCommerceState(user, new Date(), chartId);
     if (hasCloneAccessForChart(state.access, chartId)) {
-      const error = new Error('Доступ уже активен. Продлить его можно тарифом на 30 дней.');
+      const error = new Error('Доступ уже активен. Продлить его можно расширенным тарифом.');
       error.status = 409;
       error.code = 'OFFER_NOT_AVAILABLE';
       error.expose = true;
@@ -262,23 +293,26 @@ export async function resolveOffer({ user, offerCode, product, chartId = null })
     }
   }
 
-  if (code === OFFER_CODES.CLONE_ALIGNMENT) {
+  if ([OFFER_CODES.CLONE_ALIGNMENT, OFFER_CODES.CLONE_LIVE_MONTH].includes(code)) {
     const state = await getCommerceState(user, new Date(), chartId);
     if (state.access?.cloneAlignmentActive) {
       const sameChart = String(state.access.cloneAlignmentChartId || '') === String(chartId);
       const error = new Error(sameChart
-        ? 'Доступ на 30 дней для этого клона уже активен.'
-        : 'Доступ на 30 дней уже активен для другого клона. Сначала завершите текущий период.');
+        ? 'Расширенный доступ для этого клона уже активен.'
+        : 'Расширенный доступ уже активен для другого клона. Сначала завершите текущий период.');
       error.status = 409;
       error.code = sameChart ? 'ALIGNMENT_ALREADY_ACTIVE' : 'ALIGNMENT_ACTIVE_FOR_ANOTHER_CHART';
       error.expose = true;
       throw error;
     }
+    const entryCode = code === OFFER_CODES.CLONE_LIVE_MONTH ? OFFER_CODES.CLONE_LIVE_WEEK : OFFER_CODES.CLONE_DAY;
+    const maxAge = Number(catalog[entryCode].durationHours || 24) * 60 * 60 * 1000;
+    const creditPayment = await eligibleCreditPayment(user?.telegram_id, chartId, entryCode, maxAge);
     return {
       ...offer,
-      amount: state.offers.alignment.payableAmount,
-      creditSourcePaymentId: state.offers.alignment.creditSourcePaymentId,
-      credited: state.offers.alignment.credited,
+      amount: creditPayment ? offer.upgradeAmount : offer.amount,
+      creditSourcePaymentId: creditPayment?.id || null,
+      credited: Boolean(creditPayment),
     };
   }
   return { ...offer, creditSourcePaymentId: null, credited: false };
@@ -354,6 +388,20 @@ function addDuration(base, milliseconds) {
   return new Date(Math.max(Date.now(), asDate(base)?.getTime() || 0) + milliseconds);
 }
 
+function entitlementDuration(offerCode) {
+  if (offerCode === OFFER_CODES.CLONE_DAY) return DAY_MS;
+  if (offerCode === OFFER_CODES.CLONE_LIVE_WEEK) return 7 * DAY_MS;
+  return null;
+}
+
+function unlocksFullMap(offerCode) {
+  return [OFFER_CODES.CLONE_DAY, OFFER_CODES.CLONE_ALIGNMENT, OFFER_CODES.CLONE_LIVE_MONTH].includes(offerCode);
+}
+
+function isExtendedOffer(offerCode) {
+  return [OFFER_CODES.CLONE_ALIGNMENT, OFFER_CODES.CLONE_LIVE_MONTH].includes(offerCode);
+}
+
 export async function applyPaymentEntitlement({ paymentId, userId, chartId = null, offerCode, creditSourcePaymentId = null }) {
   if (!userId || !offerCode) return null;
   if (!pool) {
@@ -369,9 +417,13 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     const access = rowForUser({ telegram_id: userId }) || emptyAccess(userId);
     if (offerCode === OFFER_CODES.FULL_MAP) {
       access.full_map_unlocked = true;
-    } else if (offerCode === OFFER_CODES.CLONE_DAY) {
-      access.clone_access_until = addDuration(access.clone_access_until, CLONE_ACCESS_MS).toISOString();
-    } else if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
+    } else if (entitlementDuration(offerCode)) {
+      if (unlocksFullMap(offerCode)) {
+        access.full_map_unlocked = true;
+        access.clone_passport_unlocked = true;
+      }
+      access.clone_access_until = addDuration(access.clone_access_until, entitlementDuration(offerCode)).toISOString();
+    } else if (isExtendedOffer(offerCode)) {
       if (!chartId) throw new Error('Alignment entitlement requires a chart.');
       access.full_map_unlocked = true;
       access.clone_passport_unlocked = true;
@@ -408,18 +460,24 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     const effectiveOffer = payment.offer_code || offerCode;
 
     if (effectiveOffer === OFFER_CODES.FULL_MAP) {
+      await client.query('UPDATE users SET full_map_unlocked = TRUE WHERE telegram_id = $1', [String(userId)]);
+    } else if (effectiveOffer === OFFER_CODES.CLONE_DAY) {
       await client.query(
-        `UPDATE users SET full_map_unlocked = TRUE WHERE telegram_id = $1`,
+        `UPDATE users
+         SET full_map_unlocked = TRUE,
+             clone_passport_unlocked = TRUE,
+             clone_access_until = GREATEST(COALESCE(clone_access_until, NOW()), NOW()) + INTERVAL '24 hours'
+         WHERE telegram_id = $1`,
         [String(userId)],
       );
-    } else if (effectiveOffer === OFFER_CODES.CLONE_DAY) {
+    } else if (effectiveOffer === OFFER_CODES.CLONE_LIVE_WEEK) {
       await client.query(
         `UPDATE users
          SET clone_access_until = GREATEST(COALESCE(clone_access_until, NOW()), NOW()) + INTERVAL '7 days'
          WHERE telegram_id = $1`,
         [String(userId)],
       );
-    } else if (effectiveOffer === OFFER_CODES.CLONE_ALIGNMENT) {
+    } else if (isExtendedOffer(effectiveOffer)) {
       if (!chartId) throw new Error('Alignment entitlement requires a chart.');
       await client.query(
         `UPDATE users
