@@ -15,15 +15,16 @@ import {
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
 
 test.beforeEach(() => _resetCommerceForTests());
 
 test('каталог фиксирует утверждённые продукты и цены без автопродления', () => {
   const catalog = offerCatalog({});
-  assert.equal(catalog[OFFER_CODES.CLONE_DAY].amount, 499);
-  assert.equal(catalog[OFFER_CODES.CLONE_DAY].durationHours, 24);
-  assert.equal(catalog[OFFER_CODES.CLONE_ALIGNMENT].amount, 1499);
-  assert.equal(catalog[OFFER_CODES.CLONE_ALIGNMENT].upgradeAmount, 1000);
+  assert.equal(catalog[OFFER_CODES.CLONE_DAY].amount, 490);
+  assert.equal(catalog[OFFER_CODES.CLONE_DAY].durationHours, 168);
+  assert.equal(catalog[OFFER_CODES.CLONE_ALIGNMENT].amount, 990);
+  assert.equal(catalog[OFFER_CODES.CLONE_ALIGNMENT].upgradeAmount, 500);
   assert.equal(catalog[OFFER_CODES.CLONE_ALIGNMENT].durationDays, 30);
   assert.equal('autoRenew' in catalog[OFFER_CODES.CLONE_ALIGNMENT], false);
 });
@@ -43,7 +44,7 @@ test('постоянная карта отделена от временного
   assert.equal(access.clonePlan, 'free');
 });
 
-test('покупка дня навсегда открывает карту и паспорт и даёт около 24 часов глубокого режима', async () => {
+test('покупка первого тарифа навсегда открывает карту и даёт около семи дней диалога', async () => {
   const before = Date.now();
   await recordPaymentOffer({
     paymentId: 'day-1',
@@ -64,27 +65,26 @@ test('покупка дня навсегда открывает карту и п
   assert.equal(access.cloneAccessActive, true);
   assert.equal(access.clonePlan, 'day');
   const duration = new Date(access.cloneAccessUntil).getTime() - before;
-  assert.ok(duration >= DAY - 2000 && duration <= DAY + 5000);
+  assert.ok(duration >= WEEK - 2000 && duration <= WEEK + 5000);
 });
 
-test('успешный день засчитывает 499 рублей в Сонастройку и оставляет к оплате 1000', async () => {
+test('успешные семь дней засчитывают 490 рублей в месячный доступ и оставляют 500', async () => {
   await recordPaymentOffer({ paymentId: 'day-2', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
   await markCommercePaymentStatus('day-2', 'succeeded');
   await applyPaymentEntitlement({ paymentId: 'day-2', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
 
   const state = await getCommerceState({ telegram_id: '42' }, new Date(), 'chart-1');
   assert.equal(state.offers.alignment.credited, true);
-  assert.equal(state.offers.alignment.creditAmount, 499);
-  assert.equal(state.offers.alignment.payableAmount, 1000);
+  assert.equal(state.offers.alignment.creditAmount, 490);
+  assert.equal(state.offers.alignment.payableAmount, 500);
   assert.equal(state.offers.alignment.creditSourcePaymentId, 'day-2');
 
   const offer = await resolveOffer({ user: { telegram_id: '42' }, offerCode: OFFER_CODES.CLONE_ALIGNMENT, product: 'clone', chartId: 'chart-1' });
-  assert.equal(offer.amount, 1000);
+  assert.equal(offer.amount, 500);
   assert.equal(offer.creditSourcePaymentId, 'day-2');
 });
 
-
-test('активный глубокий режим нельзя случайно купить второй раз как ещё один день', async () => {
+test('активный глубокий режим нельзя случайно купить второй раз', async () => {
   await recordPaymentOffer({ paymentId: 'day-active', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
   await markCommercePaymentStatus('day-active', 'succeeded');
   await applyPaymentEntitlement({ paymentId: 'day-active', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
@@ -95,7 +95,7 @@ test('активный глубокий режим нельзя случайно
   );
 });
 
-test('Сонастройка начинается на 30 дней от покупки, не превращая оставшиеся сутки в 31 день', async () => {
+test('месячный доступ начинается на 30 дней от покупки, не превращая остаток недели в 37 дней', async () => {
   await recordPaymentOffer({ paymentId: 'day-3', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
   await markCommercePaymentStatus('day-3', 'succeeded');
   await applyPaymentEntitlement({ paymentId: 'day-3', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
@@ -127,51 +127,33 @@ test('повторная обработка одного webhook не продл
   await recordPaymentOffer({ paymentId: 'day-idempotent', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY });
   await markCommercePaymentStatus('day-idempotent', 'succeeded');
   const first = await applyPaymentEntitlement({
-    paymentId: 'day-idempotent',
-    userId: '42',
-    chartId: 'chart-1',
-    offerCode: OFFER_CODES.CLONE_DAY,
+    paymentId: 'day-idempotent', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY,
   });
   const second = await applyPaymentEntitlement({
-    paymentId: 'day-idempotent',
-    userId: '42',
-    chartId: 'chart-1',
-    offerCode: OFFER_CODES.CLONE_DAY,
+    paymentId: 'day-idempotent', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_DAY,
   });
-
   assert.equal(second.cloneAccessUntil, first.cloneAccessUntil);
 });
 
-
-test('Сонастройка привязана к выбранному клону и не переключается незаметно', async () => {
+test('месячный доступ привязан к выбранному клону и не переключается незаметно', async () => {
   await recordPaymentOffer({
-    paymentId: 'alignment-bound',
-    userId: '42',
-    chartId: 'chart-1',
-    offerCode: OFFER_CODES.CLONE_ALIGNMENT,
+    paymentId: 'alignment-bound', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_ALIGNMENT,
   });
   await markCommercePaymentStatus('alignment-bound', 'succeeded');
   const access = await applyPaymentEntitlement({
-    paymentId: 'alignment-bound',
-    userId: '42',
-    chartId: 'chart-1',
-    offerCode: OFFER_CODES.CLONE_ALIGNMENT,
+    paymentId: 'alignment-bound', userId: '42', chartId: 'chart-1', offerCode: OFFER_CODES.CLONE_ALIGNMENT,
   });
 
   assert.equal(access.cloneAlignmentChartId, 'chart-1');
   await assert.rejects(
     resolveOffer({
-      user: { telegram_id: '42' },
-      offerCode: OFFER_CODES.CLONE_ALIGNMENT,
-      product: 'clone',
-      chartId: 'chart-2',
+      user: { telegram_id: '42' }, offerCode: OFFER_CODES.CLONE_ALIGNMENT, product: 'clone', chartId: 'chart-2',
     }),
     (error) => error.code === 'ALIGNMENT_ACTIVE_FOR_ANOTHER_CHART' && error.status === 409,
   );
 });
 
-
-test('Сонастройка открывает глубокий алгоритм только для оплаченного клона', () => {
+test('месячный доступ открывает глубокий алгоритм только для оплаченного клона', () => {
   const now = new Date('2026-07-24T12:00:00.000Z');
   const user = {
     telegram_id: '42',
