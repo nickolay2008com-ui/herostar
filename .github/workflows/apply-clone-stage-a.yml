@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - codex/clone-stage-a-safety
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -21,13 +24,17 @@ jobs:
       - name: Assemble audit payload without decoding
         run: |
           set -euo pipefail
-          ls -l .github/stage-a-payload
+          ls -l .github/stage-a-payload > /tmp/stage-a-files.txt
           cat .github/stage-a-payload/part-* > /tmp/stage-a.b64
-          wc -c /tmp/stage-a.b64
-          sha256sum /tmp/stage-a.b64
+          wc -c /tmp/stage-a.b64 > /tmp/stage-a-size.txt
+          sha256sum /tmp/stage-a.b64 > /tmp/stage-a-sha.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: stage-a-reconstructed
-          path: /tmp/stage-a.b64
+          path: |
+            /tmp/stage-a.b64
+            /tmp/stage-a-files.txt
+            /tmp/stage-a-size.txt
+            /tmp/stage-a-sha.txt
           retention-days: 1
