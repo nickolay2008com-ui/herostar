@@ -13,9 +13,13 @@ const html = readFileSync(new URL('../public/clone/live/index.html', import.meta
 const css = readFileSync(new URL('../public/clone-live.css', import.meta.url), 'utf8');
 const jsPath = new URL('../public/clone-live.js', import.meta.url);
 const js = readFileSync(jsPath, 'utf8');
+const quota = readFileSync(new URL('../src/clone-quota.js', import.meta.url), 'utf8');
+const gears = readFileSync(new URL('../public/clone-ui-gears.js', import.meta.url), 'utf8');
 
-test('clone live frontend has a valid JavaScript bundle', () => {
+test('clone live frontend has valid JavaScript bundles', () => {
   execFileSync(process.execPath, ['--check', jsPath.pathname], { stdio: 'pipe' });
+  execFileSync(process.execPath, ['--check', new URL('../public/clone-ui-gears.js', import.meta.url).pathname], { stdio: 'pipe' });
+  execFileSync(process.execPath, ['--check', new URL('../src/clone-quota.js', import.meta.url).pathname], { stdio: 'pipe' });
 });
 
 test('clone live route follows situation-first flow', () => {
@@ -39,25 +43,41 @@ test('clone live route follows situation-first flow', () => {
 
 test('clone live keeps anonymous value before Telegram and then continues through existing APIs', () => {
   const chartCreation = js.indexOf("json('/api/charts'");
-  const localDemo = js.indexOf('buildDemo(state.chart, state.category)');
-  const telegramMount = js.indexOf('function mountTelegram()');
+  const localDemo = js.indexOf('buildDemo(state.chart,state.category)');
+  const telegramMount = js.indexOf('async function mountTelegram()');
   const consultation = js.indexOf("json('/api/consult'");
   assert.ok(chartCreation > -1);
   assert.ok(localDemo > chartCreation);
   assert.ok(telegramMount > localDemo);
   assert.ok(consultation > telegramMount);
-  assert.match(js, /callback\.searchParams\.set\('state', `clone:\$\{state\.chartId \|\| ''\}`\)/);
+  assert.match(js, /callback\.searchParams\.set\('state',`clone:\$\{state\.chartId\|\|''\}`\)/);
   assert.match(js, /await claimChart\(\)/);
+  assert.match(js, /if \(state\.user\) \{ await finishExistingLogin\(\)/);
   assert.match(js, /contextSynced/);
 });
 
-test('clone live uses exact houses, cusps, rulers, support aspects and contrast', () => {
-  assert.match(js, /const RULERS/);
-  assert.match(js, /function cusp\(chart, house\)/);
+test('clone live reads Placidus cusps from the real chart structure', () => {
+  assert.match(js, /chart\?\.houses\?\.cusps/);
+  assert.doesNotMatch(js, /\(chart\?\.houses \|\| \[\]\)\.find/);
   assert.match(js, /activeCusp\?\.degreeLabel/);
+  assert.match(js, /const RULERS/);
   assert.match(js, /strongestSupport/);
   assert.match(js, /CONTRAST_SIGN/);
   assert.match(js, /Это не гарантия удачи/);
+});
+
+test('clone live uses a quiet 24-hour trial with at least three completed answers', () => {
+  assert.match(quota, /LIVE_TRIAL_MS = 24 \* 60 \* 60 \* 1000/);
+  assert.match(quota, /LIVE_MIN_ANSWERS = 3/);
+  assert.match(quota, /timeOpen \|\| minimumOpen/);
+  assert.match(quota, /metadata->>'product'.*= 'clone_live'/s);
+  assert.match(quota, /experience = 'live'/);
+});
+
+test('payment return comes back to the live dialogue', () => {
+  assert.match(js, /starCloneLiveReturn/);
+  assert.match(gears, /LIVE_RETURN_KEY = 'starCloneLiveReturn'/);
+  assert.match(gears, /location\.replace\(target\.toString\(\)\)/);
 });
 
 test('clone profiles express the new astrological mechanism and memory model', () => {
