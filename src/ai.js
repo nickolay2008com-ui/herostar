@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { resolveConsultationProfile } from './consultation-profiles.js';
 import { buildFallbackPortrait } from './narrative.js';
 
 const REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
@@ -87,6 +88,9 @@ function localCloneConsultation(chart) {
 }
 
 export function consultationSystemPrompt(mode, product = 'herostar') {
+  const profile = resolveConsultationProfile({ product });
+  if (profile) return profile.systemPrompt;
+
   const shared = `Ты — персональный навигатор HeroStar. Карта уже рассчитана локальным ядром. Не меняй положения планет, знаки, дома, аспекты и тексты карточек. Отвечай на русском языке, опираясь только на переданную карту, редакционную матрицу, историю разговора и слова человека.
 
 Главная задача HeroStar — помочь человеку сонастроиться с собой, открыть подходящие именно ему ресурсы карты и понять, как сделать с их помощью жизнь яснее, полнее и лучше. Человек пришёл не лечиться и не искать, что с ним не так. Психологическая точность нужна только для эмпатии, понимания запроса и бережного разговора. Не ищи травмы, блоки, диагнозы и скрытые причины без прямых оснований.
@@ -117,10 +121,6 @@ export function consultationSystemPrompt(mode, product = 'herostar') {
 
 Если человек прямо спрашивает, что здесь можно исследовать, или не знает, с чего начать, спокойно предложи три входа без рекламной витрины: разобрать конкретную ситуацию; открыть сильную сторону карты; посмотреть, куда сейчас естественнее направить силы. Затем помоги выбрать один маршрут.`;
 
-  const cloneRules = product === 'clone' ? `
-
-Режим «Звёздный клон» имеет приоритет над общими правилами консультации. Звёздный клон — самостоятельная символическая модель, созданная по натальной карте, а не прогноз поступков пользователя. Не переноси решение клона на человека и не говори «вы поступите» или «вам следует». Формулируй: «ваш звёздный клон, вероятнее всего, поступил бы…». Дай законченный ответ без обязательного встречного вопроса: сначала ход клона, затем 2–4 конкретных фактора карты и короткий итог модели. Если контекста мало, честно назови ограничение, но всё равно предложи наиболее вероятный ход модели. Не выдавай астрологию за научный прогноз.` : '';
-
   if (mode === 'deep') {
     return `${shared}
 
@@ -132,15 +132,16 @@ export function consultationSystemPrompt(mode, product = 'herostar') {
 5. Верни человеку авторство: что он может заметить, выбрать или попробовать сам.
 6. Только после полезного открытия, если переход действительно естественен, покажи одно-два ближайших направления исследования.
 
-Не используй видимые рубрики вроде «Что я услышал», «Где теряется сила», «Ресурс» и «Ближайший шаг», если человек сам не просил структурированный разбор. Обычно достаточно 220–450 слов; простой запрос заслуживает более короткого ответа.${cloneRules}`;
+Не используй видимые рубрики вроде «Что я услышал», «Где теряется сила», «Ресурс» и «Ближайший шаг», если человек сам не просил структурированный разбор. Обычно достаточно 220–450 слов; простой запрос заслуживает более короткого ответа.`;
   }
 
   return `${shared}
 
-Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.${cloneRules}`;
+Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.`;
 }
 
 async function requestConsultation(client, { model, effort, maxOutputTokens, mode, product, chart, portrait, history, question }) {
+  const profile = resolveConsultationProfile({ product });
   const response = await client.responses.create({
     model,
     reasoning: { effort },
@@ -156,9 +157,14 @@ async function requestConsultation(client, { model, effort, maxOutputTokens, mod
         content: JSON.stringify({
           mode,
           product,
+          consultationProfile: profile ? {
+            id: profile.id,
+            promptVersion: profile.promptVersion,
+            factorBudget: profile.factorBudget,
+          } : null,
           chart: compactChart(chart),
           portrait,
-          history: history.slice(-8),
+          history: history.slice(-(profile?.historyLimit || 8)),
           question,
         }),
       },
@@ -190,7 +196,7 @@ export async function answerConsultation({ chart, portrait, question, history = 
       history,
       question,
     });
-    console.info(`[HeroStar AI] mode=${mode} model=${primary.model} effort=${primary.effort}`);
+    console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${resolveConsultationProfile({ product })?.id || 'default'} model=${primary.model} effort=${primary.effort}`);
     return answer;
   } catch (primaryError) {
     const canFallbackToDialog = mode === 'deep'
@@ -208,7 +214,7 @@ export async function answerConsultation({ chart, portrait, question, history = 
           history,
           question,
         });
-        console.info(`[HeroStar AI] mode=${mode} model=${config.dialog.model} effort=${config.dialog.effort} fallback=true`);
+        console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${resolveConsultationProfile({ product })?.id || 'default'} model=${config.dialog.model} effort=${config.dialog.effort} fallback=true`);
         return answer;
       } catch (fallbackError) {
         console.error('OpenAI consultation fallback failed:', fallbackError?.message || fallbackError);
