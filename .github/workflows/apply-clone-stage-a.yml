@@ -21,20 +21,39 @@ jobs:
           ref: codex/clone-stage-a-safety
           fetch-depth: 0
 
-      - name: Export assembled Stage A patch payload
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify and apply approved Stage A patch
         run: |
           set -euo pipefail
-          wc -c .github/stage-a-patch/chunk-* > /tmp/stage-a-chunk-sizes.txt
-          sha256sum .github/stage-a-patch/chunk-* > /tmp/stage-a-chunk-hashes.txt
-          cat .github/stage-a-patch/chunk-* > /tmp/stage-a-patch.b64
-          wc -c /tmp/stage-a-patch.b64 >> /tmp/stage-a-chunk-sizes.txt
-          sha256sum /tmp/stage-a-patch.b64 >> /tmp/stage-a-chunk-hashes.txt
+          cat .github/stage-a-patch/chunk-* | base64 -d > /tmp/stage-a.patch.xz
+          echo "7c1d7010d7bdc70e449101de86a0479cb7a172bdafb5a698eece44ce506f8091  /tmp/stage-a.patch.xz" | sha256sum -c -
+          xz -dc /tmp/stage-a.patch.xz > /tmp/stage-a.patch
+          git apply --3way --whitespace=nowarn /tmp/stage-a.patch
+          rm -rf .github/stage-a-patch .github/stage-a-payload .github/stage-a-payload-v2
+          rm -f .github/workflows/apply-clone-stage-a.yml
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: stage-a-patch-payload
-          path: |
-            /tmp/stage-a-patch.b64
-            /tmp/stage-a-chunk-sizes.txt
-            /tmp/stage-a-chunk-hashes.txt
-          retention-days: 1
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Run full test suite
+        run: npm test
+
+      - name: Check syntax and canonical clone page
+        run: |
+          set -euo pipefail
+          node --check server.js
+          for file in public/*.js src/*.js test/*.js; do node --check "$file"; done
+          cmp -s public/clone.html public/clone/index.html
+          git diff --check
+
+      - name: Commit Stage A
+        run: |
+          set -euo pipefail
+          git config user.name "HeroStar CI"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "Закрыть этап A безопасности Звёздного клона"
+          git push origin HEAD:codex/clone-stage-a-safety
