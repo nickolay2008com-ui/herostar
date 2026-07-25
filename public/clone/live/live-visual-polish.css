@@ -1,0 +1,387 @@
+/* HeroStar Clone — mobile visual polish.
+   Pure presentation layer: calmer hierarchy, fewer nested cards, clearer reading. */
+
+@media (max-width: 900px) {
+  body.live-product:has(.workspace:not(.hidden)) {
+    --mobile-bg: #08070f;
+    --mobile-surface: #100d1b;
+    --mobile-surface-raised: #181326;
+    --mobile-line: rgba(255, 255, 255, .075);
+    --mobile-line-strong: rgba(187, 157, 255, .22);
+    --mobile-text: #f7f3fb;
+    --mobile-muted: #aaa2b5;
+    --mobile-accent: #b187ff;
+    background: var(--mobile-bg);
+  }
+
+  body.live-product:has(.workspace:not(.hidden)) .orb {
+    opacity: .07;
+  }
+
+  body.live-product:has(.workspace:not(.hidden)) .live-topbar {
+    top: 0;
+    width: 100%;
+    height: 56px;
+    padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+    border: 0;
+    border-bottom: 1px solid rgba(255,255,255,.055);
+    border-radius: 0;
+    background: rgba(8, 7, 15, .92);
+    box-shadow: none;
+    backdrop-filter: blur(22px) saturate(125%);
+  }
+
+  body.live-product:has(.workspace:not(.hidden)) .live-topbar .brand {
+    gap: 8px;
+    font-size: 14px;
+    letter-spacing: -.01em;
+  }
+
+  body.live-product:has(.workspace:not(.hidden)) .live-topbar .brand span {
+    width: 27px;
+    height: 27px;
+    border-radius: 9px;
+    background: rgba(177, 135, 255, .14);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.065);
+  }
+
+  body.live-product:has(.workspace:not(.hidden)) .live-topbar .product {
+    gap: 0;
+    color: #bbb3c7;
+    font-size: 11px;
+  }
+
+  body.live-product:has(.workspace:not(.hidden)) .live-topbar .product i {
+    display: none;
+  }
+
+  .live-product .workspace:not(.hidden) {
+    padding: 56px 0 calc(62px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(circle at 95% 0, rgba(126, 91, 229, .09), transparent 20rem),
+      var(--mobile-bg);
+  }
+
+  .live-product .workspace:not(.hidden) .panel {
+    scrollbar-width: none;
+  }
+
+  .live-product .workspace:not(.hidden) .panel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .live-product #dialogView:not(.hidden) .conversation {
+    border: 0;
+    border-radius: 0;
+    background:
+      radial-gradient(circle at 100% 0, rgba(139, 92, 246, .055), transparent 18rem),
+      var(--mobile-surface);
+    box-shadow: none;
+  }
+
+  .live-product #dialogView .conversation-head {
+    min-height: 72px;
+    padding: 12px 14px 11px;
+    border-bottom: 1px solid var(--mobile-line);
+    background: rgba(16, 13, 27, .96);
+    box-shadow: 0 8px 26px rgba(0,0,0,.09);
+  }
+
+  .live-product #dialogView .conversation-head > div {
+    min-width: 0;
+  }
+
+  .live-product #dialogView .conversation-head h2 {
+    max-width: calc(100% - 98px);
+    color: var(--mobile-text);
+    font-size: 19px;
+    font-weight: 760;
+    line-height: 1.15;
+    letter-spacing: -.032em;
+    text-wrap: balance;
+  }
+
+  .live-product #dialogView .allowance {
+    max-width: calc(100% - 86px);
+    margin-top: 6px;
+    padding: 4px 8px;
+    overflow: visible;
+    border: 1px solid rgba(242, 217, 148, .11);
+    border-radius: 999px;
+    background: rgba(242, 217, 148, .065);
+    color: #dacb9e;
+    font-size: 10px;
+    font-weight: 680;
+    line-height: 1.2;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .live-product #dialogView .conversation-head .ghost {
+    top: 16px;
+    right: 12px;
+    min-width: 76px;
+    min-height: 40px;
+    padding: 8px 10px;
+    border-color: rgba(255,255,255,.09);
+    border-radius: 12px;
+    background: rgba(255,255,255,.025);
+    color: #c7bfce;
+    font-size: 10px;
+    font-weight: 650;
+    box-shadow: none;
+  }
+
+  .live-product #dialogView .conversation-head .ghost:active {
+    background: rgba(177,135,255,.1);
+    transform: scale(.98);
+  }
+
+  .live-product #dialogView .messages {
+    gap: 18px;
+    padding: 17px 14px 18px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.008), transparent 22%),
+      transparent;
+    scrollbar-width: none;
+  }
+
+  .live-product #dialogView .messages::-webkit-scrollbar {
+    display: none;
+  }
+
+  .live-product #dialogView .message {
+    align-items: flex-start;
+    gap: 9px;
+  }
+
+  .live-product #dialogView .mini-avatar {
+    width: 30px;
+    height: 30px;
+    margin-top: 1px;
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 11px;
+    background: linear-gradient(145deg, #8b66f4, #b75bd1);
+    box-shadow: 0 8px 22px rgba(122, 80, 220, .18);
+  }
+
+  .live-product #dialogView .message.clone > div {
+    width: min(100%, 44rem);
+    max-width: calc(100% - 39px);
+    padding: 1px 0 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .live-product #dialogView .message.clone > div b {
+    color: #aaa0ba;
+    font-size: 10px;
+    font-weight: 720;
+    letter-spacing: .035em;
+  }
+
+  .live-product #dialogView .message.clone p {
+    margin-top: 8px;
+    color: #f0ecf4;
+    font-size: 15px;
+    font-weight: 430;
+    line-height: 1.58;
+    letter-spacing: -.012em;
+  }
+
+  .live-product #dialogView .message.user {
+    padding-left: 38px;
+  }
+
+  .live-product #dialogView .message.user > div {
+    max-width: min(86%, 31rem);
+    padding: 11px 13px;
+    border: 1px solid rgba(177,135,255,.17);
+    border-radius: 16px 16px 5px 16px;
+    background: linear-gradient(145deg, rgba(139,92,246,.14), rgba(188,80,195,.055));
+    box-shadow: inset 0 1px rgba(255,255,255,.035);
+  }
+
+  .live-product #dialogView .message.user p {
+    color: #ebe5f2;
+    font-size: 14px;
+    line-height: 1.48;
+  }
+
+  .live-product #dialogView .chips {
+    gap: 7px;
+    padding: 7px 14px 8px;
+    background: linear-gradient(180deg, rgba(16,13,27,0), rgba(16,13,27,.96) 34%);
+    scroll-padding-inline: 14px;
+  }
+
+  .live-product #dialogView .chips button {
+    min-height: 34px;
+    padding: 7px 11px;
+    border-color: rgba(255,255,255,.075);
+    border-radius: 999px;
+    background: rgba(255,255,255,.026);
+    color: #b9b0c2;
+    font-size: 10.5px;
+    font-weight: 570;
+  }
+
+  .live-product #dialogView .messages:has(.message.user) + .chips {
+    display: none;
+  }
+
+  .live-product #dialogView .composer {
+    gap: 7px;
+    margin: 0 10px 10px;
+    padding: 6px;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 18px;
+    background: var(--mobile-surface-raised);
+    box-shadow: 0 12px 34px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.035);
+  }
+
+  .live-product #dialogView .composer:focus-within {
+    border-color: rgba(177,135,255,.38);
+    box-shadow: 0 0 0 3px rgba(177,135,255,.075), 0 12px 34px rgba(0,0,0,.22);
+  }
+
+  .live-product #dialogView .composer textarea {
+    min-height: 46px;
+    max-height: 116px;
+    padding: 12px 9px 10px;
+    color: #f6f1fa;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 430;
+    line-height: 1.35;
+    letter-spacing: -.01em;
+  }
+
+  .live-product #dialogView .composer textarea::placeholder {
+    color: #82798f;
+    opacity: 1;
+  }
+
+  .live-product #dialogView .composer .primary {
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    min-height: 46px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #a873ff, #b65ee3);
+    box-shadow: 0 9px 24px rgba(139,92,246,.28), inset 0 1px rgba(255,255,255,.2);
+  }
+
+  .live-product #dialogView .composer .primary::before {
+    font-size: 22px;
+  }
+
+  .live-product .side {
+    right: 6px;
+    bottom: max(6px, env(safe-area-inset-bottom));
+    left: 6px;
+    width: auto;
+    height: 54px;
+    padding: 4px;
+    border: 1px solid rgba(255,255,255,.075);
+    border-radius: 17px;
+    background: rgba(14, 12, 22, .94);
+    box-shadow: 0 12px 34px rgba(0,0,0,.24);
+    backdrop-filter: blur(22px) saturate(125%);
+  }
+
+  .live-product .side nav {
+    gap: 4px;
+  }
+
+  .live-product .side nav button {
+    min-height: 46px;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 13px;
+    color: #928b9c;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 620;
+  }
+
+  .live-product .side nav button::before {
+    margin-right: 6px;
+    font-size: 13px;
+  }
+
+  .live-product .side nav button.active {
+    border: 0;
+    background: rgba(177,135,255,.12);
+    color: #eee8f7;
+    box-shadow: inset 0 0 0 1px rgba(177,135,255,.14);
+  }
+
+  .live-product #dialogView .logic {
+    border: 0;
+    border-radius: 0;
+    background: var(--mobile-surface);
+    box-shadow: none;
+  }
+
+  .live-product #dialogView .logic::before {
+    background: rgba(142,230,193,.065);
+  }
+
+  .live-product #dialogView .logic h3 {
+    color: var(--mobile-text);
+    font-size: 23px;
+  }
+
+  .live-product #dialogView .logic-empty,
+  .live-product #dialogView .passport-section,
+  .live-product #dialogView .passport-summary > div {
+    border-color: var(--mobile-line);
+    background: rgba(255,255,255,.022);
+  }
+}
+
+@media (max-width: 380px) {
+  .live-product #dialogView .conversation-head h2 {
+    max-width: calc(100% - 76px);
+    font-size: 18px;
+  }
+
+  .live-product #dialogView .conversation-head .ghost {
+    min-width: 42px;
+    width: 42px;
+    overflow: hidden;
+    padding: 0;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .live-product #dialogView .conversation-head .ghost::before {
+    content: "+";
+    display: grid;
+    height: 100%;
+    place-items: center;
+    color: #d9d1e2;
+    font-size: 21px;
+  }
+
+  .live-product #dialogView .allowance {
+    max-width: calc(100% - 56px);
+  }
+
+  .live-product #dialogView .messages {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  .live-product #dialogView .message.clone p {
+    font-size: 14.5px;
+  }
+
+  .live-product #dialogView .composer {
+    margin-right: 7px;
+    margin-left: 7px;
+  }
+}

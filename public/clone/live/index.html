@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/clone/live/live-assets.css?v=20260725">
   <link rel="stylesheet" href="/clone/live/live.css?v=20260725">
   <link rel="stylesheet" href="/clone/live/live-detail.css?v=20260725-ux2">
+  <link rel="stylesheet" href="/clone/live/live-visual-polish.css?v=20260725-v1">
 </head>
 <body class="live-product">
   <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
@@ -141,10 +142,10 @@
 
         <div id="dialogView" class="hidden dialog-layout">
           <div class="conversation">
-            <div class="conversation-head"><div><p class="eyebrow">Живая модель активна</p><h2>Что сейчас нужно решить?</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div><button class="ghost" id="newSituation">Новая ситуация</button></div>
+            <div class="conversation-head"><div><p class="eyebrow">Живая модель активна</p><h2>Что нужно решить?</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div><button class="ghost" id="newSituation" type="button" aria-label="Начать новую ситуацию">＋ Новая</button></div>
             <div class="messages" id="messages"><article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Опишите реальную ситуацию. Что происходит, между чем вы выбираете и где чувствуете сомнение?</p></div></article></div>
             <div class="chips" aria-label="Примеры ситуаций"><button>Войти ли в новый проект?</button><button>Как ответить человеку?</button><button>Рискнуть или сохранить стабильность?</button></div>
-            <form id="questionForm" class="composer"><textarea id="question" rows="3" placeholder="Опишите ситуацию простыми словами…" required></textarea><button class="primary" type="submit" aria-label="Отправить вопрос">Спросить клона</button></form>
+            <form id="questionForm" class="composer"><textarea id="question" rows="3" placeholder="Опишите ситуацию…" required></textarea><button class="primary" type="submit" aria-label="Отправить вопрос">Спросить клона</button></form>
             <p class="composer-note">Первые три ответа доступны сразу. Затем Telegram сохранит клона и откроет бесплатный базовый диалог без лимита сообщений.</p>
             <p class="error" id="dialogError"></p>
             <section class="alignment-offer hidden" id="fullModeOffer"><p class="eyebrow">Полная глубина карты</p><h3>Открыть весь характер Клона</h3><p>Бесплатный режим уже опирается на полную карту и выбирает 2–4 фактора, важные для текущей ситуации. Полный режим связывает их между собой, показывает внутренние противоречия, альтернативные ходы и условия изменения решения.</p><button class="primary wide" id="openFullModeOffer" type="button">Посмотреть полный режим</button></section>
