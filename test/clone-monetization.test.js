@@ -36,11 +36,11 @@ test('три ответа доступны до Telegram, а после вход
 });
 
 test('постоянные материалы и временный диалог представлены разными правами', async () => {
-  const [commerce, server] = await Promise.all([read('src/commerce.js'), read('server.js')]);
-  assert.match(commerce, /full_map_unlocked/);
-  assert.match(commerce, /clone_passport_unlocked/);
-  assert.match(commerce, /clone_access_until/);
-  assert.match(commerce, /clone_alignment_until/);
+  const [commerceSchema, server] = await Promise.all([read('src/commerce/schema.js'), read('server.js')]);
+  assert.match(commerceSchema, /full_map_unlocked/);
+  assert.match(commerceSchema, /clone_passport_unlocked/);
+  assert.match(commerceSchema, /clone_access_until/);
+  assert.match(commerceSchema, /clone_alignment_until/);
   assert.match(server, /mapUnlocked/);
   assert.match(server, /clonePassportUnlocked/);
   assert.match(server, /cloneAccessActive/);

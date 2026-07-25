@@ -12,6 +12,97 @@ body::before {
   min-height: 0;
 }
 
+.telegram-connect-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  width: min(420px, 100%);
+}
+
+.telegram-connect-card > iframe,
+.telegram-connect-card > script {
+  display: none !important;
+}
+
+.telegram-connect-button {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: 1px solid rgba(82, 171, 238, .45);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(42, 171, 238, .98), rgba(39, 126, 196, .98));
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgba(30, 136, 204, .22);
+  transition: transform .18s ease, filter .18s ease, opacity .18s ease;
+}
+
+.telegram-connect-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.telegram-connect-button:disabled {
+  opacity: .68;
+  cursor: wait;
+  transform: none;
+}
+
+.telegram-connect-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .18);
+  font-size: 18px;
+}
+
+.telegram-connect-button strong,
+.telegram-connect-button small {
+  display: block;
+}
+
+.telegram-connect-button strong {
+  font-size: 15px;
+}
+
+.telegram-connect-button small {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, .82);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.telegram-connect-status {
+  margin: 0;
+  color: var(--muted, #a8a7b2);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.telegram-return-status {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 120;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 13px 17px;
+  border: 1px solid rgba(82, 171, 238, .36);
+  border-radius: 14px;
+  background: rgba(13, 16, 27, .96);
+  color: #fff;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .42);
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   #createView {
     padding-bottom: 74px;
@@ -25,5 +116,10 @@ body::before {
 @media (max-width: 640px) {
   #createView {
     padding-bottom: 78px;
+  }
+
+  .telegram-connect-button {
+    min-height: 56px;
+    padding: 9px 13px;
   }
 }
