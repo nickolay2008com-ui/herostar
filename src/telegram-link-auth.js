@@ -3,9 +3,11 @@ import pg from 'pg';
 import { claimChart, getChart, upsertUser } from './store.js';
 
 const LOGIN_TTL_MS = 10 * 60 * 1000;
+const TELEGRAM_POLL_TIMEOUT_SECONDS = 25;
 const COOKIE_NAME = 'herostar_session';
 const memoryLinks = new Map();
 let poolPromise = null;
+let fallbackPollingRuntime = null;
 let botIdentityCache = { username: null, expiresAt: 0 };
 
 function compact(value = '') {
@@ -50,18 +52,38 @@ function publicBaseUrl() {
   return railwayDomain ? `https://${railwayDomain.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : '';
 }
 
+function fallbackPollingRequired() {
+  const practiceEnabled = String(process.env.PRACTICE_NOTIFICATIONS_ENABLED || 'true').toLowerCase() !== 'false';
+  return !practiceEnabled || !compact(process.env.DATABASE_URL);
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function telegramApiRequest(fetchImpl, token, method, payload = {}, timeoutMs = 10_000) {
+  const response = await fetchImpl(`https://api.telegram.org/bot${token}/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.ok) {
+    throw new Error(result.description || `Telegram ${method} failed: ${response.status}`);
+  }
+  return result.result;
+}
+
 async function resolveBotUsername() {
   const token = compact(process.env.TELEGRAM_BOT_TOKEN);
   if (!token) return '';
   if (botIdentityCache.username && botIdentityCache.expiresAt > Date.now()) return botIdentityCache.username;
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    const payload = await response.json().catch(() => ({}));
-    const username = compact(payload?.result?.username).replace(/^@/, '');
-    if (response.ok && payload.ok && username) {
+    const bot = await telegramApiRequest(globalThis.fetch, token, 'getMe');
+    const username = compact(bot?.username).replace(/^@/, '');
+    if (username) {
       botIdentityCache = { username, expiresAt: Date.now() + 5 * 60 * 1000 };
       return username;
     }
@@ -294,13 +316,7 @@ export async function telegramLinkAuthMiddleware(req, res, next) {
 }
 
 async function sendTelegramMessage(fetchImpl, token, payload) {
-  const response = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`Telegram sendMessage failed: ${response.status}`);
+  await telegramApiRequest(fetchImpl, token, 'sendMessage', payload);
 }
 
 export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThis.fetch } = {}) {
@@ -309,6 +325,9 @@ export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThi
 
   for (const update of updates) {
     const message = update?.message;
+    const messageAgeMs = message?.date ? Date.now() - Number(message.date) * 1000 : 0;
+    if (messageAgeMs > LOGIN_TTL_MS + 60_000) continue;
+
     const text = compact(message?.text);
     const match = text.match(/^\/start(?:@\w+)?\s+login_([A-Za-z0-9_-]{24,80})$/i);
     if (!match || !message?.from?.id) continue;
@@ -336,4 +355,44 @@ export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThi
       reply_markup: returnUrl ? { inline_keyboard: [[{ text: 'Вернуться к Звёздному клону', url: returnUrl }]] } : undefined,
     }).catch((error) => console.error('Telegram link confirmation failed:', error.message));
   }
+}
+
+export function startTelegramLinkUpdatePolling({ fetchImpl = globalThis.fetch } = {}) {
+  if (!fallbackPollingRequired() || fallbackPollingRuntime) return fallbackPollingRuntime;
+
+  const botToken = compact(process.env.TELEGRAM_BOT_TOKEN);
+  if (!botToken) return null;
+
+  let stopped = false;
+  let offset = 0;
+  const done = (async () => {
+    console.log('HeroStar Telegram-вход использует самостоятельный канал обновлений.');
+    while (!stopped) {
+      try {
+        const updates = await telegramApiRequest(fetchImpl, botToken, 'getUpdates', {
+          offset,
+          timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
+          allowed_updates: ['message'],
+        }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
+
+        await handleTelegramLinkUpdates(updates, { fetchImpl });
+        for (const update of updates || []) {
+          offset = Math.max(offset, Number(update.update_id) + 1);
+        }
+      } catch (error) {
+        if (stopped) break;
+        console.error('HeroStar Telegram login polling failed:', error.message);
+        await sleep(5000);
+      }
+    }
+  })();
+
+  fallbackPollingRuntime = {
+    async stop() {
+      stopped = true;
+      await Promise.race([done, sleep(36_000)]);
+      fallbackPollingRuntime = null;
+    },
+  };
+  return fallbackPollingRuntime;
 }
