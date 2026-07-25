@@ -1,0 +1,29 @@
+/* Final layout hardening for the living Clone interface. */
+
+body::before {
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.conversation {
+  height: calc(100svh - 110px);
+}
+
+.messages {
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  #createView {
+    padding-bottom: 74px;
+  }
+
+  .conversation {
+    height: calc(100svh - 162px);
+  }
+}
+
+@media (max-width: 640px) {
+  #createView {
+    padding-bottom: 78px;
+  }
+}
