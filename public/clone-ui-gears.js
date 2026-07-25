@@ -145,21 +145,6 @@
     setTimeout(() => clearInterval(timer), 30000);
   }
 
-  function loadCandyDialogue() {
-    if (document.querySelector('script[data-clone-dialog-candy]')) return;
-    const script = document.createElement('script');
-    script.src = '/clone-dialog-candy.js?v=20260725-candy3';
-    script.defer = true;
-    script.dataset.cloneDialogCandy = 'true';
-    document.head.append(script);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadCandyDialogue, { once: true });
-  } else {
-    window.setTimeout(loadCandyDialogue, 0);
-  }
-
   if (authReturned && window.opener && window.opener !== window) {
     setTimeout(() => window.close(), 400);
   }
