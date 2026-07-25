@@ -1,5 +1,4 @@
 const HERO_STAR_COUNTER_ID = 110937602;
-const PRODUCT = 'herostar';
 const ATTRIBUTION_KEY = 'herostar_first_touch';
 const GOALS = new Set([
   'landing_to_bot',
@@ -10,10 +9,6 @@ const GOALS = new Set([
   'payment_started',
   'purchase_success',
 ]);
-
-function isHeroStarProductPage() {
-  return location.pathname === '/' || location.pathname === '/index.html';
-}
 
 function readAttribution() {
   const params = new URLSearchParams(location.search);
@@ -32,12 +27,8 @@ function readAttribution() {
 const attribution = readAttribution();
 
 export function reachHeroStarGoal(goal, params = {}) {
-  if (!isHeroStarProductPage() || !GOALS.has(goal) || typeof window.ym !== 'function') return;
-  window.ym(HERO_STAR_COUNTER_ID, 'reachGoal', goal, {
-    ...attribution,
-    ...params,
-    product: PRODUCT,
-  });
+  if (!GOALS.has(goal) || typeof window.ym !== 'function') return;
+  window.ym(HERO_STAR_COUNTER_ID, 'reachGoal', goal, { ...attribution, ...params });
 }
 
 window.herostarReachGoal = reachHeroStarGoal;
@@ -46,21 +37,16 @@ const previousFetch = window.fetch.bind(window);
 window.fetch = async (input, init = {}) => {
   const response = await previousFetch(input, init);
   try {
-    if (!isHeroStarProductPage()) return response;
     const url = new URL(input instanceof Request ? input.url : String(input), location.href);
     const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
     if (url.origin === location.origin && method === 'POST' && response.ok) {
       if (url.pathname === '/api/charts') {
         let request = {};
         try { request = JSON.parse(String(init.body || '{}')); } catch {}
-        if (!request.demo && request.product !== 'clone') reachHeroStarGoal('free_key_received');
+        if (!request.demo) reachHeroStarGoal('free_key_received');
       }
       if (url.pathname === '/api/payments/create') {
-        let request = {};
-        try { request = JSON.parse(String(init.body || '{}')); } catch {}
-        if (request.product !== 'clone') {
-          reachHeroStarGoal('payment_started', { order_price: 990, currency: 'RUB' });
-        }
+        reachHeroStarGoal('payment_started', { order_price: 990, currency: 'RUB' });
       }
     }
   } catch {
@@ -70,7 +56,6 @@ window.fetch = async (input, init = {}) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!isHeroStarProductPage()) return;
   const params = new URLSearchParams(location.search);
   if (params.get('auth') === 'ok') reachHeroStarGoal('bot_started');
 
@@ -84,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('herostar:purchase-success', (event) => {
-  if (!isHeroStarProductPage()) return;
   reachHeroStarGoal('purchase_success', {
     order_price: Number(event.detail?.price || 990),
     currency: event.detail?.currency || 'RUB',
