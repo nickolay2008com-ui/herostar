@@ -2,6 +2,7 @@
   const PENDING_KEY = 'starClonePendingQuestion';
   const AUTO_KEY = 'starClonePendingAutoSubmit';
   const RETURN_KEY = 'starCloneReturnPath';
+  const body = document.body;
   const heroForm = document.querySelector('#heroQuestionForm');
   const heroQuestion = document.querySelector('#heroQuestion');
   const question = document.querySelector('#question');
@@ -10,6 +11,9 @@
   const workspace = document.querySelector('#workspace');
   const sticky = document.querySelector('#liveStickyStart');
   const primaryHeroButton = document.querySelector('.live-hero [data-go-create]');
+  const hero = document.querySelector('.live-hero');
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   localStorage.setItem(RETURN_KEY, '/clone/live/');
 
@@ -25,18 +29,72 @@
     primaryHeroButton?.click();
   }
 
+  function installQuestionMeta() {
+    if (!heroForm || !heroQuestion || heroForm.querySelector('.live-intent-meta')) return null;
+    const meta = document.createElement('div');
+    meta.className = 'live-intent-meta';
+    meta.innerHTML = '<span id="heroQuestionHint">Можно описать коротко — клон уточнит важное</span><span id="heroQuestionCount">0 / 1600</span>';
+    heroForm.append(meta);
+    heroQuestion.setAttribute('aria-describedby', 'heroQuestionHint heroQuestionCount');
+    return {
+      hint: meta.querySelector('#heroQuestionHint'),
+      count: meta.querySelector('#heroQuestionCount'),
+    };
+  }
+
+  const questionMeta = installQuestionMeta();
+
+  function resizeHeroQuestion() {
+    if (!heroQuestion) return;
+    heroQuestion.style.height = 'auto';
+    heroQuestion.style.height = `${Math.min(Math.max(heroQuestion.scrollHeight, 84), 180)}px`;
+  }
+
+  function syncQuestionState() {
+    if (!heroQuestion) return;
+    const length = heroQuestion.value.length;
+    heroForm?.classList.toggle('has-value', length > 0);
+    if (questionMeta?.count) questionMeta.count.textContent = `${length} / ${heroQuestion.maxLength || 1600}`;
+    if (questionMeta?.hint?.classList.contains('is-saved')) {
+      questionMeta.hint.classList.remove('is-saved');
+      questionMeta.hint.textContent = 'Можно описать коротко — клон уточнит важное';
+    }
+    resizeHeroQuestion();
+  }
+
+  heroQuestion?.addEventListener('input', syncQuestionState);
+  heroQuestion?.addEventListener('keydown', (event) => {
+    if (event.isComposing || event.key !== 'Enter' || !(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    heroForm?.requestSubmit();
+  });
+
   heroForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     if (!rememberQuestion(heroQuestion?.value, true)) return;
+
+    const submit = heroForm.querySelector('button[type="submit"]');
+    if (submit) {
+      submit.disabled = true;
+      submit.classList.add('is-busy');
+      submit.firstChild.textContent = 'Сохраняем вопрос ';
+    }
+    if (questionMeta?.hint) {
+      questionMeta.hint.textContent = 'Вопрос сохранён — вернём его после создания клона';
+      questionMeta.hint.classList.add('is-saved');
+    }
+
     try { window.ym?.(110937602, 'reachGoal', 'clone_intent_captured'); } catch {}
-    openCreation();
+    window.setTimeout(openCreation, prefersReducedMotion ? 0 : 220);
   });
 
   document.querySelectorAll('.live-question-examples button').forEach((button) => {
     button.addEventListener('click', () => {
       if (!heroQuestion) return;
       heroQuestion.value = button.textContent.trim();
-      heroQuestion.focus();
+      heroQuestion.dispatchEvent(new Event('input', { bubbles: true }));
+      heroQuestion.focus({ preventScroll: true });
+      heroQuestion.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
     });
   });
 
@@ -50,7 +108,7 @@
       sessionStorage.removeItem(AUTO_KEY);
       window.setTimeout(() => {
         if (!question.disabled && question.value.trim() === pending) questionForm.requestSubmit();
-      }, 520);
+      }, prefersReducedMotion ? 0 : 520);
     }
   }
 
@@ -73,5 +131,69 @@
     observer.observe(primaryHeroButton);
   }
 
+  function installRevealMotion() {
+    const items = document.querySelectorAll('.live-flow, .live-intent, .live-alternate, .live-steps article');
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+      items.forEach((item) => item.classList.add('is-visible'));
+      return;
+    }
+    const observer = new IntersectionObserver((entries, currentObserver) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        currentObserver.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -9% 0px', threshold: .12 });
+    items.forEach((item) => {
+      item.classList.add('live-reveal');
+      observer.observe(item);
+    });
+  }
+
+  let scrollTicking = false;
+  function syncScrollUi() {
+    scrollTicking = false;
+    const top = window.scrollY || document.documentElement.scrollTop || 0;
+    const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    body.classList.toggle('is-scrolled', top > 18);
+    body.style.setProperty('--scroll-progress', String(Math.min(1, Math.max(0, top / max))));
+  }
+
+  window.addEventListener('scroll', () => {
+    if (scrollTicking) return;
+    scrollTicking = true;
+    window.requestAnimationFrame(syncScrollUi);
+  }, { passive: true });
+
+  if (hero && finePointer && !prefersReducedMotion) {
+    let pointerTicking = false;
+    let lastEvent = null;
+    hero.addEventListener('pointermove', (event) => {
+      lastEvent = event;
+      if (pointerTicking) return;
+      pointerTicking = true;
+      window.requestAnimationFrame(() => {
+        pointerTicking = false;
+        if (!lastEvent) return;
+        const rect = hero.getBoundingClientRect();
+        const x = Math.min(1, Math.max(0, (lastEvent.clientX - rect.left) / rect.width));
+        const y = Math.min(1, Math.max(0, (lastEvent.clientY - rect.top) / rect.height));
+        hero.style.setProperty('--pointer-x', `${x * 100}%`);
+        hero.style.setProperty('--pointer-y', `${y * 100}%`);
+        hero.style.setProperty('--image-x', `${(x - .5) * -7}px`);
+        hero.style.setProperty('--image-y', `${(y - .5) * -5}px`);
+      });
+    });
+    hero.addEventListener('pointerleave', () => {
+      hero.style.setProperty('--pointer-x', '72%');
+      hero.style.setProperty('--pointer-y', '34%');
+      hero.style.setProperty('--image-x', '0px');
+      hero.style.setProperty('--image-y', '0px');
+    });
+  }
+
+  installRevealMotion();
+  syncQuestionState();
+  syncScrollUi();
   deliverPendingQuestion();
 })();
