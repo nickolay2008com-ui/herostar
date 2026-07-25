@@ -1,4 +1,6 @@
 const VISITOR_KEY = 'herostar_visitor_id';
+const PRODUCT = 'herostar';
+const ACTION_PREFIX = 'herostar_';
 
 function createVisitorId() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
@@ -29,8 +31,22 @@ function currentChartId() {
   return localStorage.getItem('herostar_chart_id') || null;
 }
 
+function productMetadata(eventType, metadata) {
+  const safeMetadata = metadata && typeof metadata === 'object' ? metadata : {};
+  return {
+    ...safeMetadata,
+    product: PRODUCT,
+    action: `${ACTION_PREFIX}${eventType}`,
+  };
+}
+
 function track(eventType, metadata = null, chartId = currentChartId()) {
-  const body = JSON.stringify({ eventType, metadata, chartId, visitorId });
+  const body = JSON.stringify({
+    eventType,
+    metadata: productMetadata(eventType, metadata),
+    chartId,
+    visitorId,
+  });
   originalFetch('/api/events', {
     method: 'POST',
     headers: {
