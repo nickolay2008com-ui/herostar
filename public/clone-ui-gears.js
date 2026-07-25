@@ -59,9 +59,11 @@
   const previousFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     let nextInit = init;
+    let url = null;
+    let method = 'GET';
     try {
-      const url = new URL(input instanceof Request ? input.url : String(input), location.href);
-      const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+      url = new URL(input instanceof Request ? input.url : String(input), location.href);
+      method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
       if (url.origin === location.origin && url.pathname === '/api/charts' && method === 'POST' && typeof init.body === 'string') {
         const payload = JSON.parse(init.body);
         if (payload?.product === 'clone') {
@@ -70,14 +72,14 @@
           nextInit = { ...init, body: JSON.stringify(payload) };
         }
       }
-      const response = await previousFetch(input, nextInit);
-      if (url.origin === location.origin && url.pathname === '/api/consult' && method === 'POST' && response.ok) {
-        clearPendingQuestion();
-      }
-      return response;
     } catch {
-      return previousFetch(input, nextInit);
+      // Интерфейсный помощник не должен мешать исходному запросу.
     }
+    const response = await previousFetch(input, nextInit);
+    if (url?.origin === location.origin && url.pathname === '/api/consult' && method === 'POST' && response.ok) {
+      clearPendingQuestion();
+    }
+    return response;
   };
 
   function activateTab(name) {
