@@ -1,0 +1,51 @@
+name: Revert legacy clone living interface
+
+on:
+  push:
+    branches:
+      - revert/clone-living-interface
+
+permissions:
+  contents: write
+
+jobs:
+  revert:
+    if: "!contains(github.event.head_commit.message, '[clone-interface-reverted]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: revert/clone-living-interface
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Preserve the live experiment inside its own namespace
+        run: |
+          cp public/clone-living.css public/clone/live/foundation.css
+          cp public/clone-living-fixes.css public/clone/live/foundation-fixes.css
+          cp public/clone-living.js public/clone/live/foundation.js
+          sed -i 's|/clone-living.css?v=20260725|/clone/live/foundation.css?v=20260725|g' public/clone/live/index.html
+          sed -i 's|/clone-living-fixes.css?v=20260725|/clone/live/foundation-fixes.css?v=20260725|g' public/clone/live/index.html
+          sed -i 's|/clone-living.js?v=20260725|/clone/live/foundation.js?v=20260725|g' public/clone/live/index.html
+          git add public/clone/live
+          git commit -m "Изолировать визуальную основу live-интерфейса"
+
+      - name: Revert the complete redesign commit
+        run: |
+          git revert --no-edit 38bc685030d29f59a19e1bda20f4320b67cf175c
+
+      - name: Restore the public clone entrypoint and remove workflow
+        run: |
+          cp public/clone.html public/clone/index.html
+          git rm .github/workflows/revert-clone-living-interface.yml
+          git add public/clone/index.html
+          git commit --amend -m "Откатить весь коммит нового интерфейса /clone/ [clone-interface-reverted]"
+
+      - name: Push result
+        run: git push origin HEAD:revert/clone-living-interface
