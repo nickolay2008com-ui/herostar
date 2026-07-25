@@ -59,29 +59,25 @@
     setTimeout(() => scrollToLatest({ force: true }), 120);
   });
 
+  window.addEventListener('pageshow', () => {
+    updateViewportHeight();
+    if (isDialogOpen()) scrollToLatest({ force: true });
+  });
+
   updateViewportHeight();
   syncDialogMode();
 })();
 
-/* Payment readiness UX: never leave the owner with a silent disabled button. */
+/* Payment readiness UX: never leave a user with a silent disabled button. */
 (() => {
   const button = document.getElementById('clonePayButton');
   const hint = document.getElementById('cloneReceiptHint');
   const toast = document.getElementById('cloneToast');
   if (!button) return;
 
-  const issueLabels = {
-    YOOKASSA_SHOP_ID: 'YOOKASSA_SHOP_ID',
-    YOOKASSA_SECRET_KEY: 'YOOKASSA_SECRET_KEY',
-    LEGAL_DETAILS: 'LEGAL_FULL_NAME и LEGAL_OGRNIP',
-    DATABASE_URL: 'DATABASE_URL',
-    SESSION_SECRET: 'SESSION_SECRET не короче 32 символов',
-    TELEGRAM_BOT_TOKEN: 'TELEGRAM_BOT_TOKEN',
-    APP_URL_HTTPS: 'APP_URL или Railway public domain с HTTPS',
-  };
-
+  const publicUnavailableMessage = 'Оплата временно недоступна. Попробуйте позже или напишите в Telegram @ainicki.';
   let unavailable = false;
-  let unavailableMessage = 'Оплата временно не готова. Проверьте настройки Railway.';
+  let unavailableMessage = publicUnavailableMessage;
 
   const showToast = (text) => {
     if (!toast) return;
@@ -102,12 +98,14 @@
 
   const applyUnavailableState = (config) => {
     unavailable = true;
+    unavailableMessage = publicUnavailableMessage;
     const issues = Array.isArray(config?.paymentConfigurationIssues)
       ? config.paymentConfigurationIssues
       : [];
-    unavailableMessage = issues.length
-      ? `Для оплаты не хватает: ${issues.map((item) => issueLabels[item] || item).join(', ')}.`
-      : 'Оплата временно не готова. Владелец сервиса уже может проверить обязательные настройки Railway.';
+
+    if (issues.length) {
+      console.warn('HeroStar payment configuration is incomplete:', issues);
+    }
 
     button.disabled = false;
     button.dataset.paymentUnavailable = 'true';
@@ -156,6 +154,8 @@
     showToast(unavailableMessage);
   }, true);
 
+  window.addEventListener('online', syncPaymentReadiness);
+  window.addEventListener('pageshow', syncPaymentReadiness);
   queueMicrotask(syncPaymentReadiness);
   setTimeout(syncPaymentReadiness, 500);
 })();
