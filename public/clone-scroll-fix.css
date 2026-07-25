@@ -1,0 +1,79 @@
+/* Mobile dialogue viewport: one real scroll container for the message history. */
+@media (max-width: 600px) {
+  html.clone-dialog-open,
+  body.clone-dialog-open {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body.clone-dialog-open main {
+    height: calc(var(--clone-viewport-height, 100dvh) - 54px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body.clone-dialog-open .workspace:not(.hidden) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body.clone-dialog-open .workspace:not(.hidden) .panel {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  body.clone-dialog-open #dialogView:not(.hidden) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body.clone-dialog-open #dialogView .conversation:not(.hidden) {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  body.clone-dialog-open #dialogView .conversation-head,
+  body.clone-dialog-open #dialogView .chips,
+  body.clone-dialog-open #dialogView .composer,
+  body.clone-dialog-open #dialogView .composer-note,
+  body.clone-dialog-open #dialogView .error,
+  body.clone-dialog-open #dialogView .alignment-offer {
+    flex: 0 0 auto;
+  }
+
+  body.clone-dialog-open #dialogView .messages {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+
+  body.clone-dialog-open #dialogView .logic:not(.profile-mode) {
+    display: none;
+  }
+
+  body.clone-dialog-open #dialogView .alignment-offer:not(.hidden) {
+    max-height: 42%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}
