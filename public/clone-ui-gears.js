@@ -1,7 +1,17 @@
 (() => {
   const PENDING_KEY = 'starClonePendingQuestion';
+  const RETURN_KEY = 'starCloneReturnPath';
   const params = new URLSearchParams(location.search);
   const authReturned = params.get('auth') === 'ok';
+  const requestedReturnPath = String(localStorage.getItem(RETURN_KEY) || '').trim();
+
+  if (authReturned && requestedReturnPath && requestedReturnPath !== location.pathname) {
+    localStorage.removeItem(RETURN_KEY);
+    const target = new URL(requestedReturnPath, location.origin);
+    params.forEach((value, key) => target.searchParams.set(key, value));
+    location.replace(target.toString());
+    return;
+  }
 
   function pendingQuestion() {
     return String(localStorage.getItem(PENDING_KEY) || '').trim();
