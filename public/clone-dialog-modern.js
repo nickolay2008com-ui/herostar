@@ -301,6 +301,7 @@
     insightsButton.addEventListener('click', () => openDrawer());
     closeDrawerButton.addEventListener('click', () => openDrawer(false));
     focusButton.addEventListener('click', () => setFocus());
+    document.querySelector('[data-tab="profile"]')?.addEventListener('click', () => setFocus(false));
     latestButton.addEventListener('click', () => messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' }));
 
     byId('cloneCopyInsights')?.addEventListener('click', () => {
