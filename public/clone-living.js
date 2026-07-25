@@ -89,7 +89,7 @@
         if (telegramWindow) telegramWindow.location.href = link.telegramUrl;
         else location.href = link.telegramUrl;
         status.textContent = 'В Telegram нажмите «Начать». Эта страница продолжит вход автоматически.';
-        await finishTelegramLink(link.token, status);
+        await finishTelegramLink(link.token, status, { reload: !slot.closest('.message') });
       } catch (error) {
         telegramWindow?.close();
         status.textContent = error.message;
