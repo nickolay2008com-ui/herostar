@@ -96,5 +96,34 @@ export async function initCommerce(storePool = null) {
       access_until = GREATEST(clone_chart_entitlements.access_until, EXCLUDED.access_until),
       alignment_until = GREATEST(clone_chart_entitlements.alignment_until, EXCLUDED.alignment_until),
       updated_at = NOW();
+
+    -- После надёжного переноса больше не оставляем глобальные дубли прав Клона.
+    -- Поля Сонастройки сохраняются только как совместимый указатель для Telegram-уведомлений.
+    UPDATE users AS user_record
+    SET clone_passport_unlocked = FALSE,
+        clone_access_until = NULL
+    WHERE EXISTS (
+      SELECT 1 FROM clone_chart_entitlements AS entitlement
+      WHERE entitlement.user_id = user_record.telegram_id
+    );
+
+    -- Снимаем старое глобальное открытие обычного HeroStar только там, где его
+    -- однозначно создала покупка Клона. Неизвестные старые платежи и отдельная
+    -- покупка полной карты сохраняются, чтобы не отозвать законный доступ.
+    UPDATE users AS user_record
+    SET full_map_unlocked = FALSE
+    WHERE user_record.full_map_unlocked = TRUE
+      AND EXISTS (
+        SELECT 1 FROM payments AS clone_payment
+        WHERE clone_payment.user_id = user_record.telegram_id
+          AND clone_payment.status = 'succeeded'
+          AND clone_payment.offer_code IN ('clone_day', 'clone_alignment')
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM payments AS map_payment
+        WHERE map_payment.user_id = user_record.telegram_id
+          AND map_payment.status = 'succeeded'
+          AND (map_payment.offer_code = 'herostar_full_map' OR map_payment.offer_code IS NULL)
+      );
   `);
 }
