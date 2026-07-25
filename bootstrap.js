@@ -49,6 +49,11 @@ try {
   express.static = originalStatic;
 }
 
+const { startPaymentRecovery } = await import('./src/payment-recovery.js');
+void startPaymentRecovery().catch((error) => {
+  console.error('Не удалось запустить восстановление платежей:', error);
+});
+
 const { startPracticeNotifications } = await import('./src/practice-notifications.js');
 void startPracticeNotifications().catch((error) => {
   console.error('Не удалось запустить практические Telegram-уведомления:', error);
