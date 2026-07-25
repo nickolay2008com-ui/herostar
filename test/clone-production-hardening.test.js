@@ -66,7 +66,7 @@ test('покупка одного клона не открывает карту,
   assert.equal(secondOffer.code, OFFER_CODES.CLONE_DAY);
 });
 
-test('сервер подставляет права конкретного клона после Telegram-сессии', async () => {
+test('сервер подставляет права конкретного клона и удаляет старые глобальные дубли', async () => {
   const [bootstrap, middleware, schema] = await Promise.all([
     read('bootstrap.js'),
     read('src/clone-access-middleware.js'),
@@ -78,6 +78,9 @@ test('сервер подставляет права конкретного кл
   assert.match(middleware, /decorateUserAccess\(req\.user, new Date\(\), \{ chartId, cloneContext: true \}\)/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS clone_chart_entitlements/);
   assert.match(schema, /PRIMARY KEY \(user_id, chart_id\)/);
+  assert.match(schema, /SET clone_passport_unlocked = FALSE,/);
+  assert.match(schema, /clone_access_until = NULL/);
+  assert.match(schema, /map_payment\.offer_code = 'herostar_full_map' OR map_payment\.offer_code IS NULL/);
 });
 
 test('неизвестное время отключает вымышленную точность до отправки карты', async () => {
