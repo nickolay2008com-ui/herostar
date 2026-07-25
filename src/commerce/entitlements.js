@@ -102,6 +102,10 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     );
     const payment = locked.rows[0];
     if (!payment) throw new Error(`Payment ${paymentId} was not saved before entitlement application.`);
+    await client.query(
+      `SELECT telegram_id FROM users WHERE telegram_id = $1 FOR UPDATE`,
+      [String(userId)],
+    );
     const effectiveOffer = payment.offer_code || offerCode;
     if (!payment.entitlement_applied_at) {
       if (effectiveOffer === OFFER_CODES.FULL_MAP) {
@@ -121,12 +125,12 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
         );
       } else if (effectiveOffer === OFFER_CODES.CLONE_ALIGNMENT) {
         if (!chartId) throw new Error('Alignment entitlement requires a chart.');
-        const current = await client.query(
+        const active = await client.query(
           `SELECT chart_id FROM clone_chart_entitlements
            WHERE user_id = $1 AND alignment_until > NOW() FOR UPDATE`,
           [String(userId)],
         );
-        if (current.rows.some((row) => String(row.chart_id) !== String(chartId))) {
+        if (active.rows.some((row) => String(row.chart_id) !== String(chartId))) {
           throw new Error('Alignment is already active for another chart.');
         }
         await client.query(
