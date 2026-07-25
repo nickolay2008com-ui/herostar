@@ -83,12 +83,14 @@ test('сервер содержит все звенья публичного и 
 });
 
 test('серверная квота ограничивает только анонимное знакомство, а ЮKassa открывает глубину и Сонастройку', async () => {
-  const [auth, quota, payments, commerce] = await Promise.all([
+  const [auth, quota, payments, commerceCatalog, commerceOffers] = await Promise.all([
     read('src/auth.js'),
     read('src/clone-quota.js'),
     read('src/payments.js'),
-    read('src/commerce.js'),
+    read('src/commerce/catalog.js'),
+    read('src/commerce/offers.js'),
   ]);
+  const commerce = `${commerceCatalog}\n${commerceOffers}`;
 
   assert.match(auth, /CLONE_ANONYMOUS_QUESTION_LIMIT = 3/);
   assert.match(auth, /reserveCloneQuestion/);

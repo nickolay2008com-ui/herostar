@@ -80,15 +80,18 @@ test('аналитика не получает сырой текст вопро�
 });
 
 test('Сонастройка и восстановление используют явно выбранного клона', async () => {
-  const [commerce, practice, server, clone] = await Promise.all([
-    read('src/commerce.js'),
+  const [commerceSchema, commerceOffers, practice, server, clone] = await Promise.all([
+    read('src/commerce/schema.js'),
+    read('src/commerce/offers.js'),
     read('src/practice-notifications.js'),
     read('server.js'),
     read('public/clone.js'),
   ]);
+  const commerce = `${commerceSchema}\n${commerceOffers}`;
 
   assert.match(commerce, /clone_alignment_chart_id/);
   assert.match(commerce, /ALIGNMENT_ACTIVE_FOR_ANOTHER_CHART/);
+  assert.match(commerce, /clone_chart_entitlements/);
   assert.match(practice, /user_record\.clone_alignment_chart_id AS chart_id/);
   assert.doesNotMatch(practice, /latestChartForUser/);
   assert.match(server, /app\.get\('\/api\/me\/charts', requireUser/);

@@ -16,22 +16,68 @@
     localStorage.removeItem(PENDING_KEY);
   }
 
+  function installUnknownTimeControl() {
+    const form = document.querySelector('#birthForm');
+    const timeInput = form?.querySelector('input[name="time"]');
+    const grid = timeInput?.closest('.grid');
+    if (!form || !timeInput || !grid || form.querySelector('#unknownTime')) return null;
+
+    timeInput.id = 'birthTime';
+    const label = document.createElement('label');
+    label.className = 'consent-check unknown-time-check';
+    label.innerHTML = '<input id="unknownTime" name="unknownTime" type="checkbox"><span><strong>Время рождения неизвестно</strong><br>Карта будет построена без домов, ASC/DSC и MC/IC — без выдуманной точности.</span>';
+    grid.insertAdjacentElement('afterend', label);
+
+    const checkbox = label.querySelector('#unknownTime');
+    const sync = () => {
+      const unknown = checkbox.checked;
+      timeInput.disabled = unknown;
+      timeInput.required = !unknown;
+      timeInput.setAttribute('aria-disabled', String(unknown));
+      if (unknown) timeInput.value = '';
+    };
+    checkbox.addEventListener('change', sync);
+    sync();
+
+    const sideNote = document.querySelector('.side-note p');
+    if (sideNote) sideNote.textContent = 'При известном времени карта рассчитывается по Плацидусу. Без времени Клон честно работает без домов и осей.';
+    const technical = document.querySelector('#logicPanel details p');
+    if (technical) technical.textContent = 'Планеты, знаки, стихии, аспекты и ретроградность рассчитываются всегда. Дома, ASC/DSC и MC/IC — только при известном времени рождения.';
+    return checkbox;
+  }
+
+  const unknownTime = installUnknownTimeControl();
+
   document.addEventListener('submit', (event) => {
-    if (event.target?.id !== 'questionForm') return;
-    savePendingQuestion(document.querySelector('#question')?.value);
+    if (event.target?.id === 'questionForm') savePendingQuestion(document.querySelector('#question')?.value);
+    if (event.target?.id === 'birthForm' && unknownTime?.checked) {
+      const step = document.querySelector('#buildStep');
+      if (step) step.textContent = 'Рассчитываем карту без домов и осей…';
+    }
   }, true);
 
   const previousFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
-    const response = await previousFetch(input, init);
+    let nextInit = init;
+    let url = null;
+    let method = 'GET';
     try {
-      const url = new URL(input instanceof Request ? input.url : String(input), location.href);
-      const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-      if (url.origin === location.origin && url.pathname === '/api/consult' && method === 'POST' && response.ok) {
-        clearPendingQuestion();
+      url = new URL(input instanceof Request ? input.url : String(input), location.href);
+      method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+      if (url.origin === location.origin && url.pathname === '/api/charts' && method === 'POST' && typeof init.body === 'string') {
+        const payload = JSON.parse(init.body);
+        if (payload?.product === 'clone') {
+          payload.unknownTime = Boolean(unknownTime?.checked);
+          payload.time = payload.unknownTime ? '' : String(payload.time || '');
+          nextInit = { ...init, body: JSON.stringify(payload) };
+        }
       }
     } catch {
-      // Восстановление текста не должно влиять на сетевой запрос.
+      // Интерфейсный помощник не должен мешать исходному запросу.
+    }
+    const response = await previousFetch(input, nextInit);
+    if (url?.origin === location.origin && url.pathname === '/api/consult' && method === 'POST' && response.ok) {
+      clearPendingQuestion();
     }
     return response;
   };
@@ -59,7 +105,6 @@
       const textarea = document.querySelector('#question');
       const form = document.querySelector('#questionForm');
       if (!dialog || dialog.classList.contains('hidden') || !textarea || !form) return;
-
       if (!textarea.value.trim()) textarea.value = savedQuestion;
       if (authReturned && !window.opener && !textarea.disabled) {
         clearInterval(timer);
