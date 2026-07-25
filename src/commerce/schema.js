@@ -14,6 +14,11 @@ export async function initCommerce(storePool = null) {
     ALTER TABLE payments ADD COLUMN IF NOT EXISTS entitlement_applied_at TIMESTAMPTZ;
     ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit_source_payment_id TEXT;
 
+    CREATE TABLE IF NOT EXISTS clone_charts (
+      chart_id UUID PRIMARY KEY REFERENCES charts(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS clone_chart_entitlements (
       user_id TEXT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
       chart_id UUID NOT NULL REFERENCES charts(id) ON DELETE CASCADE,
