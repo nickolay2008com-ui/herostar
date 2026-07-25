@@ -72,7 +72,8 @@
   }
 
   function enhanceTelegramSlot(slot) {
-    if (!slot || slot.dataset.nativeTelegramReady === 'true') return;
+    if (!slot) return;
+    if (slot.dataset.nativeTelegramReady === 'true' && slot.querySelector('.telegram-connect-button')) return;
     slot.dataset.nativeTelegramReady = 'true';
     slot.innerHTML = '';
     slot.classList.add('telegram-connect-card');
@@ -145,6 +146,10 @@
 
   new MutationObserver((mutations) => {
     for (const mutation of mutations) {
+      const targetSlot = mutation.target instanceof Element
+        ? mutation.target.closest('.telegram-login-slot')
+        : null;
+      if (targetSlot) enhanceTelegramSlot(targetSlot);
       for (const node of mutation.addedNodes) {
         if (!(node instanceof Element)) continue;
         if (node.matches('.telegram-login-slot')) enhanceTelegramSlot(node);
