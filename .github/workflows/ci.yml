@@ -19,7 +19,16 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - name: Run tests
+        run: npm test 2>&1 | tee test-output.log
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.log
+          if-no-files-found: ignore
+          retention-days: 1
       - name: Syntax check
         run: |
           node --check server.js
