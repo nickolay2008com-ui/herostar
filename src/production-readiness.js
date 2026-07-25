@@ -6,8 +6,12 @@ function clean(value) {
 }
 
 function validHttpsUrl(value) {
+  const raw = clean(value);
+  if (!raw) return false;
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`;
   try {
-    return new URL(value).protocol === 'https:';
+    const url = new URL(candidate);
+    return url.protocol === 'https:' && Boolean(url.hostname);
   } catch {
     return false;
   }
@@ -16,7 +20,12 @@ function validHttpsUrl(value) {
 export function getPaymentReadiness(env = process.env) {
   const issues = [];
   const production = clean(env.NODE_ENV).toLowerCase() === 'production';
-  const appUrl = clean(env.APP_URL || env.PUBLIC_BASE_URL || env.APP_BASE_URL);
+  const appUrl = clean(
+    env.APP_URL
+      || env.PUBLIC_BASE_URL
+      || env.APP_BASE_URL
+      || env.RAILWAY_PUBLIC_DOMAIN,
+  );
 
   if (!clean(env.YOOKASSA_SHOP_ID)) issues.push('YOOKASSA_SHOP_ID');
   if (!clean(env.YOOKASSA_SECRET_KEY)) issues.push('YOOKASSA_SECRET_KEY');
