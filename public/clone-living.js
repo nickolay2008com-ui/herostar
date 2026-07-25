@@ -17,21 +17,29 @@
     window.setTimeout(() => question?.focus({ preventScroll: true }), 180);
   }
 
-  function currentChartId() {
-    const params = new URLSearchParams(location.search);
-    const fromUrl = params.get('chart');
-    if (fromUrl) return fromUrl;
+  function savedClone() {
     try {
-      return JSON.parse(localStorage.getItem('starClone') || 'null')?.chartId || null;
+      return JSON.parse(localStorage.getItem('starClone') || 'null');
     } catch {
       return null;
     }
   }
 
-  async function telegramLinkRequest(path, body) {
+  function currentCloneAuth() {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get('chart');
+    const saved = savedClone();
+    const chartId = fromUrl || saved?.chartId || null;
+    const chartToken = saved?.chartId === chartId ? saved?.token || null : null;
+    return { chartId, chartToken };
+  }
+
+  async function telegramLinkRequest(path, body, { chartToken = null } = {}) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (chartToken) headers['x-chart-token'] = chartToken;
     const response = await fetch(path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     });
     const data = await response.json().catch(() => ({}));
@@ -85,7 +93,12 @@
       status.textContent = 'Создаём безопасную ссылку входа…';
       const telegramWindow = window.open('about:blank', 'herostarTelegramLogin');
       try {
-        const link = await telegramLinkRequest('/api/auth/telegram-link', { chartId: currentChartId() });
+        const auth = currentCloneAuth();
+        const link = await telegramLinkRequest(
+          '/api/auth/telegram-link',
+          { chartId: auth.chartId },
+          { chartToken: auth.chartToken },
+        );
         if (telegramWindow) telegramWindow.location.href = link.telegramUrl;
         else location.href = link.telegramUrl;
         status.textContent = 'В Telegram нажмите «Начать». Эта страница продолжит вход автоматически.';
