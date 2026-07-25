@@ -1,17 +1,18 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
-import { claimChart, upsertUser } from './store.js';
+import { claimChart, getChart, upsertUser } from './store.js';
 
 const LOGIN_TTL_MS = 10 * 60 * 1000;
 const COOKIE_NAME = 'herostar_session';
 const memoryLinks = new Map();
 let poolPromise = null;
+let botIdentityCache = { username: null, expiresAt: 0 };
 
 function compact(value = '') {
   return String(value).trim();
 }
 
-function botUsername() {
+function configuredBotUsername() {
   return compact(process.env.TELEGRAM_BOT_USERNAME).replace(/^@/, '');
 }
 
@@ -47,6 +48,49 @@ function publicBaseUrl() {
   if (explicit) return explicit.replace(/\/$/, '');
   const railwayDomain = compact(process.env.RAILWAY_PUBLIC_DOMAIN);
   return railwayDomain ? `https://${railwayDomain.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : '';
+}
+
+async function resolveBotUsername() {
+  const token = compact(process.env.TELEGRAM_BOT_TOKEN);
+  if (!token) return '';
+  if (botIdentityCache.username && botIdentityCache.expiresAt > Date.now()) return botIdentityCache.username;
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    const payload = await response.json().catch(() => ({}));
+    const username = compact(payload?.result?.username).replace(/^@/, '');
+    if (response.ok && payload.ok && username) {
+      botIdentityCache = { username, expiresAt: Date.now() + 5 * 60 * 1000 };
+      return username;
+    }
+  } catch {
+    // При временной недоступности Telegram используем проверенное значение Railway.
+  }
+
+  const fallback = configuredBotUsername();
+  if (fallback) botIdentityCache = { username: fallback, expiresAt: Date.now() + 60_000 };
+  return fallback;
+}
+
+async function verifyChartAccess(req, chartId) {
+  if (!chartId) return { ok: true, chartId: null };
+  const record = await getChart(chartId);
+  if (!record) return { ok: false, status: 404, error: 'Клон не найден.', code: 'CHART_NOT_FOUND' };
+
+  if (record.userId) {
+    const ownsChart = Boolean(req.user && String(record.userId) === String(req.user.telegram_id));
+    return ownsChart
+      ? { ok: true, chartId }
+      : { ok: false, status: 403, error: 'Нет доступа к этому клону.', code: 'CHART_FORBIDDEN' };
+  }
+
+  const chartToken = compact(req.headers['x-chart-token']);
+  const ownsAnonymousChart = Boolean(chartToken && record.accessTokenHash && tokenHash(chartToken) === record.accessTokenHash);
+  return ownsAnonymousChart
+    ? { ok: true, chartId }
+    : { ok: false, status: 403, error: 'Нужен ключ этого клона.', code: 'CHART_TOKEN_REQUIRED' };
 }
 
 async function authPool() {
@@ -129,9 +173,11 @@ async function claimLink(token, telegramUser) {
   const link = await readLink(token);
   const record = link.record;
   if (!record || record.consumedAt || new Date(record.expiresAt).getTime() <= Date.now()) return null;
+  const telegramId = String(telegramUser.id);
+  if (record.userId && String(record.userId) !== telegramId) return null;
 
   const user = await upsertUser({
-    telegram_id: String(telegramUser.id),
+    telegram_id: telegramId,
     username: telegramUser.username || null,
     first_name: telegramUser.first_name || null,
     last_name: telegramUser.last_name || null,
@@ -139,14 +185,21 @@ async function claimLink(token, telegramUser) {
   });
 
   if (!link.pool) {
-    memoryLinks.set(link.hash, { ...record, userId: user.telegram_id, claimedAt: new Date().toISOString() });
+    const latest = memoryLinks.get(link.hash);
+    if (!latest || latest.consumedAt || (latest.userId && String(latest.userId) !== telegramId)) return null;
+    memoryLinks.set(link.hash, { ...latest, userId: telegramId, claimedAt: latest.claimedAt || new Date().toISOString() });
   } else {
-    await link.pool.query(
+    const updated = await link.pool.query(
       `UPDATE telegram_login_links
        SET user_id = $2, claimed_at = COALESCE(claimed_at, NOW())
-       WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > NOW()`,
-      [link.hash, user.telegram_id],
+       WHERE token_hash = $1
+         AND consumed_at IS NULL
+         AND expires_at > NOW()
+         AND (user_id IS NULL OR user_id = $2)
+       RETURNING chart_id`,
+      [link.hash, telegramId],
     );
+    if (!updated.rows[0]) return null;
   }
   return { user, chartId: record.chartId };
 }
@@ -155,13 +208,19 @@ async function consumeLink(token) {
   const link = await readLink(token);
   const record = link.record;
   if (!record) return { status: 'missing' };
-  if (record.consumedAt) return { status: 'consumed' };
+  if (record.consumedAt) return { status: 'consumed', userId: record.userId, chartId: record.chartId || null };
   if (new Date(record.expiresAt).getTime() <= Date.now()) return { status: 'expired' };
   if (!record.userId) return { status: 'pending' };
 
-  if (record.chartId) await claimChart(record.chartId, record.userId).catch(() => null);
+  if (record.chartId) {
+    const claimedChart = await claimChart(record.chartId, record.userId);
+    if (!claimedChart) return { status: 'chart_unavailable' };
+  }
+
   if (!link.pool) {
-    memoryLinks.set(link.hash, { ...record, consumedAt: new Date().toISOString() });
+    const latest = memoryLinks.get(link.hash);
+    if (!latest || latest.consumedAt) return { status: 'consumed', userId: latest?.userId || null, chartId: latest?.chartId || null };
+    memoryLinks.set(link.hash, { ...latest, consumedAt: new Date().toISOString() });
   } else {
     const result = await link.pool.query(
       `UPDATE telegram_login_links
@@ -170,7 +229,10 @@ async function consumeLink(token) {
        RETURNING user_id, chart_id`,
       [link.hash],
     );
-    if (!result.rows[0]) return { status: 'consumed' };
+    if (!result.rows[0]) {
+      const latest = await readLink(token);
+      return { status: 'consumed', userId: latest.record?.userId || null, chartId: latest.record?.chartId || null };
+    }
   }
   return { status: 'authorized', userId: String(record.userId), chartId: record.chartId || null };
 }
@@ -182,13 +244,21 @@ function sendJson(res, status, payload) {
 export async function telegramLinkAuthMiddleware(req, res, next) {
   try {
     if (req.method === 'POST' && req.path === '/api/auth/telegram-link') {
-      const username = botUsername();
+      const username = await resolveBotUsername();
       if (!username || !compact(process.env.TELEGRAM_BOT_TOKEN)) {
         return sendJson(res, 503, { error: 'Telegram-вход временно не настроен.', code: 'TELEGRAM_NOT_CONFIGURED' });
       }
+
+      const requestedChartId = compact(req.body?.chartId);
+      const chartId = isUuid(requestedChartId) ? requestedChartId : null;
+      if (requestedChartId && !chartId) {
+        return sendJson(res, 400, { error: 'Некорректный ID клона.', code: 'INVALID_CHART_ID' });
+      }
+      const chartAccess = await verifyChartAccess(req, chartId);
+      if (!chartAccess.ok) return sendJson(res, chartAccess.status, { error: chartAccess.error, code: chartAccess.code });
+
       const token = crypto.randomBytes(24).toString('base64url');
-      const chartId = isUuid(req.body?.chartId) ? String(req.body.chartId) : null;
-      await saveLink({ token, chartId });
+      await saveLink({ token, chartId: chartAccess.chartId });
       return sendJson(res, 201, {
         token,
         telegramUrl: `https://t.me/${username}?start=login_${token}`,
@@ -202,11 +272,18 @@ export async function telegramLinkAuthMiddleware(req, res, next) {
         return sendJson(res, 400, { error: 'Некорректная ссылка Telegram.', code: 'INVALID_TELEGRAM_LINK' });
       }
       const result = await consumeLink(token);
-      if (result.status === 'authorized') {
+      const idempotentAuthorization = result.status === 'consumed'
+        && req.user
+        && result.userId
+        && String(req.user.telegram_id) === String(result.userId);
+      if (result.status === 'authorized' || idempotentAuthorization) {
         setSessionCookie(res, result.userId);
         return sendJson(res, 200, { status: 'authorized', chartId: result.chartId });
       }
-      return sendJson(res, 200, result);
+      if (result.status === 'chart_unavailable') {
+        return sendJson(res, 409, { error: 'Этот клон уже сохранён в другом профиле.', code: 'CHART_ALREADY_CLAIMED' });
+      }
+      return sendJson(res, 200, { status: result.status });
     }
 
     return next();
