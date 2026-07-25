@@ -39,6 +39,7 @@
   };
 
   let activeKind = 'tour';
+  let memoryPendingQuestion = null;
 
   const updateWidget = (kind) => {
     const choice = choices[kind] || choices.tour;
@@ -54,27 +55,53 @@
     });
   };
 
+  const removePendingQuestion = () => {
+    memoryPendingQuestion = null;
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // В приватном режиме хранилище может быть недоступно — переход всё равно работает.
+    }
+  };
+
   const savePendingQuestion = () => {
     const choice = choices[activeKind] || choices.tour;
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+    const pending = {
       kind: activeKind,
       prompt: choice.prompt,
       createdAt: Date.now(),
-    }));
+    };
+    memoryPendingQuestion = pending;
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(pending));
+    } catch {
+      // Оставляем вопрос в памяти текущей страницы и не блокируем создание клона.
+    }
   };
 
   const readPendingQuestion = () => {
+    if (memoryPendingQuestion?.prompt) return memoryPendingQuestion;
     try {
       const pending = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
       if (!pending?.prompt) return null;
       if (Date.now() - Number(pending.createdAt || 0) > 30 * 60 * 1000) {
-        sessionStorage.removeItem(STORAGE_KEY);
+        removePendingQuestion();
         return null;
       }
+      memoryPendingQuestion = pending;
       return pending;
     } catch {
-      sessionStorage.removeItem(STORAGE_KEY);
+      removePendingQuestion();
       return null;
+    }
+  };
+
+  const focusQuestion = () => {
+    if (!questionInput) return;
+    try {
+      questionInput.focus({ preventScroll: true });
+    } catch {
+      questionInput.focus();
     }
   };
 
@@ -85,8 +112,8 @@
       questionInput.value = pending.prompt;
       questionInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    sessionStorage.removeItem(STORAGE_KEY);
-    setTimeout(() => questionInput.focus({ preventScroll: true }), 80);
+    removePendingQuestion();
+    setTimeout(focusQuestion, 80);
     return true;
   };
 
