@@ -1,4 +1,35 @@
-await import('./server.js');
+import express from 'express';
+import { scopeCloneAccess } from './src/clone-access-middleware.js';
+
+const originalUse = express.application.use;
+const originalStatic = express.static;
+
+express.application.use = function patchedUse(...handlers) {
+  const result = originalUse.apply(this, handlers);
+  if (handlers.some((handler) => typeof handler === 'function' && handler.name === 'attachUser')) {
+    originalUse.call(this, scopeCloneAccess);
+  }
+  return result;
+};
+
+express.static = (root, options = {}) => originalStatic(root, {
+  ...options,
+  maxAge: 0,
+  etag: true,
+  setHeaders(res, filePath, stat) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    if (typeof options.setHeaders === 'function') options.setHeaders(res, filePath, stat);
+  },
+});
+
+try {
+  await import('./server.js');
+} finally {
+  express.application.use = originalUse;
+  express.static = originalStatic;
+}
 
 const { startPracticeNotifications } = await import('./src/practice-notifications.js');
 void startPracticeNotifications().catch((error) => {
