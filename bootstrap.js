@@ -1,6 +1,10 @@
 import express from 'express';
 import { scopeCloneAccess } from './src/clone-access-middleware.js';
-import { handleTelegramLinkUpdates, telegramLinkAuthMiddleware } from './src/telegram-link-auth.js';
+import {
+  handleTelegramLinkUpdates,
+  startTelegramLinkUpdatePolling,
+  telegramLinkAuthMiddleware,
+} from './src/telegram-link-auth.js';
 
 const originalUse = express.application.use;
 const originalStatic = express.static;
@@ -49,3 +53,4 @@ const { startPracticeNotifications } = await import('./src/practice-notification
 void startPracticeNotifications().catch((error) => {
   console.error('Не удалось запустить практические Telegram-уведомления:', error);
 });
+startTelegramLinkUpdatePolling({ fetchImpl: originalFetch });
