@@ -3,15 +3,34 @@
   const RETURN_KEY = 'starCloneReturnPath';
   const params = new URLSearchParams(location.search);
   const authReturned = params.get('auth') === 'ok';
+  const paymentReturned = params.get('payment') === 'return';
+  const currentInterfacePath = location.pathname.startsWith('/clone/live') ? '/clone/live/' : '/clone/';
   const requestedReturnPath = String(localStorage.getItem(RETURN_KEY) || '').trim();
 
-  if (authReturned && requestedReturnPath && requestedReturnPath !== location.pathname) {
-    localStorage.removeItem(RETURN_KEY);
+  if ((authReturned || paymentReturned) && requestedReturnPath && requestedReturnPath !== currentInterfacePath) {
     const target = new URL(requestedReturnPath, location.origin);
     params.forEach((value, key) => target.searchParams.set(key, value));
     location.replace(target.toString());
     return;
   }
+
+  localStorage.setItem(RETURN_KEY, currentInterfacePath);
+
+  const nativeReplaceState = history.replaceState.bind(history);
+  history.replaceState = (state, unused, url) => {
+    if (url && currentInterfacePath === '/clone/live/') {
+      try {
+        const target = new URL(url, location.href);
+        if (target.origin === location.origin && target.pathname === '/clone/') {
+          target.pathname = currentInterfacePath;
+          return nativeReplaceState(state, unused, `${target.pathname}${target.search}${target.hash}`);
+        }
+      } catch {
+        // Не вмешиваемся, если браузер не смог разобрать переданный URL.
+      }
+    }
+    return nativeReplaceState(state, unused, url);
+  };
 
   function pendingQuestion() {
     return String(localStorage.getItem(PENDING_KEY) || '').trim();
