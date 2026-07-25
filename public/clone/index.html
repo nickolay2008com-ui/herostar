@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
   <meta name="theme-color" content="#090814">
-  <meta name="description" content="Создайте Звёздного клона по натальной карте. Опишите реальную ситуацию — клон сравнит варианты, выберет свой ход и объяснит, какие элементы карты на него повлияли.">
+  <meta name="description" content="Создайте Звёздного клона по натальной карте. Опишите реальную ситуацию — клон выберет свой ход и объяснит, какие элементы карты на него повлияли.">
   <meta name="yandex-metrika-id" content="110937602">
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
@@ -23,7 +23,6 @@
   <link rel="stylesheet" href="/clone.css">
   <link rel="stylesheet" href="/clone-mobile.css?v=20260724">
   <link rel="stylesheet" href="/clone-hero-v2.css?v=20260724">
-  <link rel="stylesheet" href="/clone-choice-widget.css?v=20260725-v1">
   <link rel="stylesheet" href="/clone-scroll-fix.css?v=20260725-scroll1">
 </head>
 <body>
@@ -39,7 +38,7 @@
       <div class="hero-copy">
         <p class="eyebrow">Астрологическая модель решений</p>
         <h1>Как бы поступил<br><em>ваш клон по звёздам?</em></h1>
-        <p class="lead">Создайте персонажа по натальной карте и приносите ему реальные развилки — куда поехать, что купить, как поступить. Клон сравнит варианты через ваш характер и объяснит свой выбор.</p>
+        <p class="lead">Создайте персонажа по натальной карте. Опишите реальную ситуацию — клон выберет свой ход и объяснит, какие элементы карты на него повлияли.</p>
         <div class="process-flow" aria-label="Как работает Звёздный клон">
           <span class="process-step">Ситуация</span>
           <span class="process-arrow" aria-hidden="true">→</span>
@@ -60,32 +59,10 @@
         <p class="microcopy">Первые три ответа доступны без регистрации. Затем Telegram сохранит клона, историю и доступ на любом устройстве.</p>
         <div class="truth">Клон не предсказывает ваши поступки. Он действует как самостоятельная астрологическая модель.</div>
       </div>
-      <div class="clone-visual choice-widget-host">
-        <div class="halo" aria-hidden="true"></div>
-        <section class="choice-widget" data-choice-widget aria-labelledby="choiceWidgetTitle">
-          <p class="choice-widget-kicker">Обычные и важные решения</p>
-          <h2 id="choiceWidgetTitle">С чем поможет ваш клон?</h2>
-          <p class="choice-widget-lead">Выберите пример. Клон не угадывает «правильный ответ», а помогает понять, какой вариант подходит именно вам.</p>
-          <div class="choice-tabs" role="tablist" aria-label="Примеры выбора">
-            <button class="choice-tab is-active" type="button" role="tab" aria-selected="true" data-choice-kind="tour">🧳 Тур</button>
-            <button class="choice-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-choice-kind="wallpaper">🏠 Обои</button>
-            <button class="choice-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-choice-kind="destination">🗺 Куда поехать</button>
-            <button class="choice-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-choice-kind="purchase">🛍 Что купить</button>
-            <button class="choice-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-choice-kind="action">⚖ Как поступить</button>
-          </div>
-          <div class="choice-example" aria-live="polite">
-            <span class="choice-example-label">Ваш вопрос</span>
-            <strong class="choice-question" data-choice-question>Спокойный отель у моря или насыщенный тур с экскурсиями?</strong>
-            <p class="choice-insight" data-choice-insight>Клон покажет, где вы действительно восстановитесь, а где выберете красивую, но чужую картинку отдыха.</p>
-          </div>
-          <div class="choice-points" aria-label="Что даст разбор">
-            <div class="choice-point"><strong>Ваш критерий</strong><span>что важно именно вам</span></div>
-            <div class="choice-point"><strong>Ловушка</strong><span>где выбор искажается</span></div>
-            <div class="choice-point"><strong>Первый ход</strong><span>как проверить без риска</span></div>
-          </div>
-          <button class="primary choice-widget-cta" type="button" data-choice-start>Разобрать похожий выбор</button>
-          <small class="choice-widget-note">3 ответа бесплатно, без регистрации. Цену, отзывы и другие факты можно добавить прямо в вопрос.</small>
-        </section>
+      <div class="clone-visual">
+        <div class="halo" aria-hidden="true"></div><div class="silhouette" aria-hidden="true"><span>✦</span></div>
+        <div class="signal s1">Марс · как действует</div><div class="signal s2">Луна · как реагирует</div><div class="signal s3">ASC · как входит в ситуацию</div>
+        <p class="visual-caption">Из элементов карты собирается самостоятельный характер решений.</p>
       </div>
     </section>
 
@@ -180,7 +157,6 @@
   <div class="toast" id="cloneToast"></div>
   <script src="/clone-ui-gears.js"></script>
   <script src="/clone.js" defer></script>
-  <script src="/clone-choice-widget.js?v=20260725-v1" defer></script>
   <script src="/clone-scroll-fix.js?v=20260725-scroll1" defer></script>
 </body>
 </html>
