@@ -1,0 +1,80 @@
+/* Render-time detail recovery for the low-resolution alternate portrait. */
+.live-image-filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.live-alternate-image {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #081020;
+  transform: translateZ(0);
+  transition: none;
+}
+
+.live-alternate-image::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  background-image: var(--live-male-image);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  filter: contrast(1.08) brightness(1.055) saturate(1.08);
+  filter: url(#liveImageDetail) contrast(1.08) brightness(1.055) saturate(1.08);
+  transform: scale(1.002);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform, filter;
+  transition: transform .7s cubic-bezier(.2,.7,.2,1), filter .32s ease;
+}
+
+.live-alternate-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(14,17,28,.96) 0%, rgba(14,17,28,.34) 24%, rgba(14,17,28,.04) 52%, transparent 72%),
+    linear-gradient(180deg, rgba(255,255,255,.025), transparent 22%, rgba(3,6,16,.12));
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .live-alternate:hover .live-alternate-image {
+    transform: translateZ(0);
+  }
+
+  .live-alternate:hover .live-alternate-image::before {
+    filter: contrast(1.1) brightness(1.07) saturate(1.1);
+    filter: url(#liveImageDetail) contrast(1.1) brightness(1.07) saturate(1.1);
+    transform: scale(1.018);
+  }
+}
+
+@media (max-width:900px) {
+  .live-alternate-image {
+    background: #081020;
+  }
+
+  .live-alternate-image::before {
+    background-position: 50% 44%;
+  }
+
+  .live-alternate-image::after {
+    background:
+      linear-gradient(0deg, #0e111c 0%, rgba(14,17,28,.3) 24%, transparent 56%),
+      linear-gradient(180deg, rgba(3,6,16,.08), transparent 38%);
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .live-alternate-image::before {
+    transform: none;
+  }
+}
