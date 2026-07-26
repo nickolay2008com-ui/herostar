@@ -4,15 +4,19 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Telegram возвращает пользователя в клон, а выбранный диалог восстанавливается по chart', async () => {
-  const [server, clone, admin] = await Promise.all([
+test('Telegram возвращает пользователя в live-клон, а выбранный диалог восстанавливается по chart', async () => {
+  const [server, clone, living, admin] = await Promise.all([
     read('server.js'),
     read('public/clone.js'),
+    read('public/clone-living.js'),
     read('public/clone-admin-page.js'),
   ]);
   assert.match(server, /rawState\.startsWith\('clone:'\)/);
-  assert.match(server, /res\.redirect\(`\/clone\/\?auth=ok/);
-  assert.match(clone, /callback\.searchParams\.set\('state', `clone:/);
+  assert.match(server, /res\.redirect\(`\/clone\/live\/\?auth=ok/);
+  assert.match(clone, /window\.mountCloneTelegramLink\(container\)/);
+  assert.doesNotMatch(clone, /telegram-widget\.js/);
+  assert.match(living, /window\.mountCloneTelegramLink = enhanceTelegramSlot/);
+  assert.match(living, /\/api\/auth\/telegram-link/);
   assert.match(clone, /requestedChartId/);
   assert.match(admin, /\/clone\/\?chart=/);
 });
