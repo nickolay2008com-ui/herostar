@@ -54,9 +54,52 @@ jobs:
         working-directory: work
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Unit and contract tests
+      - name: Product promise contract
         working-directory: work
-        run: npm test
+        run: node --test test/clone-product-promise.test.js
+
+      - name: Answer factor API contract
+        working-directory: work
+        run: node --test test/clone-answer-factors-contract.test.js
+
+      - name: Factor selector contract
+        working-directory: work
+        run: node --test test/consultation-factors.test.js
+
+      - name: Tariff prompt contract
+        working-directory: work
+        run: node --test test/consultation-profile.test.js
+
+      - name: Functional wiring contract
+        working-directory: work
+        run: node --test test/clone-functional-wiring.test.js
+
+      - name: Mobile quality contract
+        working-directory: work
+        run: node --test test/clone-mobile-quality.test.js
+
+      - name: Capture full unit suite
+        working-directory: work
+        shell: bash
+        run: |
+          set +e
+          npm test > full-suite.log 2>&1
+          echo "$?" > full-suite-status
+          exit 0
+
+      - name: Upload unit diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-clone-unit-diagnostic
+          path: |
+            work/full-suite.log
+            work/full-suite-status
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Enforce full unit suite
+        working-directory: work
+        run: test "$(cat full-suite-status)" = "0"
 
       - name: Install Playwright Chromium
         working-directory: work
@@ -78,7 +121,7 @@ jobs:
         working-directory: work
         shell: bash
         run: |
-          rm -rf priority-one-*.log priority-one-*-status test-results playwright-report
+          rm -rf priority-one-*.log priority-one-*-status full-suite.log full-suite-status test-results playwright-report
           git config user.name "HeroStar Quality Bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A
