@@ -14,15 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - run: git clone -q --depth 1 --branch fix/telegram-auth-loader https://github.com/nickolay2008com-ui/herostar.git repo
-      - working-directory: repo
-        run: npm install --ignore-scripts --no-audit --no-fund >/dev/null
-      - working-directory: repo
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - name: Syntax check
         run: |
-          set +e
-          npm test -- --test-reporter=spec > test-output.log 2>&1
-          status=$?
-          if [ "$status" -ne 0 ]; then
-            grep -E "✖|ERR_ASSERTION|AssertionError|test at|failureType:|error:|code:" test-output.log | tail -80
-          fi
-          exit "$status"
+          node --check server.js
+          for file in public/*.js; do node --check "$file"; done
+          for file in src/*.js; do node --check "$file"; done
