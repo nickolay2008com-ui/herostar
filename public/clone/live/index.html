@@ -12,15 +12,15 @@
   </script>
   <title>Звёздный клон — спросите, как поступить</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/clone.css">
-  <link rel="stylesheet" href="/clone-mobile.css?v=20260724">
-  <link rel="stylesheet" href="/clone-hero-v2.css?v=20260724">
-  <link rel="stylesheet" href="/clone-living.css?v=20260725">
-  <link rel="stylesheet" href="/clone-living-fixes.css?v=20260725">
-  <link rel="stylesheet" href="/clone/live/live-assets.css?v=20260725">
-  <link rel="stylesheet" href="/clone/live/live.css?v=20260725">
-  <link rel="stylesheet" href="/clone/live/live-detail.css?v=20260725-ux2">
-  <link rel="stylesheet" href="/clone/live/live-visual-polish.css?v=20260725-v1">
+  <link rel="stylesheet" href="/clone.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone-mobile.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone-hero-v2.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone-living.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone-living-fixes.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone/live/live-assets.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone/live/live.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone/live/live-detail.css?v=20260726-quality1">
+  <link rel="stylesheet" href="/clone/live/live-visual-polish.css?v=20260726-quality1">
 </head>
 <body class="live-product">
   <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
@@ -127,7 +127,7 @@
             <form id="birthForm" class="birth-form">
               <label>Как обращаться к клону<input name="name" placeholder="Например, Николай · другая версия" required></label>
               <div class="grid"><label>Дата рождения<input type="date" name="date" required></label><label>Точное время<input type="time" name="time" required></label></div>
-              <label class="place-label">Место рождения<input name="placeQuery" id="placeQuery" autocomplete="off" placeholder="Начните вводить город" required><input type="hidden" name="place" id="placeValue"><div id="placeResults" class="place-results"></div></label>
+              <label class="place-label">Место рождения<input name="placeQuery" id="placeQuery" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="placeResults" autocomplete="off" placeholder="Начните вводить город" required><input type="hidden" name="place" id="placeValue"><div id="placeResults" class="place-results" role="listbox"></div><span class="sr-only" id="placeStatus" role="status" aria-live="polite"></span></label>
               <label class="consent-check"><input name="personalDataConsent" type="checkbox" required><span>Я отдельно соглашаюсь на <a href="/consent" target="_blank" rel="noopener">обработку персональных данных</a> и ознакомился с <a href="/privacy" target="_blank" rel="noopener">политикой конфиденциальности</a>.</span></label>
               <button class="primary wide" type="submit">Собрать живую модель</button>
               <p class="error" id="formError"></p>
@@ -192,9 +192,9 @@
   </div>
 
   <div class="toast" id="cloneToast"></div>
-  <script src="/clone-ui-gears.js"></script>
-  <script src="/clone.js" defer></script>
-  <script src="/clone-living.js?v=20260725" defer></script>
-  <script src="/clone/live/live.js?v=20260725" defer></script>
+  <script src="/clone-ui-gears.js?v=20260726-quality1"></script>
+  <script src="/clone.js?v=20260726-quality1" defer></script>
+  <script src="/clone-living.js?v=20260726-quality1" defer></script>
+  <script src="/clone/live/live.js?v=20260726-quality1" defer></script>
 </body>
 </html>
