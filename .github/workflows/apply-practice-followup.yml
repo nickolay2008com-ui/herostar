@@ -1,0 +1,135 @@
+name: Apply practice feedback follow-up
+
+on:
+  push:
+    branches: [feature/practice-feedback-loop]
+    paths: [.github/workflows/apply-practice-followup.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/practice-feedback-loop
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Apply reviewed idempotency fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/practice-notifications.js')
+          text = source.read_text()
+          text = text.replace(
+              "       AND outcome IS NULL\n       AND reminder_sent_at IS NULL\n     RETURNING *",
+              "       AND outcome IS NULL\n       AND reminder_at IS NULL\n       AND reminder_sent_at IS NULL\n     RETURNING *",
+          )
+          old = """async function recordPracticeOutcome(pool, userId, deliveryNumber, outcome) {
+            const result = await pool.query(
+              `WITH target AS (
+                 SELECT user_id, delivery_number, outcome AS previous_outcome
+                 FROM practice_deliveries
+                 WHERE user_id = $1 AND delivery_number = $2
+                 FOR UPDATE
+               ), updated AS (
+                 UPDATE practice_deliveries AS delivery
+                 SET outcome = $3,
+                     outcome_at = NOW(),
+                     reminder_at = NULL
+                 FROM target
+                 WHERE delivery.user_id = target.user_id
+                   AND delivery.delivery_number = target.delivery_number
+                 RETURNING delivery.*
+               )
+               SELECT updated.*, target.previous_outcome IS NULL AS first_result
+               FROM updated
+               JOIN target USING (user_id, delivery_number)`,
+              [String(userId), Number(deliveryNumber), outcome],
+            );
+            return result.rows[0] || null;
+          }
+          """
+          new = """async function recordPracticeOutcome(pool, userId, deliveryNumber, outcome) {
+            const result = await pool.query(
+              `WITH updated AS (
+                 UPDATE practice_deliveries
+                 SET outcome = $3,
+                     outcome_at = NOW(),
+                     reminder_at = NULL
+                 WHERE user_id = $1
+                   AND delivery_number = $2
+                   AND outcome IS NULL
+                 RETURNING *, TRUE AS first_result
+               )
+               SELECT * FROM updated
+               UNION ALL
+               SELECT delivery.*, FALSE AS first_result
+               FROM practice_deliveries AS delivery
+               WHERE delivery.user_id = $1
+                 AND delivery.delivery_number = $2
+                 AND NOT EXISTS (SELECT 1 FROM updated)
+               LIMIT 1`,
+              [String(userId), Number(deliveryNumber), outcome],
+            );
+            return result.rows[0] || null;
+          }
+          """
+          if old not in text:
+              raise SystemExit('recordPracticeOutcome block not found')
+          text = text.replace(old, new)
+          old = """  await answerCallback(token, callback.id, 'Результат сохранён');
+            await telegramRequest(token, 'sendMessage', {
+          """
+          new = """  if (!delivery.first_result) {
+              await answerCallback(token, callback.id, 'Результат уже сохранён');
+              return;
+            }
+            await answerCallback(token, callback.id, 'Результат сохранён');
+            await telegramRequest(token, 'sendMessage', {
+          """
+          if old not in text:
+              raise SystemExit('saveOutcomeAndRespond block not found')
+          source.write_text(text.replace(old, new))
+
+          test = Path('test/practice-notifications.test.js')
+          text = test.read_text()
+          if "node:fs/promises" not in text:
+              text = text.replace(
+                  "import assert from 'node:assert/strict';\n",
+                  "import assert from 'node:assert/strict';\nimport { readFile } from 'node:fs/promises';\n",
+              )
+          marker = "повторные клики не переносят напоминание"
+          if marker not in text:
+              text += """
+
+          test('повторные клики не переносят напоминание и не переписывают результат', async () => {
+            const source = await readFile(new URL('../src/practice-notifications.js', import.meta.url), 'utf8');
+            assert.match(source, /AND reminder_at IS NULL\\s+AND reminder_sent_at IS NULL/);
+            assert.match(source, /AND outcome IS NULL\\s+RETURNING \\*, TRUE AS first_result/);
+            assert.match(source, /Результат уже сохранён/);
+          });
+          """
+          test.write_text(text)
+          PY
+
+      - name: Verify
+        run: |
+          node --check src/practice-notifications.js
+          npm test
+
+      - name: Commit verified result and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-practice-followup.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Укрепить идемпотентность реакций на практику"
+          git push origin HEAD:feature/practice-feedback-loop
