@@ -2,6 +2,8 @@ const METRIKA_ID = 110937602;
 const FREE_PREAUTH_QUESTIONS = 3;
 const STORAGE_KEY = 'starClone';
 const ATTRIBUTION_KEY = 'starCloneAttribution';
+const OFFER_DISMISSAL_KEY_PREFIX = 'starCloneOfferDismissed:';
+const dismissedOffers = new Set();
 
 const state = {
   chartId: null,
@@ -153,7 +155,6 @@ function message(role, text, { persist = true } = {}) {
     : '<div><b>Вы</b><p></p></div>';
   element.querySelector('p').textContent = text;
   $('#messages').append(element);
-  $('#messages').scrollTop = $('#messages').scrollHeight;
   if (persist) {
     state.localMessages.push({ role, content: text, createdAt: new Date().toISOString() });
     persistState();
@@ -161,8 +162,15 @@ function message(role, text, { persist = true } = {}) {
   return element;
 }
 
+function inlineOffers() {
+  return ['#fullModeOffer', '#alignmentOffer'].map($).filter(Boolean);
+}
+
 function resetMessages() {
-  $('#messages').innerHTML = '<article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Я готов. Опишите ситуацию, в которой мне нужно выбрать, ответить или действовать.</p></div></article>';
+  const messages = $('#messages');
+  const offers = inlineOffers();
+  messages.innerHTML = '<article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Я готов. Опишите ситуацию, в которой мне нужно выбрать, ответить или действовать.</p></div></article>';
+  offers.forEach((offer) => messages.append(offer));
 }
 
 function renderConversation(messages) {
@@ -245,15 +253,27 @@ function renderAllowance() {
     : 'Подключите Telegram, чтобы продолжить без лимита';
 }
 
+function syncComposerSubmitState() {
+  const form = $('#questionForm');
+  const button = form?.querySelector('button[type="submit"]');
+  const textarea = $('#question');
+  const hasQuestion = Boolean(textarea?.value.trim());
+  if (button) {
+    button.disabled = state.asking || !hasQuestion;
+    button.setAttribute('aria-label', state.asking ? 'Клон формирует ответ' : 'Отправить вопрос');
+  }
+  form?.setAttribute('aria-busy', String(state.asking));
+}
+
 function setComposerBusy(busy) {
   state.asking = busy;
   const button = $('#questionForm button[type="submit"]');
   const textarea = $('#question');
   if (button) {
-    button.disabled = busy;
     button.textContent = busy ? 'Клон размышляет…' : 'Спросить клона';
   }
   if (textarea) textarea.disabled = busy;
+  syncComposerSubmitState();
 }
 
 function formatPrice(value) {
@@ -274,14 +294,57 @@ function alignmentOffer() {
   };
 }
 
+function offerDismissalKey(offerCode) {
+  return `${OFFER_DISMISSAL_KEY_PREFIX}${offerCode}`;
+}
+
+function isOfferDismissed(offerCode) {
+  if (dismissedOffers.has(offerCode)) return true;
+  try {
+    return sessionStorage.getItem(offerDismissalKey(offerCode)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dismissOffer(offerCode, { focusComposer = true } = {}) {
+  dismissedOffers.add(offerCode);
+  try {
+    sessionStorage.setItem(offerDismissalKey(offerCode), '1');
+  } catch {
+    // Память текущей вкладки уже сохранена в dismissedOffers.
+  }
+  const offer = document.querySelector(`[data-offer-code="${offerCode}"]`);
+  offer?.classList.add('hidden');
+  if (focusComposer) $('#question')?.focus();
+}
+
+function mountInlineOffer(offer, visible) {
+  const messages = $('#messages');
+  if (!offer || !messages) return;
+  offer.classList.toggle('hidden', !visible);
+  if (visible) messages.append(offer);
+}
+
+function dismissVisibleInlineOffers() {
+  inlineOffers()
+    .filter((offer) => !offer.classList.contains('hidden'))
+    .forEach((offer) => dismissOffer(offer.dataset.offerCode, { focusComposer: false }));
+}
+
 function renderCommerceUi() {
   const alignment = alignmentOffer();
   const access = currentAccess();
   const activeDay = access?.clonePlan === 'day' && access?.cloneAccessActive;
-  const showFullMode = Boolean(state.user && !access?.cloneAccessActive && state.questionCount >= 5);
   const showAlignment = Boolean(state.user && access?.clonePlan !== 'alignment' && (activeDay || alignment.credited));
-  $('#fullModeOffer')?.classList.toggle('hidden', !showFullMode);
-  $('#alignmentOffer')?.classList.toggle('hidden', !showAlignment);
+  const showFullMode = Boolean(
+    state.user
+    && !access?.cloneAccessActive
+    && state.questionCount >= 5
+    && !showAlignment
+  );
+  mountInlineOffer($('#fullModeOffer'), showFullMode && !isOfferDismissed('clone_day'));
+  mountInlineOffer($('#alignmentOffer'), showAlignment && !isOfferDismissed('clone_alignment'));
   if ($('#alignmentPrice')) $('#alignmentPrice').textContent = formatPrice(alignment.payableAmount || alignment.amount);
   if ($('#alignmentCreditNote')) {
     $('#alignmentCreditNote').textContent = alignment.credited
@@ -484,6 +547,7 @@ async function loadHistory() {
     renderConversation(state.localMessages);
     persistState();
     renderAllowance();
+    renderCommerceUi();
     return true;
   } catch {
     return false;
@@ -877,14 +941,18 @@ $('#birthForm').addEventListener('submit', async (event) => {
 
 $$('.chips button').forEach((button) => button.addEventListener('click', () => {
   $('#question').value = button.textContent;
+  syncComposerSubmitState();
   $('#question').focus();
 }));
 
 $('#newSituation').addEventListener('click', () => {
   if (!canAsk()) return;
   $('#question').value = '';
+  syncComposerSubmitState();
   $('#question').focus();
 });
+
+$('#question').addEventListener('input', syncComposerSubmitState);
 
 $('#questionForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -893,6 +961,7 @@ $('#questionForm').addEventListener('submit', async (event) => {
   if (!question || !canAsk()) return;
   $('#dialogError').textContent = '';
   setComposerBusy(true);
+  dismissVisibleInlineOffers();
   const userElement = message('user', question, { persist: false });
   $('#question').value = '';
   const pending = message('clone', 'Клон сопоставляет ситуацию с конфигурацией карты…', { persist: false });
@@ -921,6 +990,7 @@ $('#clonePaywall').addEventListener('click', (event) => {
 $('#clonePayButton').addEventListener('click', startPayment);
 $('#openFullModeOffer')?.addEventListener('click', () => openPaywall('clone_day'));
 $('#openAlignmentOffer')?.addEventListener('click', () => openPaywall('clone_alignment'));
+$$('[data-dismiss-offer]').forEach((button) => button.addEventListener('click', () => dismissOffer(button.dataset.dismissOffer)));
 $$('.side nav button').forEach((button) => button.addEventListener('click', () => setWorkspaceTab(button.dataset.tab || 'dialog')));
 
 document.addEventListener('keydown', (event) => {
@@ -928,6 +998,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 (async () => {
+  syncComposerSubmitState();
   track('page_view', 'clone_page_view', { path: location.pathname });
   try {
     state.config = await loadConfig();
