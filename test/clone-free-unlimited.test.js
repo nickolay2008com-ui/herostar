@@ -19,7 +19,7 @@ test('анонимный пользователь получает три отв
   assert.ok(server.includes("app.post('/api/consult', consultLimiter, async"));
   assert.ok(server.includes("if (!req.user && product !== 'clone')"));
   assert.ok(clone.includes('FREE_PREAUTH_QUESTIONS = 3'));
-  assert.ok(clone.includes('Бесплатный режим · сообщения без лимита'));
+  assert.ok(clone.includes('Бесплатный диалог без лимита'));
   assert.ok(!clone.includes("openPaywall('clone_day');\n  return false"));
 });
 
