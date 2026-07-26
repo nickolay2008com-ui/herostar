@@ -11,7 +11,7 @@ let fallbackPollingRuntime = null;
 let botIdentityCache = { username: null, expiresAt: 0 };
 
 function compact(value = '') {
-  return String(value).trim();
+  return String(value ?? '').trim();
 }
 
 function configuredBotUsername() {
@@ -230,8 +230,8 @@ async function consumeLink(token) {
   const link = await readLink(token);
   const record = link.record;
   if (!record) return { status: 'missing' };
-  if (record.consumedAt) return { status: 'consumed', userId: record.userId, chartId: record.chartId || null };
   if (new Date(record.expiresAt).getTime() <= Date.now()) return { status: 'expired' };
+  if (record.consumedAt) return { status: 'consumed', userId: record.userId, chartId: record.chartId || null };
   if (!record.userId) return { status: 'pending' };
 
   if (record.chartId) {
@@ -294,11 +294,8 @@ export async function telegramLinkAuthMiddleware(req, res, next) {
         return sendJson(res, 400, { error: 'Некорректная ссылка Telegram.', code: 'INVALID_TELEGRAM_LINK' });
       }
       const result = await consumeLink(token);
-      const idempotentAuthorization = result.status === 'consumed'
-        && req.user
-        && result.userId
-        && String(req.user.telegram_id) === String(result.userId);
-      if (result.status === 'authorized' || idempotentAuthorization) {
+      const reusableAuthorization = result.status === 'consumed' && result.userId;
+      if (result.status === 'authorized' || reusableAuthorization) {
         setSessionCookie(res, result.userId);
         return sendJson(res, 200, { status: 'authorized', chartId: result.chartId });
       }
@@ -347,11 +344,14 @@ export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThi
 
     const baseUrl = publicBaseUrl();
     const returnUrl = baseUrl
-      ? `${baseUrl}/clone/?${new URLSearchParams({ telegram_link: token, ...(claimed.chartId ? { chart: claimed.chartId } : {}) }).toString()}`
+      ? `${baseUrl}/clone/live/?${new URLSearchParams({ telegram_link: token, ...(claimed.chartId ? { chart: claimed.chartId } : {}) }).toString()}`
       : null;
+    const confirmationText = claimed.chartId
+      ? '✦ Telegram подключён. Клон и история теперь сохранятся за вами. Вернитесь на страницу — разговор продолжится автоматически.'
+      : '✦ Telegram подтверждён. Возвращаем вас к сохранённому Звёздному клону.';
     await sendTelegramMessage(fetchImpl, botToken, {
       chat_id: message.chat?.id || message.from.id,
-      text: '✦ Telegram подключён. Клон и история теперь сохранятся за вами. Вернитесь на страницу — разговор продолжится автоматически.',
+      text: confirmationText,
       reply_markup: returnUrl ? { inline_keyboard: [[{ text: 'Вернуться к Звёздному клону', url: returnUrl }]] } : undefined,
     }).catch((error) => console.error('Telegram link confirmation failed:', error.message));
   }
