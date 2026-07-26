@@ -1,6 +1,102 @@
 /* HeroStar Clone — mobile visual polish.
    Pure presentation layer: calmer hierarchy, fewer nested cards, clearer reading. */
 
+.live-product .premium-entry {
+  position: static;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 2px 8px 10px;
+  border: 0;
+  background: transparent;
+  color: #d8c9ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.live-product .premium-entry span {
+  color: #f5d68a;
+}
+
+.live-product .premium-entry:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+.live-product .premium-discovery {
+  z-index: 70;
+}
+
+.live-product .premium-discovery-card {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 30px;
+  border: 1px solid rgba(167,139,250,.28);
+  border-radius: 26px;
+  background: linear-gradient(160deg,#1b1732,#0d0b19);
+  box-shadow: 0 30px 100px rgba(0,0,0,.52);
+}
+
+.live-product .premium-discovery-card h2 {
+  margin: 7px 0 12px;
+  font-size: clamp(28px, 6vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+
+.live-product .premium-discovery-card > p:not(.eyebrow) {
+  margin: 0 0 22px;
+  color: #bbb3c7;
+  line-height: 1.62;
+}
+
+.live-product .premium-discovery-back {
+  display: block;
+  min-height: 44px;
+  margin: 8px auto 0;
+  padding: 9px 14px;
+  border: 0;
+  background: transparent;
+  color: #c8c0d0;
+  font: inherit;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.live-product .premium-discovery-card > small {
+  display: block;
+  color: #91899b;
+  text-align: center;
+}
+
+.live-product .passport-premium-entry {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid rgba(177,135,255,.2);
+  border-radius: 18px;
+  background: rgba(177,135,255,.055);
+}
+
+.live-product .passport-premium-entry h4 {
+  margin: 5px 0 8px;
+  font-size: 19px;
+}
+
+.live-product .passport-premium-entry > p:not(.eyebrow) {
+  margin: 0 0 14px;
+  color: #aaa2b5;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.live-product .passport-premium-entry .ghost {
+  min-height: 44px;
+}
+
 @media (max-width: 900px) {
   body.live-product:has(.workspace:not(.hidden)) {
     --mobile-bg: #08070f;
@@ -383,5 +479,56 @@
   .live-product #dialogView .composer {
     margin-right: 7px;
     margin-left: 7px;
+  }
+}
+
+@media (max-width: 900px) {
+  .live-product #dialogView .chips {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+    overflow: visible;
+    padding: 8px 10px 10px;
+  }
+
+  .live-product #dialogView .chips button {
+    min-height: 40px;
+    max-width: 100%;
+    flex: 1 1 128px;
+    padding: 9px 12px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .live-product #dialogView .chips button:last-child {
+    flex-basis: 100%;
+  }
+
+  .live-product #dialogView .conversation-started .conversation-head {
+    min-height: 44px;
+    padding-bottom: 6px;
+  }
+
+  .live-product .premium-discovery {
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .live-product .premium-discovery-card {
+    width: 100%;
+    padding: 27px 20px calc(22px + env(safe-area-inset-bottom));
+    border-radius: 24px 24px 18px 18px;
+  }
+}
+
+@media (max-width: 380px) {
+  .live-product .premium-entry {
+    font-size: 0;
+  }
+
+  .live-product .premium-entry::after {
+    content: "Полный";
+    font-size: 12px;
   }
 }
