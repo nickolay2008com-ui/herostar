@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,8 +20,12 @@ jobs:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm test
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm run test:e2e
       - name: Syntax check
         run: |
           node --check server.js
-          for file in public/*.js; do node --check "$file"; done
+          for file in public/*.js public/clone/live/*.js; do node --check "$file"; done
           for file in src/*.js; do node --check "$file"; done
