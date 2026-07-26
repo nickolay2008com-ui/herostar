@@ -56,7 +56,27 @@ jobs:
         working-directory: work
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Unit and contract tests
+      - name: Product promise contract
+        working-directory: work
+        run: node --test test/clone-product-promise.test.js
+
+      - name: Answer factor API contract
+        working-directory: work
+        run: node --test test/clone-answer-factors-contract.test.js
+
+      - name: Factor selector contract
+        working-directory: work
+        run: node --test test/consultation-factors.test.js
+
+      - name: Tariff prompt contract
+        working-directory: work
+        run: node --test test/consultation-profile.test.js
+
+      - name: Mobile quality contract
+        working-directory: work
+        run: node --test test/clone-mobile-quality.test.js
+
+      - name: Full unit and contract suite
         working-directory: work
         run: npm test
 
