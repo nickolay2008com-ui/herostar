@@ -393,32 +393,57 @@ function prepareOffer(offerCode = 'clone_day') {
   }
 }
 
-function openPaywall(offerCode = 'clone_day') {
+function openPaywall(offerCode = 'clone_day', trigger = document.activeElement) {
   prepareOffer(offerCode);
   track('paywall_opened', 'clone_paywall_opened', { questionCount: state.questionCount, offerCode });
   goal('clone_paywall', { offer: offerCode });
-  $('#clonePaywall').classList.remove('hidden');
+  openDialog($('#clonePaywall'), trigger);
 }
 
-let premiumDiscoveryTrigger = null;
+let activeDialog = null;
+let activeDialogTrigger = null;
+
+function dialogBackgrounds() {
+  return [$('main'), $('.live-topbar')].filter(Boolean);
+}
+
+function dialogFocusable(dialog) {
+  return [...dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter((element) => !element.classList.contains('hidden'));
+}
+
+function openDialog(dialog, trigger = document.activeElement) {
+  if (!dialog) return;
+  activeDialog = dialog;
+  activeDialogTrigger = trigger;
+  dialogBackgrounds().forEach((element) => { element.inert = true; });
+  dialog.classList.remove('hidden');
+  dialogFocusable(dialog)[0]?.focus();
+}
+
+function closeDialog(dialog, { restoreFocus = true } = {}) {
+  if (!dialog) return;
+  dialog.classList.add('hidden');
+  if (activeDialog === dialog) activeDialog = null;
+  dialogBackgrounds().forEach((element) => { element.inert = false; });
+  if (restoreFocus) activeDialogTrigger?.focus?.();
+  activeDialogTrigger = null;
+}
 
 function openPremiumDiscovery(source = 'header_entry') {
-  premiumDiscoveryTrigger = document.activeElement;
   track('paywall_opened', 'premium_entry_click', {
     source,
     questionCount: state.questionCount,
   });
-  $('#premiumDiscovery')?.classList.remove('hidden');
-  $('#closePremiumDiscovery')?.focus();
+  openDialog($('#premiumDiscovery'));
 }
 
 function closePremiumDiscovery({ restoreFocus = true } = {}) {
-  $('#premiumDiscovery')?.classList.add('hidden');
-  if (restoreFocus) premiumDiscoveryTrigger?.focus?.();
+  closeDialog($('#premiumDiscovery'), { restoreFocus });
 }
 
 function closePaywall() {
-  $('#clonePaywall').classList.add('hidden');
+  closeDialog($('#clonePaywall'));
 }
 
 function canAsk() {
@@ -885,39 +910,85 @@ $$('[data-go-create]').forEach((button) => button.addEventListener('click', () =
 }));
 
 let placeTimer;
+let activePlaceIndex = -1;
+
+function closePlaceResults(status = '') {
+  $('#placeResults').innerHTML = '';
+  $('#placeQuery').setAttribute('aria-expanded', 'false');
+  $('#placeQuery').removeAttribute('aria-activedescendant');
+  $('#placeStatus').textContent = status;
+  activePlaceIndex = -1;
+}
+
+function setActivePlaceIndex(index) {
+  const options = [...$('#placeResults').querySelectorAll('[role="option"]')];
+  if (!options.length) return;
+  activePlaceIndex = (index + options.length) % options.length;
+  options.forEach((option, optionIndex) => {
+    const active = optionIndex === activePlaceIndex;
+    option.setAttribute('aria-selected', String(active));
+    option.classList.toggle('active', active);
+  });
+  $('#placeQuery').setAttribute('aria-activedescendant', options[activePlaceIndex].id);
+  options[activePlaceIndex].scrollIntoView({ block: 'nearest' });
+}
+
 $('#placeQuery').addEventListener('input', () => {
   clearTimeout(placeTimer);
   state.selectedPlace = null;
   $('#placeValue').value = '';
   const query = $('#placeQuery').value.trim();
   if (query.length < 2) {
-    $('#placeResults').innerHTML = '';
+    closePlaceResults();
     return;
   }
   placeTimer = setTimeout(async () => {
     try {
       const data = await json(`/api/places?q=${encodeURIComponent(query)}`);
-      $('#placeResults').innerHTML = '';
-      (data.items || []).slice(0, 6).forEach((item) => {
+      if ($('#placeQuery').value.trim() !== query) return;
+      const items = (data.items || []).slice(0, 6);
+      closePlaceResults(items.length ? `Найдено городов: ${items.length}` : 'Города не найдены');
+      items.forEach((item, index) => {
         const button = document.createElement('button');
         button.type = 'button';
+        button.id = `place-option-${index}`;
+        button.setAttribute('role', 'option');
+        button.setAttribute('aria-selected', 'false');
         button.textContent = item.label || item.name;
         button.onclick = () => {
           state.selectedPlace = item;
           $('#placeQuery').value = item.label || item.name;
           $('#placeValue').value = selectedPlaceValue(item);
-          $('#placeResults').innerHTML = '';
+          closePlaceResults(`Выбран город: ${item.label || item.name}`);
         };
+        button.onpointermove = () => setActivePlaceIndex(index);
         $('#placeResults').append(button);
       });
+      $('#placeQuery').setAttribute('aria-expanded', String(items.length > 0));
     } catch {
-      $('#placeResults').innerHTML = '';
+      closePlaceResults('Не удалось загрузить города');
     }
   }, 250);
 });
 
+$('#placeQuery').addEventListener('keydown', (event) => {
+  const options = [...$('#placeResults').querySelectorAll('[role="option"]')];
+  if (event.key === 'ArrowDown' && options.length) {
+    event.preventDefault();
+    setActivePlaceIndex(activePlaceIndex + 1);
+  } else if (event.key === 'ArrowUp' && options.length) {
+    event.preventDefault();
+    setActivePlaceIndex(activePlaceIndex - 1);
+  } else if (event.key === 'Enter' && activePlaceIndex >= 0) {
+    event.preventDefault();
+    options[activePlaceIndex]?.click();
+  } else if (event.key === 'Escape') {
+    closePlaceResults();
+  }
+});
+
 document.addEventListener('click', (event) => {
-  if (!event.target.closest('.place-label')) $('#placeResults').innerHTML = '';
+  if (!event.target.closest('.place-label')) closePlaceResults();
 });
 
 $('#birthForm').addEventListener('submit', async (event) => {
@@ -1026,8 +1097,9 @@ $('#openPassportPremium')?.addEventListener('click', () => openPremiumDiscovery(
 $('#closePremiumDiscovery')?.addEventListener('click', () => closePremiumDiscovery());
 $('#returnToDialog')?.addEventListener('click', () => closePremiumDiscovery());
 $('#continueToFullMode')?.addEventListener('click', () => {
+  const discoveryTrigger = activeDialogTrigger;
   closePremiumDiscovery({ restoreFocus: false });
-  openPaywall('clone_day');
+  openPaywall('clone_day', discoveryTrigger);
 });
 $('#premiumDiscovery')?.addEventListener('click', (event) => {
   if (event.target === $('#premiumDiscovery')) closePremiumDiscovery();
@@ -1036,8 +1108,20 @@ $$('[data-dismiss-offer]').forEach((button) => button.addEventListener('click', 
 $$('.side nav button').forEach((button) => button.addEventListener('click', () => setWorkspaceTab(button.dataset.tab || 'dialog')));
 
 document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return;
-  if (!$('#premiumDiscovery')?.classList.contains('hidden')) closePremiumDiscovery();
+  if (event.key === 'Tab' && activeDialog) {
+    const focusable = dialogFocusable(activeDialog);
+    if (!focusable.length) return;
+    const currentIndex = focusable.indexOf(document.activeElement);
+    const leavingStart = event.shiftKey && currentIndex <= 0;
+    const leavingEnd = !event.shiftKey && currentIndex === focusable.length - 1;
+    if (leavingStart || leavingEnd) {
+      event.preventDefault();
+      focusable[leavingStart ? focusable.length - 1 : 0].focus();
+    }
+    return;
+  }
+  if (event.key !== 'Escape' || !activeDialog) return;
+  if (activeDialog === $('#premiumDiscovery')) closePremiumDiscovery();
   else closePaywall();
 });
 

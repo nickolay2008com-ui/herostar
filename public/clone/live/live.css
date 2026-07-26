@@ -347,7 +347,7 @@
 .live-intent-form.has-value .live-intent-meta { color: #9692a0; }
 
 .live-question-examples { grid-column: 2; display: flex; flex-wrap: wrap; gap: 7px; margin-top: -20px; }
-.live-question-examples button { min-height: 34px; padding: 8px 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.025); color: #9996a2; font: inherit; font-size: 11px; cursor: pointer; }
+.live-question-examples button { min-height: 44px; padding: 8px 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.025); color: #9996a2; font: inherit; font-size: 12px; cursor: pointer; }
 .live-question-examples button:hover { border-color: rgba(164,132,255,.3); background: rgba(154,119,255,.07); color: #fff; }
 
 .live-alternate { min-height: 330px; display: grid; grid-template-columns: minmax(0,.9fr) minmax(360px,1.1fr); }
@@ -419,6 +419,7 @@
   .live-benefits span { min-height: 48px; padding: 7px 5px; font-size: 12px; line-height: 1.25; }
   .live-benefits b { display: none; }
   .live-hero { margin-bottom: 0; }
+  .live-hero-image { will-change: auto; }
   .live-flow { margin-top: 12px; }
   .live-flow,.live-intent { padding: 22px 17px; }
   .live-steps article { padding: 21px; border-radius: 20px; }

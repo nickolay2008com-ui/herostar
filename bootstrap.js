@@ -35,9 +35,17 @@ express.static = (root, options = {}) => originalStatic(root, {
   maxAge: 0,
   etag: true,
   setHeaders(res, filePath, stat) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    const requestUrl = String(res.req?.originalUrl || '');
+    const isVersionedAsset = /[?&]v=[^&]+/.test(requestUrl) && /\.(?:css|js)(?:\?|$)/i.test(requestUrl);
+    if (isVersionedAsset) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.removeHeader('Pragma');
+      res.removeHeader('Expires');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
     if (typeof options.setHeaders === 'function') options.setHeaders(res, filePath, stat);
   },
 });

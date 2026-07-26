@@ -97,6 +97,16 @@
   min-height: 44px;
 }
 
+.live-product .modal-close {
+  width: 44px;
+  height: 44px;
+}
+
+.live-product .place-results button.active {
+  background: rgba(177,135,255,.14);
+  color: #fff;
+}
+
 @media (max-width: 900px) {
   body.live-product:has(.workspace:not(.hidden)) {
     --mobile-bg: #08070f;
@@ -493,7 +503,7 @@
   }
 
   .live-product #dialogView .chips button {
-    min-height: 40px;
+    min-height: 44px;
     max-width: 100%;
     flex: 1 1 128px;
     padding: 9px 12px;
