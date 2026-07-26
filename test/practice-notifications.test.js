@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   buildOutcomeKeyboard,
   buildPracticeKeyboard,
@@ -69,4 +70,12 @@ test('выжимка честно разделяет подтверждённы�
   assert.match(summary, /Пока не стало опорой/);
   assert.match(summary, /Луна/);
   assert.match(summary, /личная карта работающих принципов/);
+});
+
+test('повторные клики не переносят напоминание и не переписывают результат', async () => {
+  const source = await readFile(new URL('../src/practice-notifications.js', import.meta.url), 'utf8');
+  assert.match(source, /AND reminder_at IS NULL\s+AND reminder_sent_at IS NULL/);
+  assert.match(source, /AND outcome IS NULL\s+RETURNING \*, TRUE AS first_result/);
+  assert.match(source, /Результат уже сохранён/);
+  assert.match(source, /editMessageReplyMarkup/);
 });
