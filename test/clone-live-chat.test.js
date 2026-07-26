@@ -74,7 +74,7 @@ test('полный режим спокойно обнаруживается в �
   assert.match(clone, /const showPremiumEntry = Boolean\(state\.chartId && state\.user && !access\?\.cloneAccessActive\)/);
   assert.match(clone, /openPremiumDiscovery'\)\?\.addEventListener\('click', \(\) => openPremiumDiscovery\('header_entry'\)\)/);
   assert.match(clone, /openPassportPremium'\)\?\.addEventListener\('click', \(\) => openPremiumDiscovery\('passport_entry'\)\)/);
-  assert.match(clone, /closePremiumDiscovery\(\{ restoreFocus: false \}\);[\s\S]*?openPaywall\('clone_day'\)/);
+  assert.match(clone, /const discoveryTrigger = activeDialogTrigger;[\s\S]*?closePremiumDiscovery\(\{ restoreFocus: false \}\);[\s\S]*?openPaywall\('clone_day', discoveryTrigger\)/);
 
   const entry = declarationsFor(styles, '.live-product .premium-entry');
   assert.match(entry, /position:\s*static/);
