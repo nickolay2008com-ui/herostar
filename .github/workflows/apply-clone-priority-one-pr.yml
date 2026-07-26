@@ -1,265 +1,68 @@
-name: Build clone priority one artifact
+name: Publish verified clone implementation
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - feature/clone-priority-one
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 jobs:
-  build-artifact:
+  publish:
+    if: "!contains(github.event.head_commit.message, '[publish-run]')"
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout task source
+        uses: actions/checkout@v4
         with:
           ref: feature/clone-priority-one
+          path: source
+          fetch-depth: 0
+      - name: Checkout clean main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: work
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Apply canonical implementation
+          cache-dependency-path: work/package-lock.json
+      - name: Restore tested implementation artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          python - <<'PY'
-          import base64, gzip, re
-          from pathlib import Path
-          workflow = Path('.github/workflows/apply-clone-priority-one.yml').read_text()
-          match = re.search(r'PATCH_B64: "([A-Za-z0-9+/=]+)"', workflow)
-          if not match:
-              raise SystemExit('PATCH_B64 not found')
-          Path('/tmp/apply-priority-one.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
-          PY
-          python /tmp/apply-priority-one.py
-      - name: Reconcile current contracts and browser scenarios
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/8634816222/zip > /tmp/priority-one.zip
+          unzip -q /tmp/priority-one.zip -d /tmp/priority-one
+          tar -xzf /tmp/priority-one/priority-one.tgz -C work
+      - name: Reconcile approved contracts
+        working-directory: work
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          def replace(path, old, new):
-              target = Path(path)
-              text = target.read_text()
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'{path}: expected 1 occurrence, found {count}')
-              target.write_text(text.replace(old, new, 1))
-
-          replace('public/clone/index.html', '/clone.js?v=20260726-auth2', '/clone.js?v=20260726-priority1')
-          replace(
-              'src/ai.js',
-              'return `Ваш звёздный клон сначала отделил бы необратимые ставки',
-              'return `Ваш звёздный клон, вероятнее всего, сначала отделил бы необратимые ставки',
-          )
-          replace(
-              'src/ai.js',
-              "  if (premium) {\n    return String(profile?.systemPromptAddon || '').trim();\n  }",
-              "  if (premium) {\n    return `${String(profile?.systemPromptAddon || '').trim()}\\n\\nСервер заранее выбрал факторы текущего ответа и передал их в selectedFactors. Используй только их; не добавляй ни одного положения, дома, угла или аспекта вне selectedFactors.`;\n  }",
-          )
-          replace(
-              'test/clone-mobile-quality.test.js',
-              "  assert.ok(assets.every((asset) => /[?&]v=20260726-auth2/.test(asset)));",
-              "  assert.ok(assets.every((asset) => /[?&]v=[A-Za-z0-9._-]+/.test(asset)));\n  assert.match(html, /\\/clone\\.js\\?v=20260726-priority1/);",
-          )
-          replace(
-              'test/consultation-profile.test.js',
-              "  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultation({'), serverSource.indexOf('answerConsultation({') + 500);",
-              "  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultationWithFactors({'), serverSource.indexOf('answerConsultationWithFactors({') + 500);",
-          )
-
-          Path('playwright.config.js').write_text("""import { defineConfig, devices } from '@playwright/test';
-
-export default defineConfig({
-  testDir: './e2e',
-  timeout: 45_000,
-  expect: { timeout: 10_000 },
-  fullyParallel: false,
-  workers: process.env.CI ? 1 : undefined,
-  retries: 0,
-  reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'line',
-  use: {
-    baseURL: 'http://127.0.0.1:3100',
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-  },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
-  ],
-  webServer: {
-    command: 'npm start',
-    url: 'http://127.0.0.1:3100/health',
-    timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
-    env: {
-      PORT: '3100',
-      NODE_ENV: 'test',
-      DEMO_MODE: 'true',
-      SESSION_SECRET: 'browser-tests-session-secret-32-chars-minimum',
-      APP_URL: 'http://127.0.0.1:3100',
-    },
-  },
-});
-""")
-
-          Path('e2e/clone-live.spec.js').write_text("""import { test, expect } from '@playwright/test';
-
-async function mockPlaces(page) {
-  await page.route('**/api/places?q=*', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ items: [{ name: 'Донецк', label: 'Донецк, Украина', latitude: 48.0159, longitude: 37.8028 }] }),
-    });
-  });
-}
-
-async function startFromQuestion(page, questionText) {
-  await mockPlaces(page);
-  await page.goto('/clone/live/');
-  await page.locator('#heroQuestion').fill(questionText);
-  await page.locator('#heroQuestionForm').getByRole('button', { name: /Сохранить вопрос/ }).click();
-  await expect(page.locator('#createView')).toBeVisible();
-}
-
-async function selectPlace(page) {
-  await page.locator('#placeQuery').fill('Донецк');
-  await page.getByRole('option', { name: /Донецк/ }).click();
-}
-
-async function createClone(page, { unknownTime = false } = {}) {
-  await page.locator('input[name="name"]').fill('Звёздный Николай');
-  await page.locator('input[name="date"]').fill('1987-11-06');
-  if (unknownTime) {
-    await page.locator('#unknownTime').check();
-    await expect(page.locator('#birthTime')).toBeDisabled();
-  } else {
-    await page.locator('#birthTime').fill('01:15');
-  }
-  await selectPlace(page);
-  await page.locator('input[name="personalDataConsent"]').check();
-  await page.getByRole('button', { name: 'Собрать живую модель' }).click();
-
-  await expect.poll(async () => {
-    if (await page.locator('#dialogView').isVisible()) return 'ready';
-    const formError = String(await page.locator('#formError').textContent() || '').trim();
-    return formError ? `error: ${formError}` : 'waiting';
-  }, {
-    timeout: 30_000,
-    message: 'Клон должен создаться; при ошибке формы она должна быть видна в результате теста',
-  }).toBe('ready');
-
-  await expect(page.locator('#messages .message.user')).toContainText(/проект|партнёр|решить/i, { timeout: 15_000 });
-  await expect(page.locator('#messages .message.clone').last()).not.toContainText('Клон готовит ответ', { timeout: 30_000 });
-}
-
-function desktopOnly(testInfo) {
-  test.skip(testInfo.project.name !== 'chromium', 'Основной контракт проверяется один раз в десктопном Chromium');
-}
-
-test('вопрос проходит через создание Клона и показывает реальные факторы ответа', async ({ page }, testInfo) => {
-  desktopOnly(testInfo);
-  await startFromQuestion(page, 'Стоит ли входить в новый проект, если роли и деньги пока не определены?');
-  await createClone(page);
-  await expect(page.locator('#logicFactors')).toBeVisible();
-  expect(await page.locator('#logicFactors .factor').count()).toBeGreaterThanOrEqual(2);
-  await expect(page.locator('#logicFactors')).toContainText(/дом|Марс|Венера|Сатурн|Солнце/i);
-  await expect(page.locator('#logicFactors')).toContainText(/текущ|действ|решен|связ/i);
-});
-
-test('режим неизвестного времени честно исключает дома, углы и Луну', async ({ page }, testInfo) => {
-  desktopOnly(testInfo);
-  await startFromQuestion(page, 'Как ответить партнёру и сохранить ясные договорённости?');
-  await createClone(page, { unknownTime: true });
-  await expect(page.locator('#cloneStatus')).toContainText('без домов');
-  await expect(page.locator('#logicFactors')).toContainText('Время рождения неизвестно');
-  await expect(page.locator('#logicFactors .factor')).not.toContainText(/дом|Асцендент|ASC|MC|Луна/i);
-  await expect(page.locator('#technicalBasis')).toContainText('Карта без домов');
-});
-
-test('ответ и его факторный след восстанавливаются после перезагрузки', async ({ page }, testInfo) => {
-  desktopOnly(testInfo);
-  await startFromQuestion(page, 'Стоит ли входить в новый проект или пока сохранить стабильность?');
-  await createClone(page);
-  const answer = await page.locator('#messages .message.clone').last().locator('p').innerText();
-  const factorHeading = await page.locator('#logicFactors .factor').first().locator('strong').innerText();
-  await page.reload();
-  await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('#messages .message.clone').last().locator('p')).toContainText(answer.slice(0, 45));
-  await expect(page.locator('#logicFactors')).toContainText(factorHeading);
-});
-
-test('мобильный основной путь сохраняет доступ к полю и факторной панели', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile-chromium', 'Проверка предназначена для мобильного проекта');
-  await startFromQuestion(page, 'Стоит ли рискнуть и начать новый проект сейчас?');
-  await createClone(page);
-  await expect(page.locator('#question')).toBeVisible();
-  await page.locator('#question').fill('Какой шаг проверить первым?');
-  await expect(page.locator('#questionForm button[type="submit"]')).toBeEnabled();
-  await page.locator('button[data-tab="profile"]').click();
-  await expect(page.locator('#logicFactors')).toBeVisible();
-});
-""")
-          PY
-      - name: Capture unit tests
+          python ../source/scripts/reconcile-clone-priority-one.py
+          git checkout HEAD -- .github/workflows/ci.yml
+      - name: Install and test
+        working-directory: work
         shell: bash
         run: |
-          set +e
-          npm test > priority-one-test.log 2>&1
-          status=$?
-          echo "$status" > priority-one-unit-status
-          tail -n 180 priority-one-test.log
-          exit 0
-      - name: Install Playwright Chromium
-        shell: bash
-        run: npx playwright install --with-deps chromium
-      - name: Capture browser tests
-        shell: bash
-        run: |
-          set +e
-          npm run test:e2e > priority-one-e2e.log 2>&1
-          status=$?
-          echo "$status" > priority-one-e2e-status
-          tail -n 240 priority-one-e2e.log
-          exit 0
-      - name: Capture syntax validation
+          npm install --ignore-scripts --no-audit --no-fund
+          npm test
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+          node --check server.js
+          for file in public/*.js public/clone/live/*.js src/*.js; do node --check "$file"; done
+          git diff --check
+      - name: Publish verified branch
+        working-directory: work
         shell: bash
         run: |
-          set +e
-          {
-            node --check server.js
-            for file in public/*.js public/clone/live/*.js src/*.js; do node --check "$file"; done
-            git diff --check
-          } > priority-one-validation.log 2>&1
-          status=$?
-          echo "$status" > priority-one-validation-status
-          cat priority-one-validation.log
-          exit 0
-      - name: Pack implementation
-        if: always()
-        shell: bash
-        run: |
-          tar -czf priority-one.tgz \
-            src/consultation-factors.js src/ai.js server.js \
-            public/clone.js public/clone.html public/clone/index.html public/clone/live/index.html public/clone/live/live.css \
-            test/consultation-factors.test.js test/clone-answer-factors-contract.test.js \
-            test/clone-mobile-quality.test.js test/consultation-profile.test.js \
-            playwright.config.js e2e/clone-live.spec.js package.json package-lock.json \
-            .github/workflows/ci.yml priority-one-test.log priority-one-e2e.log priority-one-validation.log \
-            priority-one-unit-status priority-one-e2e-status priority-one-validation-status
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: clone-priority-one
-          path: priority-one.tgz
-          if-no-files-found: error
-          retention-days: 2
-      - name: Enforce green result
-        if: always()
-        shell: bash
-        run: |
-          test "$(cat priority-one-unit-status)" = "0"
-          test "$(cat priority-one-e2e-status)" = "0"
-          test "$(cat priority-one-validation-status)" = "0"
+          git config user.name "HeroStar Quality Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Реализовать две очереди Звёздного клона [publish-run]"
+          git push --force origin HEAD:refs/heads/agent/clone-priority-one-implementation
