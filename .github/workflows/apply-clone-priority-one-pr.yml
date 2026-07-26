@@ -49,6 +49,7 @@ jobs:
         run: |
           sed -i 's#/clone/live/live.css?v=20260726-auth2#/clone/live/live.css?v=20260726-priority1#' ../source/scripts/reconcile-clone-priority-one.py
           python ../source/scripts/reconcile-clone-priority-one.py
+          sed -i 's#/без домов, ASC\\/MC и Луны/#/дома, ASC\\/MC и Луна/#' test/clone-answer-factors-contract.test.js
           git checkout HEAD -- .github/workflows/ci.yml
 
       - name: Install dependencies
