@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
+  buildOutcomeKeyboard,
+  buildPracticeKeyboard,
   buildPracticeMessage,
+  buildWeeklySummary,
   pickNextPracticeCard,
   selectPracticeCards,
 } from '../src/practice-notifications.js';
@@ -14,29 +18,64 @@ const portrait = {
   ],
 };
 
-test('Сонастройка использует полный набор карточек купленного паспорта', () => {
+test('практика использует полный набор карточек купленного паспорта', () => {
   const cards = selectPracticeCards(portrait, ['moon']);
   assert.deepEqual(cards.map((card) => card.id), ['sun', 'moon', 'mercury']);
 });
 
-test('без истории берётся первая практика полного паспорта', () => {
-  const cards = selectPracticeCards(portrait, []);
-  assert.deepEqual(cards.map((card) => card.id), ['sun', 'moon', 'mercury']);
-});
-
-test('следующая практика циклически меняет настройку клона', () => {
+test('следующая практика циклически меняет настройку карты', () => {
   const cards = selectPracticeCards(portrait, []);
   assert.equal(pickNextPracticeCard(cards, 'sun').id, 'moon');
   assert.equal(pickNextPracticeCard(cards, 'mercury').id, 'sun');
 });
 
-test('сообщение содержит ключевой момент и мини-задание без мистических обещаний', () => {
+test('сообщение объясняет пользу и просит сохранить реальный результат', () => {
   const message = buildPracticeMessage(portrait.cards[0], 0);
-  assert.match(message, /Сонастройка: Солнце/);
-  assert.match(message, /Ключевой момент/);
-  assert.match(message, /Мини-задание/);
+  assert.match(message, /Практика по вашей карте: Солнце/);
+  assert.match(message, /На что опереться/);
+  assert.match(message, /Проверка на 2 минуты/);
   assert.match(message, /выбрать один свой приоритет/i);
+  assert.match(message, /сохранит не теорию, а ваш реальный результат/i);
   assert.doesNotMatch(message, /Попробуйте сейчас:/i);
-  assert.match(message, /подошло|частично|не подошло/i);
   assert.doesNotMatch(message, /подарк|вселенн/i);
+});
+
+test('у ежедневной практики есть полный цикл реакции', () => {
+  const keyboard = buildPracticeKeyboard({ chart_id: 'chart-id' }, 12);
+  const callbacks = keyboard.inline_keyboard.flat().map((button) => button.callback_data).filter(Boolean);
+  assert.ok(callbacks.includes('alignment:done:12'));
+  assert.ok(callbacks.includes('alignment:remind:12'));
+  assert.ok(callbacks.includes('alignment:notfit:12'));
+  assert.ok(callbacks.includes('alignment:disable'));
+  assert.ok(callbacks.every((value) => value.length <= 64));
+
+  const outcomes = buildOutcomeKeyboard(12).inline_keyboard.flat().map((button) => button.callback_data);
+  assert.deepEqual(outcomes, [
+    'alignment:outcome:12:clear',
+    'alignment:outcome:12:step',
+    'alignment:outcome:12:none',
+  ]);
+});
+
+test('выжимка честно разделяет подтверждённые и не сработавшие настройки', () => {
+  const summary = buildWeeklySummary([
+    { card_title: 'Солнце', card_key: 'Опора на собственное решение', outcome: 'clear' },
+    { card_title: 'Меркурий', card_key: 'Ясность через простые слова', outcome: 'step' },
+    { card_title: 'Луна', card_key: 'Естественный ритм', outcome: 'none' },
+    { card_title: 'Луна', card_key: 'Естественный ритм', outcome: 'not_fit' },
+  ]);
+  assert.match(summary, /Что уже подтверждено вашей жизнью/);
+  assert.match(summary, /Рабочие опоры/);
+  assert.match(summary, /Солнце/);
+  assert.match(summary, /Пока не стало опорой/);
+  assert.match(summary, /Луна/);
+  assert.match(summary, /личная карта работающих принципов/);
+});
+
+test('повторные клики не переносят напоминание и не переписывают результат', async () => {
+  const source = await readFile(new URL('../src/practice-notifications.js', import.meta.url), 'utf8');
+  assert.match(source, /AND reminder_at IS NULL\s+AND reminder_sent_at IS NULL/);
+  assert.match(source, /AND outcome IS NULL\s+RETURNING \*, TRUE AS first_result/);
+  assert.match(source, /Результат уже сохранён/);
+  assert.match(source, /editMessageReplyMarkup/);
 });
