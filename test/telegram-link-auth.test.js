@@ -42,20 +42,41 @@ test('Telegram-вход не зависит от включённой Сонас
   assert.doesNotMatch(bootstrap, /globalThis\.fetch\s*=/);
 });
 
-test('Telegram-вход повторно устанавливает сессию только пока короткая ссылка не истекла', async () => {
-  const auth = await read('src/telegram-link-auth.js');
+test('Telegram-вход одноразовый, а чувствительный token очищается до Метрики', async () => {
+  const [auth, html, sanitizer, client] = await Promise.all([
+    read('src/telegram-link-auth.js'),
+    read('public/clone/live/index.html'),
+    read('public/telegram-link-sanitize.js'),
+    read('public/clone-living.js'),
+  ]);
 
   const expiryCheck = auth.indexOf("return { status: 'expired' }");
   const consumedCheck = auth.indexOf("return { status: 'consumed', userId: record.userId");
   assert.ok(expiryCheck >= 0 && consumedCheck > expiryCheck);
-  assert.match(auth, /reusableAuthorization\s*=\s*result\.status === 'consumed' && result\.userId/);
+  assert.doesNotMatch(auth, /reusableAuthorization/);
+  assert.match(auth, /if \(result\.status === 'authorized'\)/);
+  assert.match(auth, /const returnToken = crypto\.randomBytes\(24\)/);
+  assert.match(auth, /telegram_link: returnToken/);
   assert.match(auth, /\/clone\/live\/\?\$\{new URLSearchParams/);
+  assert.ok(
+    html.indexOf('/telegram-link-sanitize.js') < html.indexOf('mc.yandex.ru/metrika/tag.js'),
+    'telegram link sanitizer must run before Yandex Metrika',
+  );
+  assert.match(sanitizer, /sessionStorage\.setItem\(storageKey, token\)/);
+  assert.match(sanitizer, /window\.__herostarTelegramLinkReturn = token/);
+  assert.match(sanitizer, /url\.searchParams\.delete\(parameter\)/);
+  assert.match(client, /sessionStorage\.getItem\(TELEGRAM_LINK_STORAGE_KEY\)/);
+  assert.match(client, /window\.__herostarTelegramLinkReturn/);
 });
 
 test('старый Telegram callback не возвращает повреждённый ID и ведёт в live-интерфейс', async () => {
-  const server = await read('server.js');
+  const [server, client] = await Promise.all([
+    read('server.js'),
+    read('public/clone.js'),
+  ]);
 
   assert.match(server, /const cloneChartId = isUuid\(candidate\) \? candidate : null/);
   assert.match(server, /res\.redirect\(`\/clone\/live\/\?auth=ok/);
   assert.doesNotMatch(server, /slice\('clone:'\.length\)\.replace/);
+  assert.match(client, /location\.pathname\.startsWith\('\/clone\/live'\) \? '\/clone\/live\/' : '\/clone\/'/);
 });
