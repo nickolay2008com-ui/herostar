@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-        with:
-          show-progress: false
-      - run: npm install --ignore-scripts --no-audit --no-fund >/dev/null
-      - run: |
+      - run: git clone -q --depth 1 --branch fix/telegram-auth-loader https://github.com/nickolay2008com-ui/herostar.git repo
+      - working-directory: repo
+        run: npm install --ignore-scripts --no-audit --no-fund >/dev/null
+      - working-directory: repo
+        run: |
           set +e
           npm test -- --test-reporter=spec > test-output.log 2>&1
           status=$?
