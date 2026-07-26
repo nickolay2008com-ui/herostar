@@ -12,7 +12,7 @@ test('live-страница версионирует CSS и JavaScript, сохр
 
   const assets = [...html.matchAll(/(?:href|src)="([^"]+\.(?:css|js)[^"]*)"/g)].map((match) => match[1]);
   assert.ok(assets.length >= 10);
-  assert.ok(assets.every((asset) => /[?&]v=20260726-auth1/.test(asset)));
+  assert.ok(assets.every((asset) => /[?&]v=20260726-auth2/.test(asset)));
   assert.match(bootstrap, /isVersionedAsset/);
   assert.match(bootstrap, /public, max-age=31536000, immutable/);
   assert.match(bootstrap, /no-cache, no-store, must-revalidate/);
