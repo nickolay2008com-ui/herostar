@@ -49,6 +49,7 @@ jobs:
           sed -i 's#/clone/live/live.css?v=20260726-auth2#/clone/live/live.css?v=20260726-priority1#' ../source/scripts/reconcile-clone-priority-one.py
           python ../source/scripts/reconcile-clone-priority-one.py
           python ../source/scripts/finalize-clone-priority-one.py
+          python ../source/scripts/fix-clone-unknown-time-bridge.py
 
       - name: Install dependencies
         working-directory: work
@@ -61,6 +62,10 @@ jobs:
       - name: Answer factor API contract
         working-directory: work
         run: node --test test/clone-answer-factors-contract.test.js
+
+      - name: Unknown-time bridge contract
+        working-directory: work
+        run: node --test test/clone-unknown-time-bridge.test.js
 
       - name: Factor selector contract
         working-directory: work
