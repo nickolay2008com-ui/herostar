@@ -10,7 +10,8 @@
   const dialogView = document.querySelector('#dialogView');
   const workspace = document.querySelector('#workspace');
   const sticky = document.querySelector('#liveStickyStart');
-  const primaryHeroButton = document.querySelector('.live-hero [data-go-create]');
+  const primaryHeroButton = document.querySelector('.live-hero [data-go-intent]');
+  const creationButton = document.querySelector('[data-go-create]');
   const hero = document.querySelector('.live-hero');
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -26,19 +27,15 @@
   }
 
   function openCreation() {
-    primaryHeroButton?.click();
+    creationButton?.click();
   }
 
   function installQuestionMeta() {
-    if (!heroForm || !heroQuestion || heroForm.querySelector('.live-intent-meta')) return null;
-    const meta = document.createElement('div');
-    meta.className = 'live-intent-meta';
-    meta.innerHTML = '<span id="heroQuestionHint">Можно описать коротко — клон уточнит важное</span><span id="heroQuestionCount">0 / 1600</span>';
-    heroForm.append(meta);
+    if (!heroForm || !heroQuestion) return null;
     heroQuestion.setAttribute('aria-describedby', 'heroQuestionHint heroQuestionCount');
     return {
-      hint: meta.querySelector('#heroQuestionHint'),
-      count: meta.querySelector('#heroQuestionCount'),
+      hint: document.querySelector('#heroQuestionHint'),
+      count: document.querySelector('#heroQuestionCount'),
     };
   }
 
@@ -98,6 +95,14 @@
     });
   });
 
+  document.querySelectorAll('[data-go-intent]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!heroQuestion) return;
+      heroQuestion.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+      window.setTimeout(() => heroQuestion.focus({ preventScroll: true }), prefersReducedMotion ? 0 : 420);
+    });
+  });
+
   function deliverPendingQuestion() {
     if (!dialogView || dialogView.classList.contains('hidden') || !question || !questionForm) return;
     const pending = String(localStorage.getItem(PENDING_KEY) || '').trim();
@@ -122,13 +127,28 @@
     }).observe(workspace, { attributes: true, attributeFilter: ['class'] });
   }
 
-  if (sticky && primaryHeroButton && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(([entry]) => {
-      const show = !entry.isIntersecting && !document.querySelector('#intro')?.classList.contains('hidden');
-      sticky.classList.toggle('visible', show);
-      sticky.setAttribute('aria-hidden', show ? 'false' : 'true');
-    }, { threshold: .2 });
+  let primaryActionVisible = true;
+  let intentFormVisible = false;
+
+  function syncSticky() {
+    if (!sticky) return;
+    const scrolledEnough = window.scrollY > window.innerHeight * .6;
+    const introVisible = !document.querySelector('#intro')?.classList.contains('hidden');
+    const show = scrolledEnough && !primaryActionVisible && !intentFormVisible && introVisible;
+    sticky.classList.toggle('visible', show);
+    sticky.setAttribute('aria-hidden', show ? 'false' : 'true');
+  }
+
+  if (sticky && primaryHeroButton && heroForm && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.target === primaryHeroButton) primaryActionVisible = entry.isIntersecting;
+        if (entry.target === heroForm) intentFormVisible = entry.isIntersecting;
+      });
+      syncSticky();
+    }, { threshold: .15 });
     observer.observe(primaryHeroButton);
+    observer.observe(heroForm);
   }
 
   function installRevealMotion() {
@@ -157,6 +177,7 @@
     const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     body.classList.toggle('is-scrolled', top > 18);
     body.style.setProperty('--scroll-progress', String(Math.min(1, Math.max(0, top / max))));
+    syncSticky();
   }
 
   window.addEventListener('scroll', () => {
