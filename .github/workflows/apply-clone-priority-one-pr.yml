@@ -1,14 +1,14 @@
-name: Apply clone priority one from PR
+name: Build clone priority one artifact
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-capture-publish:
+  build-artifact:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -20,13 +20,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Detect existing implementation
-        id: state
-        shell: bash
-        run: |
-          if [ -f src/consultation-factors.js ]; then echo "applied=true" >> "$GITHUB_OUTPUT"; else echo "applied=false" >> "$GITHUB_OUTPUT"; fi
       - name: Apply canonical implementation
-        if: steps.state.outputs.applied != 'true'
         shell: bash
         run: |
           python - <<'PY'
@@ -39,8 +33,7 @@ jobs:
           Path('/tmp/apply-priority-one.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
           PY
           python /tmp/apply-priority-one.py
-          git checkout HEAD -- .github/workflows/apply-clone-priority-one.yml .github/workflows/apply-clone-priority-one-pr.yml
-      - name: Capture unit test result
+      - name: Capture unit tests
         shell: bash
         run: |
           set +e
@@ -49,15 +42,18 @@ jobs:
           echo "exit_status=$status" >> priority-one-test.log
           tail -n 180 priority-one-test.log
           exit 0
-      - name: Publish implementation for review
+      - name: Pack implementation
         shell: bash
         run: |
-          git config user.name "HeroStar Quality Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to publish"
-            exit 0
-          fi
-          git commit -m "Применить первую очередь Клона для проверки [priority-one-applied]"
-          git push origin HEAD:feature/clone-priority-one
+          tar -czf priority-one.tgz \
+            src/consultation-factors.js src/ai.js server.js \
+            public/clone.js public/clone.html public/clone/live/index.html public/clone/live/live.css \
+            test/consultation-factors.test.js test/clone-answer-factors-contract.test.js \
+            playwright.config.js e2e/clone-live.spec.js package.json package-lock.json \
+            .github/workflows/ci.yml priority-one-test.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clone-priority-one
+          path: priority-one.tgz
+          if-no-files-found: error
+          retention-days: 2
