@@ -42,11 +42,11 @@ test('полный режим использует утверждённый те
   ]);
 
   assert.match(html, />ПОЛНАЯ ГЛУБИНА КАРТЫ</);
-  assert.match(html, />Увидеть, как черты Клона работают вместе</);
-  assert.match(html, /Сейчас HeroStar отвечает по отдельным факторам карты\. В полном режиме он связывает их между собой и показывает противоречия, сильные стороны и подходящий ход именно для вашей ситуации\./);
-  assert.match(html, /id="openFullModeOffer"[^>]*>Открыть полный режим</);
+  assert.match(html, />Увидеть картину целиком</);
+  assert.match(html, /В полном режиме Клон связывает факторы карты между собой/);
+  assert.match(html, /id="openFullModeOffer"[^>]*>Что откроется в полном режиме</);
   assert.equal((html.match(/>Продолжить бесплатно</g) || []).length, 2);
-  assert.equal((html.match(/>Диалог останется доступен</g) || []).length, 2);
+  assert.match(html, />Диалог останется без лимита</);
 
   assert.match(clone, /starCloneOfferDismissed:/);
   assert.match(clone, /function dismissVisibleInlineOffers/);
@@ -55,6 +55,49 @@ test('полный режим использует утверждённый те
   assert.match(clone, /sessionStorage\.setItem\(offerDismissalKey\(offerCode\), '1'\)/);
   assert.match(clone, /\$\$\(\'\[data-dismiss-offer\]\'\)/);
   assert.match(clone, /openFullModeOffer'\)\?\.addEventListener\('click', \(\) => openPaywall\('clone_day'\)\)/);
+});
+
+test('полный режим спокойно обнаруживается в шапке через объясняющий экран', async () => {
+  const [html, clone, styles] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone.js'),
+    read('public/clone/live/live-visual-polish.css'),
+  ]);
+
+  assert.match(html, /class="premium-entry hidden" id="openPremiumDiscovery"/);
+  assert.match(html, /id="premiumDiscovery"[^>]*role="dialog"/);
+  assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\./);
+  assert.match(html, /id="continueToFullMode"[^>]*>Посмотреть полный режим</);
+  assert.match(html, /id="returnToDialog"[^>]*>Вернуться в диалог</);
+  assert.match(html, /id="passportPremiumEntry"/);
+  assert.match(html, /id="openPassportPremium"[^>]*>Посмотреть полный разбор</);
+  assert.match(clone, /const showPremiumEntry = Boolean\(state\.chartId && state\.user && !access\?\.cloneAccessActive\)/);
+  assert.match(clone, /openPremiumDiscovery'\)\?\.addEventListener\('click', \(\) => openPremiumDiscovery\('header_entry'\)\)/);
+  assert.match(clone, /openPassportPremium'\)\?\.addEventListener\('click', \(\) => openPremiumDiscovery\('passport_entry'\)\)/);
+  assert.match(clone, /closePremiumDiscovery\(\{ restoreFocus: false \}\);[\s\S]*?openPaywall\('clone_day'\)/);
+
+  const entry = declarationsFor(styles, '.live-product .premium-entry');
+  assert.match(entry, /position:\s*static/);
+  assert.match(entry, /min-height:\s*44px/);
+});
+
+test('стартовый блок сворачивается, а подсказки не обрезаются', async () => {
+  const [html, clone, styles] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone.js'),
+    read('public/clone/live/live-visual-polish.css'),
+  ]);
+
+  assert.match(html, /id="conversationIntro"/);
+  assert.match(html, /id="conversationSuggestions"/);
+  assert.match(html, />Отношения</);
+  assert.match(html, />Работа и деньги</);
+  assert.match(html, />Что со мной происходит</);
+  assert.match(clone, /function syncConversationStarted\(\)/);
+  assert.match(clone, /classList\.toggle\('conversation-started', started\)/);
+  assert.match(clone, /button\.dataset\.prompt \|\| button\.textContent/);
+
+  assert.match(styles, /\.live-product #dialogView \.chips\s*\{[^}]*flex-wrap:\s*wrap[^}]*overflow:\s*visible/s);
 });
 
 test('live-чат сохраняет позицию чтения и предлагает переход к новому ответу', async () => {
