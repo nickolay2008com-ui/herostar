@@ -23,6 +23,6 @@ jobs:
           npm test -- --test-reporter=spec > test-output.log 2>&1
           status=$?
           if [ "$status" -ne 0 ]; then
-            tail -80 test-output.log
+            grep -E "✖|ERR_ASSERTION|AssertionError|test at|failureType:|error:|code:" test-output.log | tail -80
           fi
           exit "$status"
