@@ -29,7 +29,7 @@ test('три ответа доступны до Telegram, а после вход
   assert.match(html, /без лимита сообщений/);
   assert.match(clone, /const FREE_PREAUTH_QUESTIONS = 3/);
   assert.match(clone, /state\.questionCount >= FREE_PREAUTH_QUESTIONS/);
-  assert.match(clone, /Бесплатный режим · сообщения без лимита/);
+  assert.match(clone, /Бесплатный диалог без лимита/);
   assert.match(clone, /openFullModeOffer/);
   assert.doesNotMatch(clone, /setTimeout\(\(\) => openPaywall\('clone_day'\)/);
   assert.doesNotMatch(html, /clone-conversion-hotfix/);
