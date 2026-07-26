@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - run: npm test -- --test-reporter=spec
       - name: Syntax check
         run: |
           node --check server.js
