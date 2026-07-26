@@ -147,6 +147,7 @@ jobs:
         working-directory: work
         shell: bash
         run: |
+          git checkout HEAD -- .github/workflows/ci.yml
           rm -rf priority-one-*.log priority-one-*-status full-suite.log full-suite-status browser-suite.log browser-suite-status test-results playwright-report
           git config user.name "HeroStar Quality Bot"
           git config user.email "actions@users.noreply.github.com"
