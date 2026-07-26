@@ -607,8 +607,9 @@ app.get('/auth/telegram/callback', async (req, res, next) => {
     const rawState = String(req.query.state || '');
     if (rawState === 'admin') return res.redirect('/admin');
     if (rawState.startsWith('clone:')) {
-      const cloneChartId = rawState.slice('clone:'.length).replace(/[^a-f0-9-]/gi, '');
-      return res.redirect(`/clone/?auth=ok${cloneChartId ? `&chart=${encodeURIComponent(cloneChartId)}` : ''}`);
+      const candidate = rawState.slice('clone:'.length);
+      const cloneChartId = isUuid(candidate) ? candidate : null;
+      return res.redirect(`/clone/live/?auth=ok${cloneChartId ? `&chart=${encodeURIComponent(cloneChartId)}` : ''}`);
     }
     const chartId = rawState.replace(/[^a-f0-9-]/gi, '');
     return res.redirect(`/?auth=ok${chartId ? `&chart=${encodeURIComponent(chartId)}` : ''}#map`);
