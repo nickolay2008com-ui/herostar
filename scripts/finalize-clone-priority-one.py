@@ -18,7 +18,7 @@ replace(
 )
 replace(
     'test/clone-live-chat.test.js',
-    "assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\\./);",
+    "assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\./);",
     "assert.match(html, />Бесплатный Клон показывает главный ход/);",
 )
 
@@ -74,6 +74,10 @@ client.write_text(text)
 # Keep contracts strict while checking the new single source of truth.
 answer_contract = Path('test/clone-answer-factors-contract.test.js')
 text = answer_contract.read_text()
+text = text.replace(
+    "  assert.match(liveHtml, /без домов, ASC\\/MC и Луны/);",
+    "  assert.match(liveHtml, /дома, ASC\\/MC и Луна/);",
+)
 text = text.replace(
     "  assert.match(client, /unknownTime \\? '' : formData\\.get\\('time'\\)/);",
     "  assert.match(client, /const unknownTime = Boolean\\(unknownTimeControl\\?\\.checked\\)/);\n"
