@@ -33,7 +33,7 @@ jobs:
           Path('/tmp/apply-priority-one.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
           PY
           python /tmp/apply-priority-one.py
-      - name: Reconcile current contracts
+      - name: Reconcile current contracts and browser scenarios
         shell: bash
         run: |
           python - <<'PY'
@@ -68,6 +68,140 @@ jobs:
               "  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultation({'), serverSource.indexOf('answerConsultation({') + 500);",
               "  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultationWithFactors({'), serverSource.indexOf('answerConsultationWithFactors({') + 500);",
           )
+
+          Path('playwright.config.js').write_text("""import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  timeout: 45_000,
+  expect: { timeout: 10_000 },
+  fullyParallel: false,
+  workers: process.env.CI ? 1 : undefined,
+  retries: 0,
+  reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'line',
+  use: {
+    baseURL: 'http://127.0.0.1:3100',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
+  ],
+  webServer: {
+    command: 'npm start',
+    url: 'http://127.0.0.1:3100/health',
+    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+    env: {
+      PORT: '3100',
+      NODE_ENV: 'test',
+      DEMO_MODE: 'true',
+      SESSION_SECRET: 'browser-tests-session-secret-32-chars-minimum',
+      APP_URL: 'http://127.0.0.1:3100',
+    },
+  },
+});
+""")
+
+          Path('e2e/clone-live.spec.js').write_text("""import { test, expect } from '@playwright/test';
+
+async function mockPlaces(page) {
+  await page.route('**/api/places?q=*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [{ name: 'Донецк', label: 'Донецк, Украина', latitude: 48.0159, longitude: 37.8028 }] }),
+    });
+  });
+}
+
+async function startFromQuestion(page, questionText) {
+  await mockPlaces(page);
+  await page.goto('/clone/live/');
+  await page.locator('#heroQuestion').fill(questionText);
+  await page.locator('#heroQuestionForm').getByRole('button', { name: /Сохранить вопрос/ }).click();
+  await expect(page.locator('#createView')).toBeVisible();
+}
+
+async function selectPlace(page) {
+  await page.locator('#placeQuery').fill('Донецк');
+  await page.getByRole('option', { name: /Донецк/ }).click();
+}
+
+async function createClone(page, { unknownTime = false } = {}) {
+  await page.locator('input[name="name"]').fill('Звёздный Николай');
+  await page.locator('input[name="date"]').fill('1987-11-06');
+  if (unknownTime) {
+    await page.locator('#unknownTime').check();
+    await expect(page.locator('#birthTime')).toBeDisabled();
+  } else {
+    await page.locator('#birthTime').fill('01:15');
+  }
+  await selectPlace(page);
+  await page.locator('input[name="personalDataConsent"]').check();
+  await page.getByRole('button', { name: 'Собрать живую модель' }).click();
+
+  await expect.poll(async () => {
+    if (await page.locator('#dialogView').isVisible()) return 'ready';
+    const formError = String(await page.locator('#formError').textContent() || '').trim();
+    return formError ? `error: ${formError}` : 'waiting';
+  }, {
+    timeout: 30_000,
+    message: 'Клон должен создаться; при ошибке формы она должна быть видна в результате теста',
+  }).toBe('ready');
+
+  await expect(page.locator('#messages .message.user')).toContainText(/проект|партнёр|решить/i, { timeout: 15_000 });
+  await expect(page.locator('#messages .message.clone').last()).not.toContainText('Клон готовит ответ', { timeout: 30_000 });
+}
+
+function desktopOnly(testInfo) {
+  test.skip(testInfo.project.name !== 'chromium', 'Основной контракт проверяется один раз в десктопном Chromium');
+}
+
+test('вопрос проходит через создание Клона и показывает реальные факторы ответа', async ({ page }, testInfo) => {
+  desktopOnly(testInfo);
+  await startFromQuestion(page, 'Стоит ли входить в новый проект, если роли и деньги пока не определены?');
+  await createClone(page);
+  await expect(page.locator('#logicFactors')).toBeVisible();
+  expect(await page.locator('#logicFactors .factor').count()).toBeGreaterThanOrEqual(2);
+  await expect(page.locator('#logicFactors')).toContainText(/дом|Марс|Венера|Сатурн|Солнце/i);
+  await expect(page.locator('#logicFactors')).toContainText(/текущ|действ|решен|связ/i);
+});
+
+test('режим неизвестного времени честно исключает дома, углы и Луну', async ({ page }, testInfo) => {
+  desktopOnly(testInfo);
+  await startFromQuestion(page, 'Как ответить партнёру и сохранить ясные договорённости?');
+  await createClone(page, { unknownTime: true });
+  await expect(page.locator('#cloneStatus')).toContainText('без домов');
+  await expect(page.locator('#logicFactors')).toContainText('Время рождения неизвестно');
+  await expect(page.locator('#logicFactors .factor')).not.toContainText(/дом|Асцендент|ASC|MC|Луна/i);
+  await expect(page.locator('#technicalBasis')).toContainText('Карта без домов');
+});
+
+test('ответ и его факторный след восстанавливаются после перезагрузки', async ({ page }, testInfo) => {
+  desktopOnly(testInfo);
+  await startFromQuestion(page, 'Стоит ли входить в новый проект или пока сохранить стабильность?');
+  await createClone(page);
+  const answer = await page.locator('#messages .message.clone').last().locator('p').innerText();
+  const factorHeading = await page.locator('#logicFactors .factor').first().locator('strong').innerText();
+  await page.reload();
+  await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('#messages .message.clone').last().locator('p')).toContainText(answer.slice(0, 45));
+  await expect(page.locator('#logicFactors')).toContainText(factorHeading);
+});
+
+test('мобильный основной путь сохраняет доступ к полю и факторной панели', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium', 'Проверка предназначена для мобильного проекта');
+  await startFromQuestion(page, 'Стоит ли рискнуть и начать новый проект сейчас?');
+  await createClone(page);
+  await expect(page.locator('#question')).toBeVisible();
+  await page.locator('#question').fill('Какой шаг проверить первым?');
+  await expect(page.locator('#questionForm button[type="submit"]')).toBeEnabled();
+  await page.locator('button[data-tab="profile"]').click();
+  await expect(page.locator('#logicFactors')).toBeVisible();
+});
+""")
           PY
       - name: Capture unit tests
         shell: bash
@@ -88,7 +222,7 @@ jobs:
           npm run test:e2e > priority-one-e2e.log 2>&1
           status=$?
           echo "$status" > priority-one-e2e-status
-          tail -n 220 priority-one-e2e.log
+          tail -n 240 priority-one-e2e.log
           exit 0
       - name: Capture syntax validation
         shell: bash
