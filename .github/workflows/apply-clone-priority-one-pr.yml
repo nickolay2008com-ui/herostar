@@ -67,15 +67,25 @@ jobs:
 
           client = Path('public/clone.js')
           text = client.read_text()
+          state_old = "  asking: false,\n  selectedOffer: 'clone_day',"
+          state_new = "  asking: false,\n  unknownBirthTime: false,\n  selectedOffer: 'clone_day',"
+          if state_old not in text:
+              raise SystemExit('clone state marker not found')
+          text = text.replace(state_old, state_new, 1)
+          sync_old = "  const unknown = checkbox.checked;\n  time.disabled = unknown;"
+          sync_new = "  const unknown = checkbox.checked;\n  state.unknownBirthTime = unknown;\n  time.disabled = unknown;"
+          if sync_old not in text:
+              raise SystemExit('unknown time sync marker not found')
+          text = text.replace(sync_old, sync_new, 1)
           form_old = "  const formData = new FormData(event.currentTarget);\n  show('#buildingView');"
-          form_new = "  const form = event.currentTarget;\n  const unknownTime = Boolean(form.elements.namedItem('unknownTime')?.checked);\n  const formData = new FormData(form);\n  show('#buildingView');"
+          form_new = "  const unknownTime = Boolean(state.unknownBirthTime);\n  const formData = new FormData(event.currentTarget);\n  show('#buildingView');"
           if form_old not in text:
               raise SystemExit('birth form source not found')
           text = text.replace(form_old, form_new, 1)
-          old = "    const unknownTime = formData.get('unknownTime') === 'on';\n"
-          if old not in text:
+          old_calc = "    const unknownTime = formData.get('unknownTime') === 'on';\n"
+          if old_calc not in text:
               raise SystemExit('old unknownTime calculation not found')
-          client.write_text(text.replace(old, '', 1))
+          client.write_text(text.replace(old_calc, '', 1))
 
           live_css = Path('public/clone/live/live.css')
           live_css.write_text(live_css.read_text() + """
@@ -95,17 +105,16 @@ jobs:
               "await expect(page.locator('#messages .message.clone').last()).toContainText(answer.slice(0, 35));",
               "await expect(page.locator('#messages .message.clone').last().locator('p')).toContainText(answer.slice(0, 35));",
           )
-          text = text.replace(
-              "await expect(page.locator('#logicFactors')).toBeVisible();\n});\n",
-              "await page.locator('button[data-tab=\"profile\"]').click();\n  await expect(page.locator('#logicFactors')).toBeVisible();\n});\n",
-              1,
-          )
-          spec.write_text(text)
+          mobile_old = "  await expect(page.locator('#questionForm button[type=\"submit\"]')).toBeEnabled();\n  await page.locator('button[data-tab=\"profile\"]').click();"
+          mobile_new = "  await expect(page.locator('#questionForm button[type=\"submit\"]')).toBeEnabled();\n  await page.locator('#question').blur();\n  await page.locator('button[data-tab=\"profile\"]').click();"
+          if mobile_old not in text:
+              raise SystemExit('mobile tab scenario not found')
+          spec.write_text(text.replace(mobile_old, mobile_new, 1))
 
           wiring = Path('test/clone-functional-wiring.test.js')
           text = wiring.read_text()
           marker = "  assert.match(clone, /personalDataConsent/);\n"
-          replacement = marker + "  assert.match(clone, /form\\.elements\\.namedItem\\('unknownTime'\\)\\?\\.checked/);\n"
+          replacement = marker + "  assert.match(clone, /state\\.unknownBirthTime = unknown/);\n  assert.match(clone, /const unknownTime = Boolean\\(state\\.unknownBirthTime\\)/);\n"
           if marker not in text:
               raise SystemExit('functional wiring marker not found')
           wiring.write_text(text.replace(marker, replacement, 1))
