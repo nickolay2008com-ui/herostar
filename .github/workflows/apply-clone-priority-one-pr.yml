@@ -78,14 +78,19 @@ jobs:
               raise SystemExit('unknown time sync marker not found')
           text = text.replace(sync_old, sync_new, 1)
           form_old = "  const formData = new FormData(event.currentTarget);\n  show('#buildingView');"
-          form_new = "  const unknownTime = Boolean(state.unknownBirthTime);\n  const formData = new FormData(event.currentTarget);\n  show('#buildingView');"
+          form_new = "  const formData = new FormData(event.currentTarget);\n  const birthTime = String(formData.get('time') || '').trim();\n  const unknownTime = Boolean(state.unknownBirthTime || !birthTime);\n  show('#buildingView');"
           if form_old not in text:
               raise SystemExit('birth form source not found')
           text = text.replace(form_old, form_new, 1)
           old_calc = "    const unknownTime = formData.get('unknownTime') === 'on';\n"
           if old_calc not in text:
               raise SystemExit('old unknownTime calculation not found')
-          client.write_text(text.replace(old_calc, '', 1))
+          text = text.replace(old_calc, '', 1)
+          payload_old = "      time: unknownTime ? '' : formData.get('time'),"
+          payload_new = "      time: unknownTime ? '' : birthTime,"
+          if payload_old not in text:
+              raise SystemExit('birth time payload source not found')
+          client.write_text(text.replace(payload_old, payload_new, 1))
 
           live_css = Path('public/clone/live/live.css')
           live_css.write_text(live_css.read_text() + """
@@ -114,7 +119,7 @@ jobs:
           wiring = Path('test/clone-functional-wiring.test.js')
           text = wiring.read_text()
           marker = "  assert.match(clone, /personalDataConsent/);\n"
-          replacement = marker + "  assert.match(clone, /state\\.unknownBirthTime = unknown/);\n  assert.match(clone, /const unknownTime = Boolean\\(state\\.unknownBirthTime\\)/);\n"
+          replacement = marker + "  assert.match(clone, /state\\.unknownBirthTime = unknown/);\n  assert.match(clone, /const unknownTime = Boolean\\(state\\.unknownBirthTime \\|\\| !birthTime\\)/);\n"
           if marker not in text:
               raise SystemExit('functional wiring marker not found')
           wiring.write_text(text.replace(marker, replacement, 1))
