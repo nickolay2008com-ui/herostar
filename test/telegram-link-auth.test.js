@@ -58,6 +58,9 @@ test('Telegram-вход одноразовый, а чувствительный 
   assert.match(auth, /const returnToken = crypto\.randomBytes\(24\)/);
   assert.match(auth, /telegram_link: returnToken/);
   assert.match(auth, /\/clone\/live\/\?\$\{new URLSearchParams/);
+  assert.match(auth, /\(token_hash, chart_id, expires_at\)[\s\S]+VALUES \(\$1, \$2, \$3\)/);
+  assert.match(auth, /VALUES \(\$1, \$2, \$3, \$4, \$5\)/);
+  assert.doesNotMatch(auth, /CASE WHEN \$3 IS NULL/);
   assert.ok(
     html.indexOf('/telegram-link-sanitize.js') < html.indexOf('mc.yandex.ru/metrika/tag.js'),
     'telegram link sanitizer must run before Yandex Metrika',
