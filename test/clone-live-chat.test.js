@@ -1,0 +1,93 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+
+function declarationsFor(source, selector) {
+  const start = source.indexOf(selector);
+  assert.notEqual(start, -1, `Не найден CSS-селектор: ${selector}`);
+  const openingBrace = source.indexOf('{', start);
+  const closingBrace = source.indexOf('}', openingBrace);
+  return source.slice(openingBrace + 1, closingBrace);
+}
+
+test('live-офферы монтируются в историю как одна inline service-card', async () => {
+  const [html, clone, styles] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone.js'),
+    read('public/clone/live/live-detail.css'),
+  ]);
+
+  assert.match(html, /class="alignment-offer inline-service-card hidden" id="fullModeOffer" data-offer-code="clone_day"/);
+  assert.match(html, /class="alignment-offer inline-service-card hidden" id="alignmentOffer" data-offer-code="clone_alignment"/);
+  assert.match(clone, /function mountInlineOffer\(offer, visible\)[\s\S]*?if \(visible\) messages\.append\(offer\)/);
+  assert.match(clone, /mountInlineOffer\(\$\('#fullModeOffer'\), showFullMode/);
+  assert.match(clone, /mountInlineOffer\(\$\('#alignmentOffer'\), showAlignment/);
+  assert.doesNotMatch(clone, /cloneNode\(|insertAdjacentHTML\(/);
+
+  const mobileOffer = declarationsFor(
+    styles,
+    '.live-product #dialogView .messages > .alignment-offer:not(.hidden)',
+  );
+  assert.match(mobileOffer, /position:\s*static/);
+  assert.doesNotMatch(mobileOffer, /position:\s*absolute/);
+  assert.match(mobileOffer, /max-height:\s*none/);
+});
+
+test('полный режим использует утверждённый текст и не блокирует бесплатный диалог', async () => {
+  const [html, clone] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone.js'),
+  ]);
+
+  assert.match(html, />ПОЛНАЯ ГЛУБИНА КАРТЫ</);
+  assert.match(html, />Увидеть, как черты Клона работают вместе</);
+  assert.match(html, /Сейчас HeroStar отвечает по отдельным факторам карты\. В полном режиме он связывает их между собой и показывает противоречия, сильные стороны и подходящий ход именно для вашей ситуации\./);
+  assert.match(html, /id="openFullModeOffer"[^>]*>Открыть полный режим</);
+  assert.equal((html.match(/>Продолжить бесплатно</g) || []).length, 2);
+  assert.equal((html.match(/>Диалог останется доступен</g) || []).length, 2);
+
+  assert.match(clone, /starCloneOfferDismissed:/);
+  assert.match(clone, /function dismissVisibleInlineOffers/);
+  assert.match(clone, /dismissVisibleInlineOffers/);
+  assert.match(clone, /&& !showAlignment/);
+  assert.match(clone, /sessionStorage\.setItem\(offerDismissalKey\(offerCode\), '1'\)/);
+  assert.match(clone, /\$\$\(\'\[data-dismiss-offer\]\'\)/);
+  assert.match(clone, /openFullModeOffer'\)\?\.addEventListener\('click', \(\) => openPaywall\('clone_day'\)\)/);
+});
+
+test('live-чат сохраняет позицию чтения и предлагает переход к новому ответу', async () => {
+  const [html, living, styles, clone] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone-living.js'),
+    read('public/clone/live/live-detail.css'),
+    read('public/clone.js'),
+  ]);
+
+  assert.match(html, /id="jumpToLatest"[^>]*>К новому ответу/);
+  assert.match(living, /const NEAR_BOTTOM_THRESHOLD = 96/);
+  assert.match(living, /const shouldFollowLatest = pinnedToBottom/);
+  assert.match(living, /if \(shouldFollowLatest\)[\s\S]*?scrollToLatest\(\)[\s\S]*?else[\s\S]*?showJumpToLatest\(\)/);
+  assert.match(living, /jumpToLatest\?\.addEventListener\('click', \(\) => scrollToLatest\(\)\)/);
+  assert.doesNotMatch(clone, /\$\('#messages'\)\.scrollTop = \$\('#messages'\)\.scrollHeight/);
+
+  const jumpButton = declarationsFor(styles, '.live-product #dialogView .jump-to-latest');
+  assert.match(jumpButton, /min-height:\s*44px/);
+});
+
+test('composer не отправляет пустой вопрос и сообщает состояние запроса', async () => {
+  const [html, clone] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone.js'),
+  ]);
+
+  assert.match(html, /id="questionForm"[^>]*aria-busy="false"/);
+  assert.match(html, /type="submit"[^>]*aria-label="Отправить вопрос"[^>]*disabled/);
+  assert.match(clone, /const hasQuestion = Boolean\(textarea\?\.value\.trim\(\)\)/);
+  assert.match(clone, /button\.disabled = state\.asking \|\| !hasQuestion/);
+  assert.match(clone, /form\?\.setAttribute\('aria-busy', String\(state\.asking\)\)/);
+  assert.match(clone, /state\.asking \? 'Клон формирует ответ' : 'Отправить вопрос'/);
+  assert.match(clone, /\$\('#question'\)\.addEventListener\('input', syncComposerSubmitState\)/);
+  assert.match(clone, /if \(state\.asking\) return/);
+});
