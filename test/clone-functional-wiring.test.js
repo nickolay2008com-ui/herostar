@@ -31,7 +31,7 @@ test('клиент соединяет создание, три ответа до
   assert.match(clone, /callback\.searchParams\.set\('state', `clone:/);
   assert.match(clone, /CLONE_TELEGRAM_REQUIRED/);
   assert.match(clone, /cloneUsage/);
-  assert.match(clone, /сообщения без лимита/);
+  assert.match(clone, /Бесплатный диалог без лимита/);
   assert.match(clone, /showTelegramContinuation/);
   assert.match(clone, /fullModeOffer/);
   assert.match(clone, /json\('\/api\/payments\/create'/);
