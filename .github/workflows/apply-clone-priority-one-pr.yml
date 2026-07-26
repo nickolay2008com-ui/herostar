@@ -50,6 +50,20 @@ jobs:
           sed -i 's#/clone/live/live.css?v=20260726-auth2#/clone/live/live.css?v=20260726-priority1#' ../source/scripts/reconcile-clone-priority-one.py
           python ../source/scripts/reconcile-clone-priority-one.py
           sed -i 's#/без домов, ASC\\/MC и Луны/#/дома, ASC\\/MC и Луна/#' test/clone-answer-factors-contract.test.js
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('test/clone-live-chat.test.js')
+          text = path.read_text()
+          text = text.replace(
+              "assert.match(html, /В полном режиме Клон связывает факторы карты между собой/);",
+              "assert.match(html, /Полный режим связывает 3–6 значимых факторов/);",
+          )
+          text = text.replace(
+              "assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\\./);",
+              "assert.match(html, />Бесплатный Клон показывает главный ход/);",
+          )
+          path.write_text(text)
+          PY
           git checkout HEAD -- .github/workflows/ci.yml
 
       - name: Install dependencies
