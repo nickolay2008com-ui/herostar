@@ -40,6 +40,15 @@ for path in ['public/clone.html', 'public/clone/index.html', 'public/clone/live/
         '/clone-ui-gears.js?v=20260726-priority1',
     )
 
+# Playwright strict mode cannot apply one matcher to several factor cards. Check
+# the combined text while preserving the same product assertion.
+replace(
+    'e2e/clone-live.spec.js',
+    "  await expect(page.locator('#logicFactors .factor')).not.toContainText(/дом|Асцендент|ASC|MC|Луна/i);",
+    "  const unknownTimeFactors = (await page.locator('#logicFactors .factor').allTextContents()).join(' ');\n"
+    "  expect(unknownTimeFactors).not.toMatch(/дом|Асцендент|ASC|MC|Луна/i);",
+)
+
 Path('test/clone-unknown-time-bridge.test.js').write_text("""import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
