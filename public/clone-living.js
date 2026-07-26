@@ -4,7 +4,9 @@
   const messages = document.querySelector('#messages');
   const dialogView = document.querySelector('#dialogView');
   const paywall = document.querySelector('#clonePaywall');
+  const jumpToLatest = document.querySelector('#jumpToLatest');
   const TELEGRAM_LINK_PARAM = 'telegram_link';
+  const NEAR_BOTTOM_THRESHOLD = 96;
 
   function resizeComposer() {
     if (!question) return;
@@ -135,10 +137,36 @@
   if (messages) {
     messages.setAttribute('aria-live', 'polite');
     messages.setAttribute('aria-relevant', 'additions text');
+    let pinnedToBottom = true;
+
+    const isNearBottom = () => (
+      messages.scrollHeight - messages.scrollTop - messages.clientHeight <= NEAR_BOTTOM_THRESHOLD
+    );
+
+    const hideJumpToLatest = () => jumpToLatest?.classList.add('hidden');
+    const showJumpToLatest = () => jumpToLatest?.classList.remove('hidden');
+    const scrollToLatest = (behavior = 'smooth') => {
+      messages.scrollTo({ top: messages.scrollHeight, behavior });
+      pinnedToBottom = true;
+      hideJumpToLatest();
+    };
+
+    messages.addEventListener('scroll', () => {
+      pinnedToBottom = isNearBottom();
+      if (pinnedToBottom) hideJumpToLatest();
+    }, { passive: true });
+
+    jumpToLatest?.addEventListener('click', () => scrollToLatest());
+
     const observer = new MutationObserver(() => {
+      const shouldFollowLatest = pinnedToBottom;
       window.requestAnimationFrame(() => {
         enhanceTelegramSlots(messages);
-        messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
+        if (shouldFollowLatest) {
+          scrollToLatest();
+        } else {
+          showJumpToLatest();
+        }
       });
     });
     observer.observe(messages, { childList: true, subtree: true, characterData: true });
