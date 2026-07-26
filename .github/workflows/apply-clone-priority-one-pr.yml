@@ -52,8 +52,9 @@ jobs:
           sed -i 's#/без домов, ASC\\/MC и Луны/#/дома, ASC\\/MC и Луна/#' test/clone-answer-factors-contract.test.js
           python - <<'PY'
           from pathlib import Path
-          path = Path('test/clone-live-chat.test.js')
-          text = path.read_text()
+
+          live_chat = Path('test/clone-live-chat.test.js')
+          text = live_chat.read_text()
           text = text.replace(
               "assert.match(html, /В полном режиме Клон связывает факторы карты между собой/);",
               "assert.match(html, /Полный режим связывает 3–6 значимых факторов/);",
@@ -62,7 +63,31 @@ jobs:
               "assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\\./);",
               "assert.match(html, />Бесплатный Клон показывает главный ход/);",
           )
-          path.write_text(text)
+          live_chat.write_text(text)
+
+          client = Path('public/clone.js')
+          text = client.read_text()
+          old = "const unknownTime = formData.get('unknownTime') === 'on';"
+          new = "const unknownTime = Boolean($('#unknownTime')?.checked);"
+          if old not in text:
+              raise SystemExit('unknownTime submit source not found')
+          client.write_text(text.replace(old, new, 1))
+
+          spec = Path('e2e/clone-live.spec.js')
+          text = spec.read_text()
+          text = text.replace(
+              "const answer = await page.locator('#messages .message.clone').last().innerText();",
+              "const answer = await page.locator('#messages .message.clone').last().locator('p').innerText();",
+          )
+          text = text.replace(
+              "await expect(page.locator('#messages .message.clone').last()).toContainText(answer.slice(0, 35));",
+              "await expect(page.locator('#messages .message.clone').last().locator('p')).toContainText(answer.slice(0, 35));",
+          )
+          text = text.replace(
+              "await page.locator('button[data-tab=\"profile\"]').click();\n  await expect(page.locator('#logicFactors')).toBeVisible();",
+              "await page.locator('#logicPanel').scrollIntoViewIfNeeded();\n  await expect(page.locator('#logicFactors')).toBeVisible();",
+          )
+          spec.write_text(text)
           PY
           git checkout HEAD -- .github/workflows/ci.yml
 
