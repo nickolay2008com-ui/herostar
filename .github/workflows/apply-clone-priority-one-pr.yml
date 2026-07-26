@@ -2,8 +2,7 @@ name: Publish verified clone implementation
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
@@ -14,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout task source
+      - name: Checkout bootstrap source
         uses: actions/checkout@v4
         with:
           ref: feature/clone-priority-one
@@ -34,7 +33,7 @@ jobs:
           cache: npm
           cache-dependency-path: work/package-lock.json
 
-      - name: Restore tested implementation artifact
+      - name: Restore implementation artifact
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -43,174 +42,29 @@ jobs:
           unzip -q /tmp/priority-one.zip -d /tmp/priority-one
           tar -xzf /tmp/priority-one/priority-one.tgz -C work
 
-      - name: Reconcile approved contracts
+      - name: Apply approved contracts and final fix
         working-directory: work
         shell: bash
         run: |
           sed -i 's#/clone/live/live.css?v=20260726-auth2#/clone/live/live.css?v=20260726-priority1#' ../source/scripts/reconcile-clone-priority-one.py
           python ../source/scripts/reconcile-clone-priority-one.py
-          sed -i 's#/без домов, ASC\\/MC и Луны/#/дома, ASC\\/MC и Луна/#' test/clone-answer-factors-contract.test.js
-          python - <<'PY'
-          from pathlib import Path
-
-          live_chat = Path('test/clone-live-chat.test.js')
-          text = live_chat.read_text()
-          text = text.replace(
-              "assert.match(html, /В полном режиме Клон связывает факторы карты между собой/);",
-              "assert.match(html, /Полный режим связывает 3–6 значимых факторов/);",
-          )
-          text = text.replace(
-              "assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\\./);",
-              "assert.match(html, />Бесплатный Клон показывает главный ход/);",
-          )
-          live_chat.write_text(text)
-
-          client = Path('public/clone.js')
-          text = client.read_text()
-          state_old = "  asking: false,\n  selectedOffer: 'clone_day',"
-          state_new = "  asking: false,\n  unknownBirthTime: false,\n  selectedOffer: 'clone_day',"
-          if state_old not in text:
-              raise SystemExit('clone state marker not found')
-          text = text.replace(state_old, state_new, 1)
-          sync_old = "  const unknown = checkbox.checked;\n  time.disabled = unknown;"
-          sync_new = "  const unknown = checkbox.checked;\n  state.unknownBirthTime = unknown;\n  time.disabled = unknown;"
-          if sync_old not in text:
-              raise SystemExit('unknown time sync marker not found')
-          text = text.replace(sync_old, sync_new, 1)
-          form_old = "  const formData = new FormData(event.currentTarget);\n  show('#buildingView');"
-          form_new = "  const formData = new FormData(event.currentTarget);\n  const birthTime = String(formData.get('time') || '').trim();\n  const unknownTime = Boolean(state.unknownBirthTime || !birthTime);\n  show('#buildingView');"
-          if form_old not in text:
-              raise SystemExit('birth form source not found')
-          text = text.replace(form_old, form_new, 1)
-          old_calc = "    const unknownTime = formData.get('unknownTime') === 'on';\n"
-          if old_calc not in text:
-              raise SystemExit('old unknownTime calculation not found')
-          text = text.replace(old_calc, '', 1)
-          payload_old = "      time: unknownTime ? '' : formData.get('time'),"
-          payload_new = "      time: unknownTime ? '' : birthTime,"
-          if payload_old not in text:
-              raise SystemExit('birth time payload source not found')
-          client.write_text(text.replace(payload_old, payload_new, 1))
-
-          answer_contract = Path('test/clone-answer-factors-contract.test.js')
-          text = answer_contract.read_text()
-          old = "  assert.match(client, /unknownTime \\? '' : formData\\.get\\('time'\\)/);"
-          new = "  assert.match(client, /unknownTime \\? '' : birthTime/);"
-          if old not in text:
-              raise SystemExit('answer contract time assertion not found')
-          answer_contract.write_text(text.replace(old, new, 1))
-
-          live_css = Path('public/clone/live/live.css')
-          live_css.write_text(live_css.read_text() + """
-
-          @media (max-width: 900px) {
-            .live-product .workspace .side { display: block; }
-          }
-          """)
-
-          spec = Path('e2e/clone-live.spec.js')
-          text = spec.read_text()
-          text = text.replace(
-              "const answer = await page.locator('#messages .message.clone').last().innerText();",
-              "const answer = await page.locator('#messages .message.clone').last().locator('p').innerText();",
-          )
-          text = text.replace(
-              "await expect(page.locator('#messages .message.clone').last()).toContainText(answer.slice(0, 35));",
-              "await expect(page.locator('#messages .message.clone').last().locator('p')).toContainText(answer.slice(0, 35));",
-          )
-          mobile_old = "  await expect(page.locator('#questionForm button[type=\"submit\"]')).toBeEnabled();\n  await page.locator('button[data-tab=\"profile\"]').click();"
-          mobile_new = "  await expect(page.locator('#questionForm button[type=\"submit\"]')).toBeEnabled();\n  await page.locator('#question').blur();\n  await page.locator('button[data-tab=\"profile\"]').click();"
-          if mobile_old not in text:
-              raise SystemExit('mobile tab scenario not found')
-          spec.write_text(text.replace(mobile_old, mobile_new, 1))
-
-          wiring = Path('test/clone-functional-wiring.test.js')
-          text = wiring.read_text()
-          marker = "  assert.match(clone, /personalDataConsent/);\n"
-          replacement = marker + "  assert.match(clone, /state\\.unknownBirthTime = unknown/);\n  assert.match(clone, /const unknownTime = Boolean\\(state\\.unknownBirthTime \\|\\| !birthTime\\)/);\n"
-          if marker not in text:
-              raise SystemExit('functional wiring marker not found')
-          wiring.write_text(text.replace(marker, replacement, 1))
-          PY
-          git checkout HEAD -- .github/workflows/ci.yml
+          python ../source/scripts/finalize-clone-priority-one.py
 
       - name: Install dependencies
         working-directory: work
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Product promise contract
+      - name: Unit and contract tests
         working-directory: work
-        run: node --test test/clone-product-promise.test.js
-
-      - name: Answer factor API contract
-        working-directory: work
-        run: node --test test/clone-answer-factors-contract.test.js
-
-      - name: Factor selector contract
-        working-directory: work
-        run: node --test test/consultation-factors.test.js
-
-      - name: Tariff prompt contract
-        working-directory: work
-        run: node --test test/consultation-profile.test.js
-
-      - name: Mobile quality contract
-        working-directory: work
-        run: node --test test/clone-mobile-quality.test.js
-
-      - name: Capture full unit suite
-        working-directory: work
-        shell: bash
-        run: |
-          set +e
-          npm test > full-suite.log 2>&1
-          echo "$?" > full-suite-status
-          exit 0
-
-      - name: Upload unit diagnostic
-        uses: actions/upload-artifact@v4
-        with:
-          name: clone-full-suite-diagnostic
-          path: |
-            work/full-suite.log
-            work/full-suite-status
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Enforce full unit suite
-        working-directory: work
-        shell: bash
-        run: test "$(cat full-suite-status)" = "0"
+        run: npm test
 
       - name: Install Playwright Chromium
         working-directory: work
         run: npx playwright install --with-deps chromium
 
-      - name: Capture browser tests
+      - name: Browser tests
         working-directory: work
-        shell: bash
-        run: |
-          set +e
-          npm run test:e2e > browser-suite.log 2>&1
-          echo "$?" > browser-suite-status
-          exit 0
-
-      - name: Upload browser diagnostic
-        uses: actions/upload-artifact@v4
-        with:
-          name: clone-browser-diagnostic
-          path: |
-            work/browser-suite.log
-            work/browser-suite-status
-            work/test-results
-            work/playwright-report
-          if-no-files-found: warn
-          retention-days: 2
-
-      - name: Enforce browser tests
-        working-directory: work
-        shell: bash
-        run: test "$(cat browser-suite-status)" = "0"
+        run: npm run test:e2e
 
       - name: Syntax and diff validation
         working-directory: work
@@ -220,13 +74,13 @@ jobs:
           for file in public/*.js public/clone/live/*.js src/*.js; do node --check "$file"; done
           git diff --check
 
-      - name: Publish verified branch
+      - name: Publish clean implementation branch
         working-directory: work
         shell: bash
         run: |
-          rm -rf full-suite.log full-suite-status browser-suite.log browser-suite-status test-results playwright-report
+          rm -rf priority-one-*.log priority-one-*-status test-results playwright-report
           git config user.name "HeroStar Quality Bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A
-          git commit -m "Реализовать две очереди Звёздного клона [publish-run]"
+          git commit -m "Реализовать две очереди Звёздного клона"
           git push --force origin HEAD:refs/heads/agent/clone-priority-one-implementation
