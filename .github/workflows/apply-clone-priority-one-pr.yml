@@ -92,6 +92,14 @@ jobs:
               raise SystemExit('birth time payload source not found')
           client.write_text(text.replace(payload_old, payload_new, 1))
 
+          answer_contract = Path('test/clone-answer-factors-contract.test.js')
+          text = answer_contract.read_text()
+          old = "  assert.match(client, /unknownTime \\? '' : formData\\.get\\('time'\\)/);"
+          new = "  assert.match(client, /unknownTime \\? '' : birthTime/);"
+          if old not in text:
+              raise SystemExit('answer contract time assertion not found')
+          answer_contract.write_text(text.replace(old, new, 1))
+
           live_css = Path('public/clone/live/live.css')
           live_css.write_text(live_css.read_text() + """
 
