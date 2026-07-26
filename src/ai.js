@@ -4,6 +4,12 @@ import {
   resolveConsultationProfile,
 } from './consultation-profiles.js';
 import { buildFallbackPortrait } from './narrative.js';
+import {
+  compactCloneEvidence,
+  factorScopeForChart,
+  publicConsultationFactors,
+  selectConsultationFactors,
+} from './consultation-factors.js';
 
 const REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
 
@@ -94,24 +100,10 @@ function localConsultation(portrait, question) {
   return `По этой теме я бы начал с раздела «${related.title}». ${related.key} ${related.action} Дальше можно посмотреть, где этот ресурс раскрывается сильнее, или связать его с конкретной ситуацией.`;
 }
 
-function localCloneConsultation(chart) {
-  const planets = chart.planets || [];
-  const mars = planets.find((planet) => planet.key === 'mars') || planets[0];
-  const moon = planets.find((planet) => planet.key === 'moon') || planets[1];
-  const ascendant = chart.angles?.ascendant;
-  const actionByElement = {
-    'Огонь': 'быстро выбрал проверяемый ход и посмотрел на результат в действии',
-    'Земля': 'сначала уточнил условия, ресурсы и выбрал самый надёжный обратимый шаг',
-    'Воздух': 'собрал недостающие факты, проговорил варианты и только затем зафиксировал решение',
-    'Вода': 'сначала оценил атмосферу и последствия для отношений, а затем действовал бережно, но определённо',
-  };
-  const action = actionByElement[mars?.element] || 'сначала отделил факты от предположений и выбрал небольшой обратимый шаг';
-  const factors = [
-    mars ? `${mars.name} в ${mars.sign}${mars.house ? `, ${mars.house} дом` : ''} — способ переходить к действию` : null,
-    moon ? `${moon.name} в ${moon.sign}${moon.house ? `, ${moon.house} дом` : ''} — автоматическая реакция модели` : null,
-    ascendant ? `Асцендент в ${ascendant.sign} — то, что клон замечает первым` : null,
-  ].filter(Boolean);
-  return `Ваш звёздный клон, вероятнее всего, ${action}.\n\nПочему: ${factors.join('; ')}.\n\nИтог модели: не угадывать идеальный ответ заранее, а выбрать ход, который соответствует конфигурации карты и даёт ясную обратную связь.`;
+function localCloneConsultation(factors = []) {
+  const evidence = publicConsultationFactors(factors);
+  const explanation = evidence.map((factor) => `${factor.position || factor.title} — ${factor.role}`).join('; ');
+  return `Ваш звёздный клон, вероятнее всего, сначала отделил бы необратимые ставки от того, что можно проверить небольшим ходом, и выбрал бы обратимый шаг с ясным признаком результата.\n\nПочему: ${explanation || 'для текущего вопроса не удалось выделить достаточно надёжных факторов карты'}.\n\nИтог модели: не угадывать идеальный ответ заранее, а получить факт, который уточнит следующий выбор.`;
 }
 
 function cloneProfilePolicy(profile, premium) {
@@ -230,6 +222,7 @@ async function requestConsultation(client, {
   history,
   question,
   externalContext = null,
+  factors = [],
 }) {
   const profile = resolveConsultationProfile({ product, premium });
   const preparedQuestion = prepareConsultationQuestion(profile, question);
@@ -256,8 +249,8 @@ async function requestConsultation(client, {
             factorBudget: profile.factorBudget,
             chartDepth: profile.chartDepth,
           } : null,
-          chart: compactChart(chart, profile),
-          portrait,
+          chart: product === 'clone' ? compactCloneEvidence(chart, factors) : compactChart(chart, profile),
+          portrait: product === 'clone' ? null : portrait,
           history: history.slice(-(profile?.historyLimit || 8)),
           question: preparedQuestion,
           externalContext,
@@ -271,7 +264,7 @@ async function requestConsultation(client, {
   return answer;
 }
 
-export async function answerConsultation({
+async function runConsultation({
   chart,
   portrait,
   question,
@@ -282,9 +275,17 @@ export async function answerConsultation({
 }) {
   const mode = consultationMode(history);
   const profile = resolveConsultationProfile({ product, premium });
-  const localAnswer = () => product === 'clone' ? localCloneConsultation(chart) : localConsultation(portrait, question);
+  const selected = product === 'clone'
+    ? selectConsultationFactors({ chart, question, factorBudget: profile?.factorBudget, premium })
+    : { factors: [], scope: factorScopeForChart(chart) };
+  const publicFactors = product === 'clone' ? publicConsultationFactors(selected.factors) : [];
+  const localAnswer = () => product === 'clone'
+    ? localCloneConsultation(selected.factors)
+    : localConsultation(portrait, question);
 
-  if (!process.env.OPENAI_API_KEY) return localAnswer();
+  if (!process.env.OPENAI_API_KEY) {
+    return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
+  }
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const config = resolveConsultationConfig();
@@ -301,9 +302,10 @@ export async function answerConsultation({
       history,
       question,
       externalContext,
+      factors: selected.factors,
     });
     console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${profile?.id || 'default'} model=${primary.model} effort=${primary.effort}`);
-    return answer;
+    return { answer, factors: publicFactors, factorScope: selected.scope };
   } catch (primaryError) {
     const canFallbackToDialog = mode === 'deep'
       && (primary.model !== config.dialog.model || primary.effort !== config.dialog.effort);
@@ -321,9 +323,10 @@ export async function answerConsultation({
           history,
           question,
           externalContext,
+          factors: selected.factors,
         });
         console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${profile?.id || 'default'} model=${config.dialog.model} effort=${config.dialog.effort} fallback=true`);
-        return answer;
+        return { answer, factors: publicFactors, factorScope: selected.scope };
       } catch (fallbackError) {
         console.error('OpenAI consultation fallback failed:', fallbackError?.message || fallbackError);
       }
@@ -331,6 +334,15 @@ export async function answerConsultation({
       console.error('OpenAI consultation failed:', primaryError?.message || primaryError);
     }
 
-    return localAnswer();
+    return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
+}
+
+export async function answerConsultation(options) {
+  const result = await runConsultation(options);
+  return result.answer;
+}
+
+export async function answerConsultationWithFactors(options) {
+  return runConsultation(options);
 }

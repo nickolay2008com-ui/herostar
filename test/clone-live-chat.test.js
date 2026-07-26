@@ -43,7 +43,7 @@ test('полный режим использует утверждённый те
 
   assert.match(html, />ПОЛНАЯ ГЛУБИНА КАРТЫ</);
   assert.match(html, />Увидеть картину целиком</);
-  assert.match(html, /В полном режиме Клон связывает факторы карты между собой/);
+  assert.match(html, /Полный режим связывает 3–6 значимых факторов/);
   assert.match(html, /id="openFullModeOffer"[^>]*>Что откроется в полном режиме</);
   assert.equal((html.match(/>Продолжить бесплатно</g) || []).length, 2);
   assert.match(html, />Диалог останется без лимита</);
@@ -66,7 +66,7 @@ test('полный режим спокойно обнаруживается в �
 
   assert.match(html, /class="premium-entry hidden" id="openPremiumDiscovery"/);
   assert.match(html, /id="premiumDiscovery"[^>]*role="dialog"/);
-  assert.match(html, />Бесплатный диалог помогает разбирать ваши вопросы без лимита\./);
+  assert.match(html, />Бесплатный Клон показывает главный ход/);
   assert.match(html, /id="continueToFullMode"[^>]*>Посмотреть полный режим</);
   assert.match(html, /id="returnToDialog"[^>]*>Вернуться в диалог</);
   assert.match(html, /id="passportPremiumEntry"/);

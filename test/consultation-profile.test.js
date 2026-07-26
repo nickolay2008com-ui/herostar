@@ -89,7 +89,7 @@ test('обычный HeroStar сохраняет собственную комп
 
 test('уровень доступа выбирается только на сервере', () => {
   assert.ok(serverSource.includes('const premium = req.user ? hasCloneAccessForChart(req.user, record.id) : false'));
-  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultation({'), serverSource.indexOf('answerConsultation({') + 500);
+  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultationWithFactors({'), serverSource.indexOf('answerConsultationWithFactors({') + 500);
   assert.ok(answerCall.includes('product'));
   assert.ok(answerCall.includes('premium'));
 });

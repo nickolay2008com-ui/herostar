@@ -21,6 +21,7 @@ const state = {
   localMessages: [],
   asking: false,
   selectedOffer: 'clone_day',
+  factorScope: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -340,7 +341,7 @@ function renderWebSearch(container, webSearch, { trackImpression = true } = {}) 
   container.append(section);
 }
 
-function message(role, text, { persist = true, webSearch = null, trackSearchImpression = true } = {}) {
+function message(role, text, { persist = true, webSearch = null, factors = [], factorScope = null, trackSearchImpression = true } = {}) {
   const element = document.createElement('article');
   element.className = `message ${role}`;
   element.innerHTML = role === 'clone'
@@ -354,7 +355,7 @@ function message(role, text, { persist = true, webSearch = null, trackSearchImpr
   }
   $('#messages').append(element);
   if (persist) {
-    state.localMessages.push({ role, content: text, webSearch, createdAt: new Date().toISOString() });
+    state.localMessages.push({ role, content: text, webSearch, factors, factorScope, createdAt: new Date().toISOString() });
     persistState();
   }
   return element;
@@ -377,9 +378,13 @@ function renderConversation(messages) {
     message(item.role === 'assistant' ? 'clone' : item.role, item.content, {
       persist: false,
       webSearch: item.webSearch || item.metadata?.webSearch || null,
+      factors: item.factors || item.metadata?.factors || [],
+      factorScope: item.factorScope || item.metadata?.factorScope || null,
       trackSearchImpression: false,
     });
   }
+  const latest = [...messages].reverse().find((item) => (item.role === 'clone' || item.role === 'assistant') && (item.factors?.length || item.metadata?.factors?.length));
+  if (latest) renderAnswerFactors(latest.factors || latest.metadata?.factors, latest.factorScope || latest.metadata?.factorScope);
   syncConversationStarted();
 }
 
@@ -581,7 +586,7 @@ function prepareOffer(offerCode = 'clone_day') {
   $('#clonePaywallTitle').textContent = isAlignment ? 'Сонастройка на 30 дней' : 'День со Звёздным клоном';
   $('#cloneOfferDescription').textContent = isAlignment
     ? 'Ежедневно сверяйте реальные ситуации с клоном, получайте ключевые моменты карты и простые мини-задания в Telegram.'
-    : 'На 24 часа Клон перейдёт в глубокий режим: свяжет параметры полной карты в единую систему, покажет противоречия, альтернативные ходы и условия изменения решения. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
+    : 'Бесплатный Клон показывает главный ход и объясняет его через факторы текущего ответа. На 24 часа полный режим связывает 3–6 значимых факторов в единую систему, показывает главное противоречие, альтернативный ход и условие, при котором решение изменится. Полная карта, персональный аватар и Паспорт клона останутся у вас навсегда.';
   $('#cloneOfferBenefits').innerHTML = (isAlignment
     ? ['✓ 30 дней глубоких вопросов клону', '✓ Ключевые моменты карты в Telegram', '✓ Простые мини-задания для проверки в жизни']
     : ['✓ Глубокий разбор 3–6 значимых связей', '✓ Противоречия, альтернативные ходы и условия выбора', '✓ Полный образ, карта и Паспорт клона навсегда'])
@@ -719,19 +724,50 @@ async function startPayment() {
 }
 
 function renderFactorsFromChart(chart) {
-  if (!chart) return;
-  const planets = chart.planets || [];
-  const factors = [];
-  const mars = planets.find((planet) => planet.key === 'mars');
-  const moon = planets.find((planet) => planet.key === 'moon');
-  if (mars) factors.push([`${mars.name} в ${mars.sign}${mars.house ? ` · ${mars.house} дом` : ''}`, 'Способ, которым клон переходит от оценки ситуации к действию.']);
-  if (moon) factors.push([`${moon.name} в ${moon.sign}${moon.house ? ` · ${moon.house} дом` : ''}`, 'Автоматическая эмоциональная реакция модели.']);
-  if (chart.angles?.ascendant) factors.push([`Асцендент · ${chart.angles.ascendant.sign}`, 'То, как клон входит в новую ситуацию и что замечает первым.']);
-  if (chart.angles?.mc) factors.push([`MC · ${chart.angles.mc.sign}`, 'Внешний результат, к которому тяготеет решение.']);
-  if (!factors.length) return;
-  $('#logicEmpty').classList.add('hidden');
-  $('#logicFactors').classList.remove('hidden');
-  $('#logicFactors').innerHTML = factors.slice(0, 4).map(([title, body]) => `<div class="factor"><strong>${title}</strong><p>${body}</p></div>`).join('');
+  state.factorScope = chart?.birth?.unknownTime
+    ? {
+        unknownTime: true,
+        system: chart.system,
+        note: 'Время рождения неизвестно: дома, ASC/MC и Луна не используются в объяснении ответа.',
+      }
+    : null;
+  const empty = $('#logicEmpty');
+  const list = $('#logicFactors');
+  list.classList.add('hidden');
+  list.innerHTML = '';
+  empty.classList.remove('hidden');
+  empty.textContent = chart?.birth?.unknownTime
+    ? 'Клон создан без точного времени. После ответа здесь появятся только устойчивые факторы даты — без домов, ASC/MC и Луны.'
+    : 'Задайте ситуацию. После ответа здесь появятся только те параметры карты, которые действительно были переданы модели для этого хода.';
+  const technical = $('#technicalBasis');
+  if (technical) {
+    technical.textContent = chart?.birth?.unknownTime
+      ? 'Карта без домов: планеты по знакам, устойчивые аспекты и ретроградность. Дома, ASC/DSC, MC/IC и Луна исключены.'
+      : 'Натальная карта, система домов Плацидуса, планеты, знаки, дома, аспекты, ретроградность, ASC/DSC и MC/IC.';
+  }
+}
+
+function renderAnswerFactors(factors = [], scope = null) {
+  const items = Array.isArray(factors) ? factors.filter((item) => item?.title && item?.role).slice(0, 6) : [];
+  const empty = $('#logicEmpty');
+  const list = $('#logicFactors');
+  state.factorScope = scope || state.factorScope;
+  if (!items.length) {
+    list.classList.add('hidden');
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    empty.textContent = scope?.note || 'Для этого ответа не удалось сформировать проверяемый след факторов.';
+    return;
+  }
+  empty.classList.add('hidden');
+  list.classList.remove('hidden');
+  const scopeNote = scope?.note ? `<p class="factor-scope-note">${escapeHtml(scope.note)}</p>` : '';
+  list.innerHTML = `${scopeNote}${items.map((factor) => `
+    <div class="factor" data-factor-id="${escapeHtml(factor.id || factor.key || '')}">
+      <strong>${escapeHtml(factor.title)}</strong>
+      ${factor.position ? `<small>${escapeHtml(factor.position)}</small>` : ''}
+      <p>${escapeHtml(factor.role)}</p>
+    </div>`).join('')}`;
 }
 
 function renderPassport(passport) {
@@ -803,6 +839,8 @@ async function loadHistory() {
       role: item.role === 'assistant' ? 'clone' : item.role,
       content: item.content,
       webSearch: item.metadata?.webSearch || null,
+      factors: item.metadata?.factors || [],
+      factorScope: item.metadata?.factorScope || null,
       createdAt: item.createdAt,
     }));
     renderConversation(state.localMessages);
@@ -853,6 +891,8 @@ async function askClone(question, pending, userElement) {
         role: 'clone',
         content: data.answer,
         webSearch: data.webSearch || null,
+        factors: data.factors || [],
+        factorScope: data.factorScope || null,
         createdAt: new Date().toISOString(),
       },
     );
@@ -860,6 +900,7 @@ async function askClone(question, pending, userElement) {
     if (countsAsAnonymousAnswer) {
       state.questionCount = Number(data.cloneUsage?.used || state.questionCount + 1);
     }
+    renderAnswerFactors(data.factors || [], data.factorScope || null);
     persistState();
     renderAllowance();
     renderCommerceUi();
@@ -1208,6 +1249,40 @@ document.addEventListener('click', (event) => {
   if (!event.target.closest('.place-label')) closePlaceResults();
 });
 
+function syncUnknownBirthTime() {
+  const checkbox = $('#unknownTime');
+  const time = $('#birthTime') || $('#birthForm input[name="time"]');
+  const label = $('#birthTimeLabel');
+  const note = $('#unknownTimeNote');
+  if (!checkbox || !time) return;
+  const unknown = checkbox.checked;
+  time.disabled = unknown;
+  time.required = !unknown;
+  if (unknown) time.value = '';
+  label?.classList.toggle('is-disabled', unknown);
+  if (note) note.textContent = unknown
+    ? 'Будет построен режим без домов. В объяснении ответов не используются ASC/MC и Луна — только устойчивые параметры даты.'
+    : 'Точное время включает дома Плацидуса и углы карты.';
+}
+
+$('#unknownTime')?.addEventListener('change', syncUnknownBirthTime);
+syncUnknownBirthTime();
+
+function buildBirthPayload(form, selectedPlace) {
+  const formData = new FormData(form);
+  const unknownTime = Boolean(form.querySelector('input[name="unknownTime"]:checked'));
+  const birthTime = String(formData.get('time') || '').trim();
+  return {
+    name: formData.get('name'),
+    date: formData.get('date'),
+    time: unknownTime ? '' : birthTime,
+    unknownTime,
+    place: selectedPlaceValue(selectedPlace),
+    personalDataConsent: formData.get('personalDataConsent') === 'on',
+    product: 'clone',
+  };
+}
+
 $('#birthForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   $('#formError').textContent = '';
@@ -1215,20 +1290,12 @@ $('#birthForm').addEventListener('submit', async (event) => {
     $('#formError').textContent = 'Выберите город из подсказки.';
     return;
   }
-  const formData = new FormData(event.currentTarget);
+  const payload = buildBirthPayload(event.currentTarget, state.selectedPlace);
   show('#buildingView');
   const steps = ['Рассчитываем натальную карту…', 'Определяем характер действия…', 'Сопоставляем дома и аспекты…', 'Формируем логику решений…'];
   let index = 0;
   const timer = setInterval(() => { $('#buildStep').textContent = steps[Math.min(++index, steps.length - 1)]; }, 900);
   try {
-    const payload = {
-      name: formData.get('name'),
-      date: formData.get('date'),
-      time: formData.get('time'),
-      place: selectedPlaceValue(state.selectedPlace),
-      personalDataConsent: formData.get('personalDataConsent') === 'on',
-      product: 'clone',
-    };
     const data = await json('/api/charts', { method: 'POST', body: JSON.stringify(payload) });
     state.chartId = data.id;
     state.token = data.accessToken;
@@ -1237,7 +1304,7 @@ $('#birthForm').addEventListener('submit', async (event) => {
     state.questionCount = 0;
     state.localMessages = [];
     $('#cloneName').textContent = payload.name;
-    $('#cloneStatus').textContent = 'модель создана';
+    $('#cloneStatus').textContent = payload.unknownTime ? 'модель без домов' : 'модель создана';
     persistState({ name: payload.name });
     const url = new URL(location.href);
     url.pathname = location.pathname.startsWith('/clone/live') ? '/clone/live/' : '/clone/';

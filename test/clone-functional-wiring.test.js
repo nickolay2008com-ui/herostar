@@ -60,6 +60,8 @@ test('клиент соединяет создание, три ответа до
   assert.match(clone, /\/api\/payments\/status/);
   assert.match(clone, /\/api\/me\/charts/);
   assert.match(clone, /personalDataConsent/);
+  assert.match(clone, /function buildBirthPayload\(form, selectedPlace\)/);
+  assert.match(clone, /querySelector\('input\[name=\"unknownTime\"\]:checked'\)/);
   assert.match(clone, /clone_payment_success/);
 });
 

@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node bootstrap.js",
     "dev": "node --watch bootstrap.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "astronomy-engine": "2.1.19",
@@ -21,5 +22,8 @@
     "openai": "6.49.0",
     "pg": "8.16.3",
     "tz-lookup": "6.1.25"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0"
   }
 }

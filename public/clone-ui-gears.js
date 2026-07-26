@@ -49,7 +49,9 @@
     const form = document.querySelector('#birthForm');
     const timeInput = form?.querySelector('input[name="time"]');
     const grid = timeInput?.closest('.grid');
-    if (!form || !timeInput || !grid || form.querySelector('#unknownTime')) return null;
+    if (!form || !timeInput || !grid) return null;
+    const existingControl = form.querySelector('#unknownTime');
+    if (existingControl) return existingControl;
 
     timeInput.id = 'birthTime';
     const label = document.createElement('label');
