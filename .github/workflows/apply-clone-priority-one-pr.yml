@@ -78,7 +78,18 @@ jobs:
 
       - name: Full unit and contract suite
         working-directory: work
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test > /tmp/full-suite.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "=== FAILING TEST EXCERPTS ==="
+            grep -n -B 8 -A 36 -E '^not ok|failureType:|error:' /tmp/full-suite.log || tail -n 240 /tmp/full-suite.log
+          else
+            tail -n 24 /tmp/full-suite.log
+          fi
+          exit "$status"
 
       - name: Install Playwright Chromium
         working-directory: work
