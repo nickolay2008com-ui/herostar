@@ -176,6 +176,7 @@ function resetMessages() {
 function renderConversation(messages) {
   resetMessages();
   for (const item of messages) message(item.role === 'assistant' ? 'clone' : item.role, item.content, { persist: false });
+  syncConversationStarted();
 }
 
 function cleanCloneQuestion(content) {
@@ -235,6 +236,7 @@ function accessLabel() {
 function renderAllowance() {
   const element = $('#questionAllowance');
   if (!element) return;
+  syncConversationStarted();
   const paidLabel = accessLabel();
   if (paidLabel) {
     element.textContent = paidLabel;
@@ -242,7 +244,7 @@ function renderAllowance() {
     return;
   }
   if (state.user) {
-    element.textContent = 'Бесплатный режим · сообщения без лимита';
+    element.textContent = 'Бесплатный диалог без лимита';
     element.classList.add('unlimited');
     return;
   }
@@ -251,6 +253,13 @@ function renderAllowance() {
   element.textContent = remaining
     ? `${remaining} ${remaining === 1 ? 'ответ' : 'ответа'} до сохранения в Telegram`
     : 'Подключите Telegram, чтобы продолжить без лимита';
+}
+
+function syncConversationStarted() {
+  const started = state.questionCount > 0 || Boolean($('#messages .message.user'));
+  $('.conversation')?.classList.toggle('conversation-started', started);
+  $('#conversationIntro')?.classList.toggle('hidden', started);
+  $('#conversationSuggestions')?.classList.toggle('hidden', started);
 }
 
 function syncComposerSubmitState() {
@@ -345,6 +354,10 @@ function renderCommerceUi() {
   );
   mountInlineOffer($('#fullModeOffer'), showFullMode && !isOfferDismissed('clone_day'));
   mountInlineOffer($('#alignmentOffer'), showAlignment && !isOfferDismissed('clone_alignment'));
+  const showPremiumEntry = Boolean(state.chartId && state.user && !access?.cloneAccessActive);
+  $('#openPremiumDiscovery')?.classList.toggle('hidden', !showPremiumEntry);
+  $('#productLabel')?.classList.toggle('hidden', showPremiumEntry);
+  $('#passportPremiumEntry')?.classList.toggle('hidden', !showPremiumEntry);
   if ($('#alignmentPrice')) $('#alignmentPrice').textContent = formatPrice(alignment.payableAmount || alignment.amount);
   if ($('#alignmentCreditNote')) {
     $('#alignmentCreditNote').textContent = alignment.credited
@@ -385,6 +398,23 @@ function openPaywall(offerCode = 'clone_day') {
   track('paywall_opened', 'clone_paywall_opened', { questionCount: state.questionCount, offerCode });
   goal('clone_paywall', { offer: offerCode });
   $('#clonePaywall').classList.remove('hidden');
+}
+
+let premiumDiscoveryTrigger = null;
+
+function openPremiumDiscovery(source = 'header_entry') {
+  premiumDiscoveryTrigger = document.activeElement;
+  track('paywall_opened', 'premium_entry_click', {
+    source,
+    questionCount: state.questionCount,
+  });
+  $('#premiumDiscovery')?.classList.remove('hidden');
+  $('#closePremiumDiscovery')?.focus();
+}
+
+function closePremiumDiscovery({ restoreFocus = true } = {}) {
+  $('#premiumDiscovery')?.classList.add('hidden');
+  if (restoreFocus) premiumDiscoveryTrigger?.focus?.();
 }
 
 function closePaywall() {
@@ -500,7 +530,7 @@ function renderPassport(passport) {
     avatar.style.background = `linear-gradient(135deg, ${from}, ${to})`;
     avatar.innerHTML = `<span>${escapeHtml(initials)}</span><small>${escapeHtml(passport.avatar?.symbol || '✦')}</small>`;
   }
-  $('#clonePassportTitle').textContent = passport.title || 'Паспорт клона';
+  $('#clonePassportTitle').textContent = passport.title || 'Моя карта';
   $('#passportSubtitle').textContent = [passport.avatar?.signature, passport.subtitle].filter(Boolean).join(' · ');
   $('#passportSections').innerHTML = (passport.sections || []).map((section) => `
     <article class="passport-section">
@@ -940,7 +970,7 @@ $('#birthForm').addEventListener('submit', async (event) => {
 });
 
 $$('.chips button').forEach((button) => button.addEventListener('click', () => {
-  $('#question').value = button.textContent;
+  $('#question').value = button.dataset.prompt || button.textContent;
   syncComposerSubmitState();
   $('#question').focus();
 }));
@@ -963,6 +993,7 @@ $('#questionForm').addEventListener('submit', async (event) => {
   setComposerBusy(true);
   dismissVisibleInlineOffers();
   const userElement = message('user', question, { persist: false });
+  syncConversationStarted();
   $('#question').value = '';
   const pending = message('clone', 'Клон сопоставляет ситуацию с конфигурацией карты…', { persist: false });
   try {
@@ -990,11 +1021,24 @@ $('#clonePaywall').addEventListener('click', (event) => {
 $('#clonePayButton').addEventListener('click', startPayment);
 $('#openFullModeOffer')?.addEventListener('click', () => openPaywall('clone_day'));
 $('#openAlignmentOffer')?.addEventListener('click', () => openPaywall('clone_alignment'));
+$('#openPremiumDiscovery')?.addEventListener('click', () => openPremiumDiscovery('header_entry'));
+$('#openPassportPremium')?.addEventListener('click', () => openPremiumDiscovery('passport_entry'));
+$('#closePremiumDiscovery')?.addEventListener('click', () => closePremiumDiscovery());
+$('#returnToDialog')?.addEventListener('click', () => closePremiumDiscovery());
+$('#continueToFullMode')?.addEventListener('click', () => {
+  closePremiumDiscovery({ restoreFocus: false });
+  openPaywall('clone_day');
+});
+$('#premiumDiscovery')?.addEventListener('click', (event) => {
+  if (event.target === $('#premiumDiscovery')) closePremiumDiscovery();
+});
 $$('[data-dismiss-offer]').forEach((button) => button.addEventListener('click', () => dismissOffer(button.dataset.dismissOffer)));
 $$('.side nav button').forEach((button) => button.addEventListener('click', () => setWorkspaceTab(button.dataset.tab || 'dialog')));
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closePaywall();
+  if (event.key !== 'Escape') return;
+  if (!$('#premiumDiscovery')?.classList.contains('hidden')) closePremiumDiscovery();
+  else closePaywall();
 });
 
 (async () => {
