@@ -160,6 +160,10 @@
 
 /* Mobile app shell: one controlled scroll area, no overlapping floating layers. */
 @media (max-width: 900px) {
+  .live-alternate-image::before {
+    filter: contrast(1.08) brightness(1.055) saturate(1.08);
+  }
+
   html:has(body.live-product .workspace:not(.hidden)),
   body.live-product:has(.workspace:not(.hidden)) {
     height: 100%;
