@@ -650,6 +650,7 @@ async function scheduleReminder(pool, userId, deliveryNumber, reminderHours) {
      WHERE user_id = $1
        AND delivery_number = $2
        AND outcome IS NULL
+       AND reminder_at IS NULL
        AND reminder_sent_at IS NULL
      RETURNING *`,
     [String(userId), Number(deliveryNumber), String(reminderHours)],
@@ -659,24 +660,24 @@ async function scheduleReminder(pool, userId, deliveryNumber, reminderHours) {
 
 async function recordPracticeOutcome(pool, userId, deliveryNumber, outcome) {
   const result = await pool.query(
-    `WITH target AS (
-       SELECT user_id, delivery_number, outcome AS previous_outcome
-       FROM practice_deliveries
-       WHERE user_id = $1 AND delivery_number = $2
-       FOR UPDATE
-     ), updated AS (
-       UPDATE practice_deliveries AS delivery
+    `WITH updated AS (
+       UPDATE practice_deliveries
        SET outcome = $3,
            outcome_at = NOW(),
            reminder_at = NULL
-       FROM target
-       WHERE delivery.user_id = target.user_id
-         AND delivery.delivery_number = target.delivery_number
-       RETURNING delivery.*
+       WHERE user_id = $1
+         AND delivery_number = $2
+         AND outcome IS NULL
+       RETURNING *, TRUE AS first_result
      )
-     SELECT updated.*, target.previous_outcome IS NULL AS first_result
-     FROM updated
-     JOIN target USING (user_id, delivery_number)`,
+     SELECT * FROM updated
+     UNION ALL
+     SELECT delivery.*, FALSE AS first_result
+     FROM practice_deliveries AS delivery
+     WHERE delivery.user_id = $1
+       AND delivery.delivery_number = $2
+       AND NOT EXISTS (SELECT 1 FROM updated)
+     LIMIT 1`,
     [String(userId), Number(deliveryNumber), outcome],
   );
   return result.rows[0] || null;
@@ -725,7 +726,20 @@ async function saveOutcomeAndRespond(pool, token, callback, deliveryNumber, outc
     await answerCallback(token, callback.id, 'Эта практика уже недоступна');
     return;
   }
+  if (!delivery.first_result) {
+    await answerCallback(token, callback.id, 'Результат уже сохранён');
+    return;
+  }
   await answerCallback(token, callback.id, 'Результат сохранён');
+  const sourceChatId = callback.message?.chat?.id;
+  const sourceMessageId = callback.message?.message_id;
+  if (sourceChatId && sourceMessageId) {
+    await telegramRequest(token, 'editMessageReplyMarkup', {
+      chat_id: sourceChatId,
+      message_id: sourceMessageId,
+      reply_markup: controlKeyboard(delivery, true),
+    }).catch(() => {});
+  }
   await telegramRequest(token, 'sendMessage', {
     chat_id: String(callback.from.id),
     text: outcomeConfirmation(outcome),
@@ -765,13 +779,25 @@ async function handlePracticeCallback(pool, token, callback, reminderHours) {
       return true;
     }
 
-    await answerCallback(token, callback.id, 'Осталось отметить результат');
-    await telegramRequest(token, 'sendMessage', {
-      chat_id: String(userId),
-      text: '✦ <b>Что изменилось после практики?</b>\n\nВыберите самый близкий результат. Здесь нет правильного ответа.',
-      parse_mode: 'HTML',
-      reply_markup: buildOutcomeKeyboard(deliveryNumber),
-    });
+    await answerCallback(token, callback.id, 'Что изменилось? Выберите результат ниже');
+    const sourceChatId = callback.message?.chat?.id;
+    const sourceMessageId = callback.message?.message_id;
+    let keyboardReplaced = false;
+    if (sourceChatId && sourceMessageId) {
+      keyboardReplaced = await telegramRequest(token, 'editMessageReplyMarkup', {
+        chat_id: sourceChatId,
+        message_id: sourceMessageId,
+        reply_markup: buildOutcomeKeyboard(deliveryNumber),
+      }).then(() => true).catch(() => false);
+    }
+    if (!keyboardReplaced) {
+      await telegramRequest(token, 'sendMessage', {
+        chat_id: String(userId),
+        text: '✦ <b>Что изменилось после практики?</b>\n\nВыберите самый близкий результат. Здесь нет правильного ответа.',
+        parse_mode: 'HTML',
+        reply_markup: buildOutcomeKeyboard(deliveryNumber),
+      });
+    }
     return true;
   }
 
