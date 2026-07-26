@@ -12,5 +12,5 @@ test('страница /clone/ совпадает с основной стран
   ]);
   assert.equal(cloneIndex, cloneFile);
   assert.match(cloneIndex, /<title>Звёздный клон/);
-  assert.match(cloneIndex, /src="\/clone\.js"/);
+  assert.match(cloneIndex, /src="\/clone\.js(?:\?v=[^"]+)?"/);
 });
