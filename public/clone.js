@@ -147,16 +147,214 @@ function persistState(extra = {}) {
   }));
 }
 
-function message(role, text, { persist = true } = {}) {
+function safeSourceUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost')) return null;
+    if (/^(?:127|10|0)\./.test(hostname) || /^192\.168\./.test(hostname)) return null;
+    if (/^172\.(?:1[6-9]|2\d|3[01])\./.test(hostname)) return null;
+    return { href: url.toString(), domain: hostname };
+  } catch {
+    return null;
+  }
+}
+
+function checkedAtLabel(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'Проверено сейчас';
+  return `Проверено ${date.toLocaleString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+function quotaResetLabel(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  const time = date.toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const now = new Date();
+  const sameLocalDay = (
+    date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth()
+    && date.getDate() === now.getDate()
+  );
+  if (sameLocalDay) return ` Новый поиск — после ${time}.`;
+  const day = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  return ` Новый поиск — ${day} в ${time}.`;
+}
+
+function appendCitedText(container, text, citations = []) {
+  const normalizedText = String(text || '');
+  const normalizedCitations = citations
+    .map((citation) => {
+      const target = safeSourceUrl(citation?.url);
+      const start = Math.max(0, Number(citation?.start) || 0);
+      const end = Math.min(normalizedText.length, Math.max(start, Number(citation?.end) || 0));
+      return target && end > start ? { ...citation, ...target, start, end } : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.start - right.start || left.end - right.end);
+
+  let cursor = 0;
+  for (const citation of normalizedCitations) {
+    if (citation.start < cursor) continue;
+    container.append(document.createTextNode(normalizedText.slice(cursor, citation.start)));
+    const link = document.createElement('a');
+    link.href = citation.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer nofollow';
+    link.className = 'web-citation';
+    link.textContent = normalizedText.slice(citation.start, citation.end);
+    link.title = citation.title || citation.domain;
+    link.addEventListener('click', () => {
+      track('web_result_opened', 'citation_opened', { domain: citation.domain });
+    });
+    container.append(link);
+    cursor = citation.end;
+  }
+  container.append(document.createTextNode(normalizedText.slice(cursor)));
+}
+
+function renderWebSearch(container, webSearch, { trackImpression = true } = {}) {
+  container.querySelector('.web-search-result')?.remove();
+  if (!webSearch?.requested || webSearch.status === 'not_requested') return;
+
+  const section = document.createElement('section');
+  section.className = `web-search-result web-search-${webSearch.status}`;
+  section.setAttribute('aria-label', 'Результат поиска в интернете');
+
+  const heading = document.createElement('h3');
+  const note = document.createElement('p');
+  note.className = 'web-search-note';
+
+  if (webSearch.status === 'completed') {
+    heading.textContent = 'Найдено сейчас';
+    note.textContent = checkedAtLabel(webSearch.checkedAt);
+    section.append(heading, note);
+
+    const summary = document.createElement('div');
+    summary.className = 'web-search-summary';
+    appendCitedText(summary, webSearch.text, webSearch.citations);
+    section.append(summary);
+
+    const sources = (webSearch.sources || [])
+      .map((source) => ({ source, target: safeSourceUrl(source?.url) }))
+      .filter(({ target }) => target)
+      .slice(0, 5);
+    if (sources.length) {
+      const sourcesTitle = document.createElement('h4');
+      sourcesTitle.textContent = 'Источники';
+      const list = document.createElement('ol');
+      list.className = 'web-search-sources';
+      sources.forEach(({ source, target }, index) => {
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = target.href;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer nofollow';
+        link.textContent = source.title || target.domain;
+        const domain = document.createElement('span');
+        domain.textContent = `${target.domain} ↗`;
+        link.append(domain);
+        link.addEventListener('click', () => {
+          track('web_result_opened', 'source_opened', { domain: target.domain, index: index + 1 });
+        });
+        item.append(link);
+        list.append(item);
+      });
+      section.append(sourcesTitle, list);
+    }
+
+    const disclaimer = document.createElement('small');
+    disclaimer.textContent = 'Актуальные данные, цены и наличие могут измениться после проверки.';
+    section.append(disclaimer);
+  } else if (webSearch.status === 'telegram_required') {
+    section.classList.add('web-search-gate');
+    heading.textContent = 'Поиск доступен после сохранения Клона';
+    note.textContent = 'Подключите Telegram — один актуальный поиск в сутки останется бесплатным.';
+    const slot = document.createElement('div');
+    slot.className = 'telegram-login-slot';
+    section.append(heading, note, slot);
+    if (!location.pathname.startsWith('/clone/live')) {
+      window.setTimeout(() => mountTelegramLogin(slot), 0);
+    }
+    if (trackImpression) track('web_search_gate_shown', 'telegram_search_gate');
+  } else if (webSearch.status === 'quota_exhausted') {
+    section.classList.add('web-search-gate');
+    const premiumLimit = webSearch.quota?.accessTier === 'premium'
+      || webSearch.quota?.upgradeAvailable === false;
+    heading.textContent = premiumLimit ? 'Лимит поиска на сегодня исчерпан' : 'Сравнить больше вариантов';
+    note.textContent = premiumLimit
+      ? `Обычный диалог продолжает работать.${quotaResetLabel(webSearch.quota?.resetsAt)}`
+      : `Бесплатный поиск уже использован.${quotaResetLabel(webSearch.quota?.resetsAt)} В полном режиме Клон проверяет больше источников и помогает сравнить найденное.`;
+    const actions = document.createElement('div');
+    actions.className = 'web-search-actions';
+    const continueButton = document.createElement('button');
+    continueButton.type = 'button';
+    continueButton.className = 'ghost';
+    continueButton.textContent = 'Продолжить разговор';
+    continueButton.addEventListener('click', () => {
+      if (!premiumLimit) dismissOffer('clone_day', { focusComposer: false });
+      section.remove();
+      renderCommerceUi();
+      $('#question')?.focus();
+    });
+    if (!premiumLimit) {
+      const upgrade = document.createElement('button');
+      upgrade.type = 'button';
+      upgrade.className = 'primary';
+      upgrade.textContent = 'Посмотреть полный режим';
+      upgrade.addEventListener('click', () => {
+        track('web_search_upgrade_clicked', 'web_search_upgrade');
+        if ($('#premiumDiscovery')) openPremiumDiscovery('web_search_gate');
+        else openPaywall('clone_day', upgrade);
+      });
+      actions.append(upgrade);
+    }
+    actions.append(continueButton);
+    section.append(heading, note, actions);
+    if (trackImpression) {
+      track('web_search_gate_shown', premiumLimit ? 'premium_search_limit' : 'premium_search_gate');
+    }
+  } else {
+    const messages = {
+      blocked: 'Этот поиск затрагивает приватность или небезопасное действие, поэтому я его не выполняю.',
+      empty: 'Не нашёл данных, которые можно надёжно подтвердить. Не буду придумывать результаты.',
+      timeout: 'Поиск занял слишком много времени. Актуальные данные не были подтверждены.',
+      temporarily_unavailable: 'Лимит безопасного поиска на сервисе временно исчерпан. Обычный диалог продолжает работать.',
+      unavailable: 'Поиск сейчас недоступен. Обычный диалог и ваш вопрос сохранены.',
+      failed: 'Не удалось выполнить поиск. Актуальные данные не были подтверждены.',
+    };
+    heading.textContent = 'Поиск не выполнен';
+    note.textContent = messages[webSearch.status] || messages.failed;
+    section.append(heading, note);
+  }
+
+  container.append(section);
+}
+
+function message(role, text, { persist = true, webSearch = null, trackSearchImpression = true } = {}) {
   const element = document.createElement('article');
   element.className = `message ${role}`;
   element.innerHTML = role === 'clone'
     ? '<span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p></p></div>'
     : '<div><b>Вы</b><p></p></div>';
   element.querySelector('p').textContent = text;
+  if (role === 'clone' && webSearch) {
+    renderWebSearch(element.querySelector('div'), webSearch, {
+      trackImpression: trackSearchImpression,
+    });
+  }
   $('#messages').append(element);
   if (persist) {
-    state.localMessages.push({ role, content: text, createdAt: new Date().toISOString() });
+    state.localMessages.push({ role, content: text, webSearch, createdAt: new Date().toISOString() });
     persistState();
   }
   return element;
@@ -175,7 +373,13 @@ function resetMessages() {
 
 function renderConversation(messages) {
   resetMessages();
-  for (const item of messages) message(item.role === 'assistant' ? 'clone' : item.role, item.content, { persist: false });
+  for (const item of messages) {
+    message(item.role === 'assistant' ? 'clone' : item.role, item.content, {
+      persist: false,
+      webSearch: item.webSearch || item.metadata?.webSearch || null,
+      trackSearchImpression: false,
+    });
+  }
   syncConversationStarted();
 }
 
@@ -352,7 +556,8 @@ function renderCommerceUi() {
     && state.questionCount >= 5
     && !showAlignment
   );
-  mountInlineOffer($('#fullModeOffer'), showFullMode && !isOfferDismissed('clone_day'));
+  const explicitSearchGateVisible = Boolean($('#messages .web-search-gate'));
+  mountInlineOffer($('#fullModeOffer'), showFullMode && !explicitSearchGateVisible && !isOfferDismissed('clone_day'));
   mountInlineOffer($('#alignmentOffer'), showAlignment && !isOfferDismissed('clone_alignment'));
   const showPremiumEntry = Boolean(state.chartId && state.user && !access?.cloneAccessActive);
   $('#openPremiumDiscovery')?.classList.toggle('hidden', !showPremiumEntry);
@@ -597,6 +802,7 @@ async function loadHistory() {
     state.localMessages = dialogue.map((item) => ({
       role: item.role === 'assistant' ? 'clone' : item.role,
       content: item.content,
+      webSearch: item.metadata?.webSearch || null,
       createdAt: item.createdAt,
     }));
     renderConversation(state.localMessages);
@@ -631,12 +837,29 @@ async function askClone(question, pending, userElement) {
       method: 'POST',
       body: JSON.stringify({ chartId: state.chartId, question, product: 'clone' }),
     });
+    if (data.webSearch?.status === 'telegram_required') {
+      pending.querySelector('p').textContent = 'Подключите Telegram — после входа Клон сам продолжит этот поиск.';
+      renderWebSearch(pending.querySelector('div'), data.webSearch);
+      state.pendingRequest = { question, userElement };
+      waitingForTelegram = true;
+      startAuthPoll(pending);
+      return;
+    }
     pending.querySelector('p').textContent = data.answer;
+    renderWebSearch(pending.querySelector('div'), data.webSearch);
     state.localMessages.push(
       { role: 'user', content: question, createdAt: new Date().toISOString() },
-      { role: 'clone', content: data.answer, createdAt: new Date().toISOString() },
+      {
+        role: 'clone',
+        content: data.answer,
+        webSearch: data.webSearch || null,
+        createdAt: new Date().toISOString(),
+      },
     );
-    state.questionCount = Number(data.cloneUsage?.used || state.questionCount + 1);
+    const countsAsAnonymousAnswer = !(data.webSearch?.requested && !state.user);
+    if (countsAsAnonymousAnswer) {
+      state.questionCount = Number(data.cloneUsage?.used || state.questionCount + 1);
+    }
     persistState();
     renderAllowance();
     renderCommerceUi();
@@ -1017,7 +1240,7 @@ $('#birthForm').addEventListener('submit', async (event) => {
     $('#cloneStatus').textContent = 'модель создана';
     persistState({ name: payload.name });
     const url = new URL(location.href);
-    url.pathname = '/clone/';
+    url.pathname = location.pathname.startsWith('/clone/live') ? '/clone/live/' : '/clone/';
     url.searchParams.set('chart', state.chartId);
     history.replaceState(null, '', url);
     renderFactorsFromChart(data.chart);
@@ -1060,7 +1283,7 @@ $('#questionForm').addEventListener('submit', async (event) => {
   const userElement = message('user', question, { persist: false });
   syncConversationStarted();
   $('#question').value = '';
-  const pending = message('clone', 'Клон сопоставляет ситуацию с конфигурацией карты…', { persist: false });
+  const pending = message('clone', 'Клон готовит ответ…', { persist: false });
   try {
     state.config = await loadConfig();
     state.user = state.config.user;

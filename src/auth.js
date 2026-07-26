@@ -10,6 +10,7 @@ import {
 } from './clone-quota.js';
 import { runRequestContext } from './request-context.js';
 import { decorateUserAccess } from './commerce.js';
+import { explicitWebSearchIntent } from './web-search-intent.js';
 
 const COOKIE_NAME = 'herostar_session';
 const METRIKA_INLINE_SCRIPT_HASH = "'sha256-C9Cumf0lnPcYdvKbnC3roPXPzPkdvVTbO7dG0AwnrSQ='";
@@ -207,6 +208,7 @@ async function prepareCloneQuota(req, res) {
   const registeredClone = await isCloneChart(chartId);
   if (!explicitlyClone && !registeredClone) return;
   if (explicitlyClone && !registeredClone) await registerCloneChart(chartId);
+  if (explicitWebSearchIntent(req.body?.question)) return;
 
   const reservation = await reserveCloneQuestion({
     chartId,

@@ -7,6 +7,7 @@ const memory = {
   messages: [],
   events: [],
   consents: [],
+  webSearchReservations: new Map(),
   sequence: 1,
 };
 
@@ -116,6 +117,23 @@ export async function initStore() {
     );
     CREATE INDEX IF NOT EXISTS consultation_messages_chart_idx
       ON consultation_messages(chart_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS web_search_reservations (
+      id UUID PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(telegram_id) ON DELETE CASCADE,
+      chart_id UUID REFERENCES charts(id) ON DELETE SET NULL,
+      access_tier TEXT NOT NULL CHECK (access_tier IN ('free', 'premium')),
+      usage_day DATE NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('reserved', 'attempted', 'completed', 'failed')),
+      attempted_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      failure_reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS web_search_reservations_user_day_idx
+      ON web_search_reservations(user_id, usage_day, created_at);
+    CREATE INDEX IF NOT EXISTS web_search_reservations_day_idx
+      ON web_search_reservations(usage_day, attempted_at);
 
     CREATE TABLE IF NOT EXISTS analytics_events (
       id BIGSERIAL PRIMARY KEY,
@@ -724,6 +742,208 @@ export async function getConsultationMessages(chartId, limit = 200) {
     metadata: row.metadata,
     createdAt: row.created_at,
   }));
+}
+
+function utcUsageWindow(now = new Date()) {
+  const date = now instanceof Date ? now : new Date(now);
+  const usageDay = date.toISOString().slice(0, 10);
+  const resetsAt = new Date(`${usageDay}T00:00:00.000Z`);
+  resetsAt.setUTCDate(resetsAt.getUTCDate() + 1);
+  return { usageDay, resetsAt: resetsAt.toISOString() };
+}
+
+function quotaResult({
+  reservationId = null,
+  used,
+  limit,
+  resetsAt,
+  accessTier,
+  globalExhausted = false,
+}) {
+  return {
+    ok: Boolean(reservationId),
+    reservationId,
+    used,
+    remaining: Math.max(0, limit - used),
+    limit,
+    resetsAt,
+    accessTier,
+    globalExhausted,
+  };
+}
+
+export async function reserveWebSearchUsage({
+  reservationId,
+  userId,
+  chartId = null,
+  accessTier = 'free',
+  userLimit,
+  globalLimit,
+  now = new Date(),
+}) {
+  const normalizedUserId = String(userId || '').trim();
+  const normalizedLimit = Math.max(0, Number(userLimit) || 0);
+  const normalizedGlobalLimit = Math.max(1, Number(globalLimit) || 1);
+  if (!reservationId || !normalizedUserId || normalizedLimit < 1) {
+    throw new Error('Web search quota reservation requires user, id and positive limit.');
+  }
+
+  const { usageDay, resetsAt } = utcUsageWindow(now);
+
+  if (!pool) {
+    const staleBefore = new Date(now).getTime() - 2 * 60_000;
+    for (const item of memory.webSearchReservations.values()) {
+      if (item.status === 'reserved' && new Date(item.createdAt).getTime() < staleBefore) {
+        item.status = 'failed';
+        item.failureReason = 'reservation_expired';
+        item.completedAt = new Date(now).toISOString();
+      }
+    }
+
+    const rows = [...memory.webSearchReservations.values()];
+    const reservedOrAttemptedGlobally = rows.filter((item) => (
+      item.usageDay === usageDay
+      && (['reserved', 'attempted', 'completed'].includes(item.status) || item.attemptedAt)
+    )).length;
+    const used = rows.filter((item) => (
+      item.userId === normalizedUserId
+      && item.usageDay === usageDay
+      && (['reserved', 'attempted', 'completed'].includes(item.status) || item.attemptedAt)
+    )).length;
+
+    if (reservedOrAttemptedGlobally >= normalizedGlobalLimit) {
+      return quotaResult({
+        used,
+        limit: normalizedLimit,
+        resetsAt,
+        accessTier,
+        globalExhausted: true,
+      });
+    }
+    if (used >= normalizedLimit) {
+      return quotaResult({ used, limit: normalizedLimit, resetsAt, accessTier });
+    }
+
+    memory.webSearchReservations.set(reservationId, {
+      id: reservationId,
+      userId: normalizedUserId,
+      chartId,
+      accessTier,
+      usageDay,
+      status: 'reserved',
+      attemptedAt: null,
+      completedAt: null,
+      failureReason: null,
+      createdAt: new Date(now).toISOString(),
+    });
+    return quotaResult({
+      reservationId,
+      used: used + 1,
+      limit: normalizedLimit,
+      resetsAt,
+      accessTier,
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1))',
+      [`web-search:${usageDay}`],
+    );
+    await client.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1))',
+      [`web-search:${usageDay}:${normalizedUserId}`],
+    );
+    await client.query(
+      `UPDATE web_search_reservations
+       SET status = 'failed', failure_reason = 'reservation_expired', completed_at = NOW()
+       WHERE status = 'reserved'
+         AND attempted_at IS NULL
+         AND created_at < NOW() - INTERVAL '2 minutes'`,
+    );
+
+    const globalResult = await client.query(
+      `SELECT COUNT(*)::int AS total
+       FROM web_search_reservations
+       WHERE usage_day = $1::date
+         AND (status IN ('reserved', 'attempted', 'completed') OR attempted_at IS NOT NULL)`,
+      [usageDay],
+    );
+    const usedResult = await client.query(
+      `SELECT COUNT(*)::int AS total
+       FROM web_search_reservations
+       WHERE user_id = $1
+         AND usage_day = $2::date
+         AND (status IN ('reserved', 'attempted', 'completed') OR attempted_at IS NOT NULL)`,
+      [normalizedUserId, usageDay],
+    );
+    const globalUsed = Number(globalResult.rows[0]?.total || 0);
+    const used = Number(usedResult.rows[0]?.total || 0);
+
+    if (globalUsed >= normalizedGlobalLimit || used >= normalizedLimit) {
+      await client.query('COMMIT');
+      return quotaResult({
+        used,
+        limit: normalizedLimit,
+        resetsAt,
+        accessTier,
+        globalExhausted: globalUsed >= normalizedGlobalLimit,
+      });
+    }
+
+    await client.query(
+      `INSERT INTO web_search_reservations
+         (id, user_id, chart_id, access_tier, usage_day, status)
+       VALUES ($1,$2,$3,$4,$5,'reserved')`,
+      [reservationId, normalizedUserId, chartId, accessTier, usageDay],
+    );
+    await client.query('COMMIT');
+    return quotaResult({
+      reservationId,
+      used: used + 1,
+      limit: normalizedLimit,
+      resetsAt,
+      accessTier,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateWebSearchUsage(reservationId, status, reason = null) {
+  const normalizedStatus = String(status || '').trim();
+  if (!['attempted', 'completed', 'failed'].includes(normalizedStatus)) {
+    throw new Error('Unsupported web search reservation status.');
+  }
+
+  if (!pool) {
+    const record = memory.webSearchReservations.get(reservationId);
+    if (!record) return null;
+    record.status = normalizedStatus;
+    if (normalizedStatus === 'attempted') record.attemptedAt = record.attemptedAt || nowIso();
+    if (normalizedStatus === 'completed' || normalizedStatus === 'failed') record.completedAt = nowIso();
+    if (normalizedStatus === 'failed') record.failureReason = String(reason || 'search_failed').slice(0, 120);
+    return { ...record };
+  }
+
+  const result = await pool.query(
+    `UPDATE web_search_reservations
+     SET status = $2,
+         attempted_at = CASE WHEN $2 IN ('attempted', 'completed', 'failed')
+           THEN COALESCE(attempted_at, NOW()) ELSE attempted_at END,
+         completed_at = CASE WHEN $2 IN ('completed', 'failed') THEN NOW() ELSE completed_at END,
+         failure_reason = CASE WHEN $2 = 'failed' THEN $3 ELSE failure_reason END
+     WHERE id = $1
+     RETURNING id, user_id, chart_id, access_tier, usage_day, status,
+               attempted_at, completed_at, failure_reason, created_at`,
+    [reservationId, normalizedStatus, reason ? String(reason).slice(0, 120) : null],
+  );
+  return result.rows[0] || null;
 }
 
 export async function trackEvent({

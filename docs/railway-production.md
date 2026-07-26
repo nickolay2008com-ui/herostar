@@ -55,6 +55,11 @@ APP_URL=https://herostar.up.railway.app
 SESSION_SECRET=...
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5-mini
+WEB_SEARCH_ENABLED=true
+OPENAI_SEARCH_MODEL=gpt-5.6
+WEB_SEARCH_FREE_DAILY_LIMIT=1
+WEB_SEARCH_PREMIUM_DAILY_LIMIT=10
+WEB_SEARCH_GLOBAL_DAILY_LIMIT=100
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_USERNAME=...
 LEGAL_FULL_NAME=...
@@ -74,6 +79,15 @@ DATABASE_URL=... # Railway подключает из Postgres service
 DEMO_MODE=true
 FREE_CARD_COUNT=3
 ```
+
+Поиск в диалоге Клона не включается автоматически: сервер запускает отдельный
+`web_search` только после явной просьбы «найди», «поищи», «погугли» либо
+однозначной просьбы проверить внешний источник. Натальная карта, профиль и
+полная история разговора в поисковый запрос не передаются. Бесплатный лимит
+считается на Telegram-пользователя, а общий суточный лимит защищает бюджет.
+После обращения к провайдеру попытка учитывается в суточном лимите даже при
+таймауте: это защищает бюджет от повторных платных запросов. Запросы,
+остановленные до внешнего вызова, лимит не расходуют.
 
 ## Production-gate оплаты
 

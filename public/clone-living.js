@@ -6,6 +6,7 @@
   const paywall = document.querySelector('#clonePaywall');
   const jumpToLatest = document.querySelector('#jumpToLatest');
   const TELEGRAM_LINK_PARAM = 'telegram_link';
+  const TELEGRAM_LINK_STORAGE_KEY = 'herostarTelegramLinkReturn';
   const CHART_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const NEAR_BOTTOM_THRESHOLD = 96;
 
@@ -63,6 +64,8 @@
     const url = new URL(location.href);
     url.searchParams.delete(TELEGRAM_LINK_PARAM);
     history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    try { sessionStorage.removeItem(TELEGRAM_LINK_STORAGE_KEY); } catch { /* no-op */ }
+    try { delete window.__herostarTelegramLinkReturn; } catch { /* no-op */ }
   }
 
   async function finishTelegramLink(token, statusNode, { reload = false } = {}) {
@@ -139,7 +142,11 @@
   }
 
   async function resumeTelegramLinkFromUrl() {
-    const token = new URLSearchParams(location.search).get(TELEGRAM_LINK_PARAM);
+    let storedToken = null;
+    try { storedToken = sessionStorage.getItem(TELEGRAM_LINK_STORAGE_KEY); } catch { storedToken = null; }
+    const token = new URLSearchParams(location.search).get(TELEGRAM_LINK_PARAM)
+      || storedToken
+      || window.__herostarTelegramLinkReturn;
     if (!token) return;
     const status = document.createElement('div');
     status.className = 'telegram-return-status';

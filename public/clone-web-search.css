@@ -1,0 +1,124 @@
+.web-search-result {
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.web-search-result h3,
+.web-search-result h4 {
+  margin: 0;
+  color: #f7f5fb;
+}
+
+.web-search-result h3 {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.web-search-result h4 {
+  margin-top: 16px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.web-search-note {
+  margin: 4px 0 0 !important;
+  color: var(--muted, #a8a7b2) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.web-search-summary {
+  min-width: 0;
+  margin-top: 13px;
+  color: #e8e3ef;
+  font-size: 14px;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.web-citation {
+  color: #d9c7ff;
+  text-decoration: underline;
+  text-decoration-color: rgba(181, 145, 255, .48);
+  text-underline-offset: 3px;
+}
+
+.web-citation:focus-visible,
+.web-search-sources a:focus-visible,
+.web-search-actions button:focus-visible {
+  outline: 2px solid #c6a5ff;
+  outline-offset: 3px;
+}
+
+.web-search-sources {
+  display: grid;
+  gap: 8px;
+  margin: 9px 0 13px;
+  padding-left: 20px;
+}
+
+.web-search-sources li {
+  padding-left: 2px;
+  color: #cfc8d9;
+}
+
+.web-search-sources a {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-height: 44px;
+  min-width: 0;
+  align-items: center;
+  color: #f0ebf7;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.web-search-sources a span {
+  color: #a991d8;
+  font-size: 11px;
+}
+
+.web-search-result > small {
+  display: block;
+  color: var(--muted, #a8a7b2);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.web-search-gate {
+  padding: 16px;
+  border: 1px solid rgba(181, 145, 255, .24);
+  border-radius: 16px;
+  background: rgba(142, 92, 246, .08);
+}
+
+.web-search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.web-search-actions button {
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .web-search-result {
+    font-size: 14px;
+  }
+
+  .web-search-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .web-search-actions button {
+    width: 100%;
+  }
+}

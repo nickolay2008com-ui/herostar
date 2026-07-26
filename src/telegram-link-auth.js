@@ -146,25 +146,26 @@ async function authPool() {
   return poolPromise;
 }
 
-async function saveLink({ token, chartId }) {
+async function saveLink({ token, chartId, userId = null }) {
   const hash = tokenHash(token);
   const expiresAt = new Date(Date.now() + LOGIN_TTL_MS);
   const pool = await authPool();
   if (!pool) {
     memoryLinks.set(hash, {
       chartId: isUuid(chartId) ? chartId : null,
-      userId: null,
+      userId: userId ? String(userId) : null,
       expiresAt: expiresAt.toISOString(),
-      claimedAt: null,
+      claimedAt: userId ? new Date().toISOString() : null,
       consumedAt: null,
     });
     return;
   }
   await pool.query('DELETE FROM telegram_login_links WHERE expires_at < NOW() - INTERVAL \'1 day\'');
   await pool.query(
-    `INSERT INTO telegram_login_links (token_hash, chart_id, expires_at)
-     VALUES ($1, $2, $3)`,
-    [hash, isUuid(chartId) ? chartId : null, expiresAt],
+    `INSERT INTO telegram_login_links
+       (token_hash, chart_id, user_id, expires_at, claimed_at)
+     VALUES ($1, $2, $3, $4, CASE WHEN $3 IS NULL THEN NULL ELSE NOW() END)`,
+    [hash, isUuid(chartId) ? chartId : null, userId ? String(userId) : null, expiresAt],
   );
 }
 
@@ -294,8 +295,7 @@ export async function telegramLinkAuthMiddleware(req, res, next) {
         return sendJson(res, 400, { error: 'Некорректная ссылка Telegram.', code: 'INVALID_TELEGRAM_LINK' });
       }
       const result = await consumeLink(token);
-      const reusableAuthorization = result.status === 'consumed' && result.userId;
-      if (result.status === 'authorized' || reusableAuthorization) {
+      if (result.status === 'authorized') {
         setSessionCookie(res, result.userId);
         return sendJson(res, 200, { status: 'authorized', chartId: result.chartId });
       }
@@ -343,8 +343,14 @@ export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThi
     }
 
     const baseUrl = publicBaseUrl();
+    const returnToken = crypto.randomBytes(24).toString('base64url');
+    await saveLink({
+      token: returnToken,
+      chartId: claimed.chartId,
+      userId: claimed.user.telegram_id,
+    });
     const returnUrl = baseUrl
-      ? `${baseUrl}/clone/live/?${new URLSearchParams({ telegram_link: token, ...(claimed.chartId ? { chart: claimed.chartId } : {}) }).toString()}`
+      ? `${baseUrl}/clone/live/?${new URLSearchParams({ telegram_link: returnToken, ...(claimed.chartId ? { chart: claimed.chartId } : {}) }).toString()}`
       : null;
     const confirmationText = claimed.chartId
       ? '✦ Telegram подключён. Клон и история теперь сохранятся за вами. Вернитесь на страницу — разговор продолжится автоматически.'
