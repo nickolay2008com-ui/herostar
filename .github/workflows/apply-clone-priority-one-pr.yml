@@ -65,12 +65,11 @@ jobs:
           )
           replace(
               'test/consultation-profile.test.js',
-              "serverSource.indexOf('answerConsultation({')",
-              "serverSource.indexOf('answerConsultationWithFactors({')",
+              "  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultation({'), serverSource.indexOf('answerConsultation({') + 500);",
+              "  const answerCall = serverSource.slice(serverSource.indexOf('answerConsultationWithFactors({'), serverSource.indexOf('answerConsultationWithFactors({') + 500);",
           )
           PY
       - name: Capture unit tests
-        id: unit
         shell: bash
         run: |
           set +e
