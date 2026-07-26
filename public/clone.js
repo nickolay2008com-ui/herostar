@@ -717,18 +717,12 @@ function mountTelegramLogin(container) {
     return;
   }
   track('auth_opened', 'clone_auth_opened');
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = 'https://telegram.org/js/telegram-widget.js?22';
-  script.dataset.telegramLogin = state.config.telegramBotUsername;
-  script.dataset.size = 'large';
-  script.dataset.radius = '12';
-  script.dataset.userpic = 'true';
-  script.dataset.requestAccess = 'write';
-  const callback = new URL('/auth/telegram/callback', location.origin);
-  callback.searchParams.set('state', `clone:${state.chartId || ''}`);
-  script.dataset.authUrl = callback.toString();
-  container.append(script);
+  if (typeof window.mountCloneTelegramLink !== 'function') {
+    container.textContent = 'Не удалось открыть Telegram. Обновите страницу и попробуйте ещё раз.';
+    setComposerBusy(false);
+    return;
+  }
+  window.mountCloneTelegramLink(container);
 }
 
 function showTelegramContinuation(pending, request = null) {

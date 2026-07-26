@@ -1,25 +1,12 @@
 import express from 'express';
 import { scopeCloneAccess } from './src/clone-access-middleware.js';
 import {
-  handleTelegramLinkUpdates,
   startTelegramLinkUpdatePolling,
   telegramLinkAuthMiddleware,
 } from './src/telegram-link-auth.js';
 
 const originalUse = express.application.use;
 const originalStatic = express.static;
-const originalFetch = globalThis.fetch;
-
-globalThis.fetch = async (...args) => {
-  const response = await originalFetch(...args);
-  const url = String(args[0]?.url || args[0] || '');
-  if (/api\.telegram\.org\/bot[^/]+\/getUpdates(?:\?|$)/i.test(url)) {
-    response.clone().json()
-      .then((payload) => handleTelegramLinkUpdates(payload?.result, { fetchImpl: originalFetch }))
-      .catch((error) => console.error('Не удалось обработать Telegram-вход по ссылке:', error));
-  }
-  return response;
-};
 
 express.application.use = function patchedUse(...handlers) {
   const result = originalUse.apply(this, handlers);
@@ -66,4 +53,4 @@ const { startPracticeNotifications } = await import('./src/practice-notification
 void startPracticeNotifications().catch((error) => {
   console.error('Не удалось запустить практические Telegram-уведомления:', error);
 });
-startTelegramLinkUpdatePolling({ fetchImpl: originalFetch });
+startTelegramLinkUpdatePolling();
