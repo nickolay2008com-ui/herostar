@@ -12,7 +12,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout task source
         uses: actions/checkout@v4
@@ -20,17 +20,20 @@ jobs:
           ref: feature/clone-priority-one
           path: source
           fetch-depth: 0
+
       - name: Checkout clean main
         uses: actions/checkout@v4
         with:
           ref: main
           path: work
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: work/package-lock.json
+
       - name: Restore tested implementation artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -39,6 +42,7 @@ jobs:
           gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/8634816222/zip > /tmp/priority-one.zip
           unzip -q /tmp/priority-one.zip -d /tmp/priority-one
           tar -xzf /tmp/priority-one/priority-one.tgz -C work
+
       - name: Reconcile approved contracts
         working-directory: work
         shell: bash
@@ -46,17 +50,31 @@ jobs:
           sed -i 's#/clone/live/live.css?v=20260726-auth2#/clone/live/live.css?v=20260726-priority1#' ../source/scripts/reconcile-clone-priority-one.py
           python ../source/scripts/reconcile-clone-priority-one.py
           git checkout HEAD -- .github/workflows/ci.yml
-      - name: Install and test
+
+      - name: Install dependencies
+        working-directory: work
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Unit and contract tests
+        working-directory: work
+        run: npm test
+
+      - name: Install Playwright Chromium
+        working-directory: work
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        working-directory: work
+        run: npm run test:e2e
+
+      - name: Syntax and diff validation
         working-directory: work
         shell: bash
         run: |
-          npm install --ignore-scripts --no-audit --no-fund
-          npm test
-          npx playwright install --with-deps chromium
-          npm run test:e2e
           node --check server.js
           for file in public/*.js public/clone/live/*.js src/*.js; do node --check "$file"; done
           git diff --check
+
       - name: Publish verified branch
         working-directory: work
         shell: bash
