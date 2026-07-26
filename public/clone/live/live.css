@@ -162,7 +162,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-size: clamp(25px,3vw,39px);
+  font-size: clamp(24px,2.6vw,36px);
   font-weight: 790;
   line-height: 1.08;
   letter-spacing: -.04em;
@@ -170,7 +170,7 @@
 
 .live-lead { max-width: 520px; margin: 20px 0 0; color: #bbb8c5; font-size: 17px; line-height: 1.62; }
 .live-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 30px; }
-.live-trust-line { max-width: 520px; margin: 14px 0 0; color: #8f8a99; font-size: 12px; line-height: 1.5; }
+.live-trust-line { max-width: 540px; margin: 14px 0 0; color: #b7b0bf; font-size: 13px; line-height: 1.55; }
 
 .live-product .primary,
 .live-product .ghost,
@@ -380,6 +380,10 @@
   .live-alternate:hover .live-alternate-image { transform: scale(1.045); }
 }
 
+@media (min-width:901px) {
+  .live-actions { margin-bottom: 24px; }
+}
+
 @media (max-width:900px) {
   .live-home { width: min(100% - 20px,760px); padding-top: 78px; }
   .live-hero { min-height: 760px; border-radius: 28px; }
@@ -415,7 +419,7 @@
   .live-accent { font-size: 27px; }
   .live-actions { display: grid; }
   .live-primary,.live-actions .restore-access,.live-actions .ghost { width: 100%; }
-  .live-benefits { position: static; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; margin-top: 14px; transform: none; }
+  .live-benefits { position: static; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; margin-top: 18px; transform: none; }
   .live-benefits span { min-height: 48px; padding: 7px 5px; font-size: 12px; line-height: 1.25; }
   .live-benefits b { display: none; }
   .live-hero { margin-bottom: 0; }

@@ -39,9 +39,19 @@ test('мобильные преимущества компактны, а sticky 
     read('public/clone/live/live.js'),
   ]);
 
-  assert.match(styles, /\.live-benefits\s*\{[^}]*position:\s*static[^}]*grid-template-columns:\s*repeat\(3/s);
+  assert.match(styles, /\.live-benefits\s*\{[^}]*position:\s*static[^}]*grid-template-columns:\s*repeat\(3[^}]*margin-top:\s*18px/s);
   assert.match(styles, /\.live-hero\s*\{[^}]*margin-bottom:\s*0/s);
   assert.match(live, /window\.scrollY > window\.innerHeight \* \.6/);
   assert.match(live, /!primaryActionVisible && !intentFormVisible/);
   assert.match(live, /observer\.observe\(heroForm\)/);
+});
+
+test('hero сохраняет спокойную и читаемую визуальную иерархию', async () => {
+  const styles = await read('public/clone/live/live.css');
+
+  assert.match(styles, /\.live-accent\s*\{[^}]*font-size:\s*clamp\(24px,2\.6vw,36px\)/s);
+  assert.match(styles, /\.live-trust-line\s*\{[^}]*color:\s*#b7b0bf[^}]*font-size:\s*13px/s);
+  assert.match(styles, /@media\s*\(min-width:901px\)\s*\{[^}]*\.live-actions\s*\{[^}]*margin-bottom:\s*24px/s);
+  assert.match(styles, /@media\s*\(max-width:900px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*clamp\(25px,7vw,36px\)/);
+  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*27px/);
 });
