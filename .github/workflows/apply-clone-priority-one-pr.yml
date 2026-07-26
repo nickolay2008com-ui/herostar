@@ -105,9 +105,30 @@ jobs:
         working-directory: work
         run: npx playwright install --with-deps chromium
 
-      - name: Browser tests
+      - name: Capture browser tests
         working-directory: work
-        run: npm run test:e2e
+        shell: bash
+        run: |
+          set +e
+          npm run test:e2e > browser-suite.log 2>&1
+          echo "$?" > browser-suite-status
+          exit 0
+
+      - name: Upload browser diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-clone-browser-diagnostic
+          path: |
+            work/browser-suite.log
+            work/browser-suite-status
+            work/test-results
+            work/playwright-report
+          if-no-files-found: warn
+          retention-days: 2
+
+      - name: Enforce browser tests
+        working-directory: work
+        run: test "$(cat browser-suite-status)" = "0"
 
       - name: Syntax and diff validation
         working-directory: work
@@ -121,7 +142,7 @@ jobs:
         working-directory: work
         shell: bash
         run: |
-          rm -rf priority-one-*.log priority-one-*-status full-suite.log full-suite-status test-results playwright-report
+          rm -rf priority-one-*.log priority-one-*-status full-suite.log full-suite-status browser-suite.log browser-suite-status test-results playwright-report
           git config user.name "HeroStar Quality Bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A
