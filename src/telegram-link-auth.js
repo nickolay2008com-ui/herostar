@@ -149,23 +149,33 @@ async function authPool() {
 async function saveLink({ token, chartId, userId = null }) {
   const hash = tokenHash(token);
   const expiresAt = new Date(Date.now() + LOGIN_TTL_MS);
+  const normalizedUserId = userId ? String(userId) : null;
+  const claimedAt = normalizedUserId ? new Date() : null;
   const pool = await authPool();
   if (!pool) {
     memoryLinks.set(hash, {
       chartId: isUuid(chartId) ? chartId : null,
-      userId: userId ? String(userId) : null,
+      userId: normalizedUserId,
       expiresAt: expiresAt.toISOString(),
-      claimedAt: userId ? new Date().toISOString() : null,
+      claimedAt: claimedAt?.toISOString() || null,
       consumedAt: null,
     });
     return;
   }
   await pool.query('DELETE FROM telegram_login_links WHERE expires_at < NOW() - INTERVAL \'1 day\'');
+  if (!normalizedUserId) {
+    await pool.query(
+      `INSERT INTO telegram_login_links (token_hash, chart_id, expires_at)
+       VALUES ($1, $2, $3)`,
+      [hash, isUuid(chartId) ? chartId : null, expiresAt],
+    );
+    return;
+  }
   await pool.query(
     `INSERT INTO telegram_login_links
        (token_hash, chart_id, user_id, expires_at, claimed_at)
-     VALUES ($1, $2, $3, $4, CASE WHEN $3 IS NULL THEN NULL ELSE NOW() END)`,
-    [hash, isUuid(chartId) ? chartId : null, userId ? String(userId) : null, expiresAt],
+     VALUES ($1, $2, $3, $4, $5)`,
+    [hash, isUuid(chartId) ? chartId : null, normalizedUserId, expiresAt, claimedAt],
   );
 }
 
