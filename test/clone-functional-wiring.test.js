@@ -22,13 +22,17 @@ test('оба публичных адреса клона отдают одну и
 });
 
 test('клиент соединяет создание, три ответа до Telegram, свободный базовый диалог и два платных продукта', async () => {
-  const clone = await read('public/clone.js');
+  const [clone, living] = await Promise.all([
+    read('public/clone.js'),
+    read('public/clone-living.js'),
+  ]);
 
   assert.match(clone, /json\('\/api\/charts'/);
   assert.match(clone, /json\('\/api\/consult'/);
   assert.match(clone, /\/api\/charts\/\$\{encodeURIComponent\(state\.chartId\)\}\/messages/);
   assert.match(clone, /\/api\/charts\/\$\{state\.chartId\}\/claim/);
-  assert.match(clone, /callback\.searchParams\.set\('state', `clone:/);
+  assert.match(clone, /window\.mountCloneTelegramLink\(container\)/);
+  assert.match(living, /\/api\/auth\/telegram-link/);
   assert.match(clone, /CLONE_TELEGRAM_REQUIRED/);
   assert.match(clone, /cloneUsage/);
   assert.match(clone, /Бесплатный диалог без лимита/);
@@ -74,7 +78,7 @@ test('сервер содержит все звенья публичного и 
   }
 
   assert.match(server, /rawState\.startsWith\('clone:'\)/);
-  assert.match(server, /res\.redirect\(`\/clone\/\?auth=ok/);
+  assert.match(server, /res\.redirect\(`\/clone\/live\/\?auth=ok/);
   assert.match(server, /requireUser/);
   assert.match(server, /requireAdmin/);
   assert.match(server, /express\.static\('public'/);
