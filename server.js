@@ -3,7 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { calculateNatalChart } from './src/astro.js';
-import { generatePortrait, answerConsultation } from './src/ai.js';
+import { generatePortrait, answerConsultationWithFactors } from './src/ai.js';
 import {
   initStore,
   saveChart,
@@ -760,9 +760,9 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
       }
     }
 
-    const answer = searchRequested && webSearch.status !== 'completed'
-      ? answerForWebSearchOutcome(webSearch)
-      : await answerConsultation({
+    const consultation = searchRequested && webSearch.status !== 'completed'
+      ? { answer: answerForWebSearchOutcome(webSearch), factors: [], factorScope: null }
+      : await answerConsultationWithFactors({
           chart: record.chartData,
           portrait: record.portraitData,
           question,
@@ -771,6 +771,9 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
           premium,
           externalContext,
         });
+    const answer = consultation.answer;
+    const factors = product === 'clone' && Array.isArray(consultation.factors) ? consultation.factors : [];
+    const factorScope = product === 'clone' ? consultation.factorScope || null : null;
 
     const userMessageMetadata = product === 'clone'
       ? { product: 'clone', cloneReservationId: req.cloneReservationId || null }
@@ -778,6 +781,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
     const assistantMessageMetadata = {
       ...userMessageMetadata,
       ...(searchRequested ? { webSearch: publicWebSearchPayload(webSearch) } : {}),
+      ...(factors.length ? { factors, factorScope } : {}),
     };
     await saveConsultationExchange({
       chartId: record.id,
@@ -804,6 +808,8 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
     });
     res.json({
       answer,
+      factors,
+      factorScope,
       webSearch: publicWebSearchPayload(webSearch),
       cloneUsage: req.cloneQuestionUsage
         ? {
