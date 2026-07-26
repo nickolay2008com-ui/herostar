@@ -20,7 +20,13 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - name: Detect existing implementation
+        id: state
+        shell: bash
+        run: |
+          if [ -f src/consultation-factors.js ]; then echo "applied=true" >> "$GITHUB_OUTPUT"; else echo "applied=false" >> "$GITHUB_OUTPUT"; fi
       - name: Apply canonical implementation
+        if: steps.state.outputs.applied != 'true'
         shell: bash
         run: |
           python - <<'PY'
@@ -33,6 +39,7 @@ jobs:
           Path('/tmp/apply-priority-one.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
           PY
           python /tmp/apply-priority-one.py
+          git checkout HEAD -- .github/workflows/apply-clone-priority-one.yml .github/workflows/apply-clone-priority-one-pr.yml
       - name: Capture unit test result
         shell: bash
         run: |
@@ -40,14 +47,17 @@ jobs:
           npm test > priority-one-test.log 2>&1
           status=$?
           echo "exit_status=$status" >> priority-one-test.log
-          cat priority-one-test.log
+          tail -n 180 priority-one-test.log
           exit 0
       - name: Publish implementation for review
         shell: bash
         run: |
-          rm -f .github/workflows/apply-clone-priority-one-pr.yml .github/workflows/apply-clone-priority-one.yml
           git config user.name "HeroStar Quality Bot"
           git config user.email "actions@users.noreply.github.com"
           git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+            exit 0
+          fi
           git commit -m "Применить первую очередь Клона для проверки [priority-one-applied]"
           git push origin HEAD:feature/clone-priority-one
