@@ -22,8 +22,8 @@ replace(
     "assert.match(html, />Бесплатный Клон показывает главный ход/);",
 )
 
-# Build the birth payload from the submitted form itself. This avoids stale UI state
-# and makes the checked unknown-time control the single source of truth.
+# Build the birth payload from the submitted form itself. The checked selector is
+# the single source of truth and cannot be confused with a form RadioNodeList.
 client = Path('public/clone.js')
 text = client.read_text()
 helper_marker = "$('#unknownTime')?.addEventListener('change', syncUnknownBirthTime);\nsyncUnknownBirthTime();\n\n"
@@ -32,8 +32,7 @@ syncUnknownBirthTime();
 
 function buildBirthPayload(form, selectedPlace) {
   const formData = new FormData(form);
-  const unknownTimeControl = form.elements.namedItem('unknownTime');
-  const unknownTime = Boolean(unknownTimeControl?.checked);
+  const unknownTime = Boolean(form.querySelector('input[name="unknownTime"]:checked'));
   const birthTime = String(formData.get('time') || '').trim();
   return {
     name: formData.get('name'),
@@ -80,7 +79,7 @@ text = text.replace(
 )
 text = text.replace(
     "  assert.match(client, /unknownTime \\? '' : formData\\.get\\('time'\\)/);",
-    "  assert.match(client, /const unknownTime = Boolean\\(unknownTimeControl\\?\\.checked\\)/);\n"
+    "  assert.match(client, /input\\[name=\\\"unknownTime\\\"\\]:checked/);\n"
     "  assert.match(client, /time: unknownTime \\? '' : birthTime/);",
 )
 answer_contract.write_text(text)
@@ -91,17 +90,28 @@ marker = "  assert.match(clone, /personalDataConsent/);\n"
 addition = (
     marker
     + "  assert.match(clone, /function buildBirthPayload\\(form, selectedPlace\\)/);\n"
-    + "  assert.match(clone, /form\\.elements\\.namedItem\\('unknownTime'\\)/);\n"
+    + "  assert.match(clone, /querySelector\\('input\\[name=\\\"unknownTime\\\"\\]:checked'\\)/);\n"
 )
 if marker not in text:
     raise SystemExit('functional wiring marker not found')
 wiring.write_text(text.replace(marker, addition, 1))
+
+# The live mobile stylesheet already has a compact navigation treatment; expose it
+# so users can switch between the dialog and the answer-factor panel.
+live_css = Path('public/clone/live/live.css')
+live_css.write_text(live_css.read_text() + """
+
+@media (max-width: 900px) {
+  .live-product .workspace .side { display: block; }
+}
+""")
 
 # Browser tests validate the actual POST body, not merely the checkbox appearance.
 spec = Path('e2e/clone-live.spec.js')
 text = spec.read_text()
 text = text.replace(
     "  await page.getByRole('button', { name: 'Собрать живую модель' }).click();",
+    "  expect(await page.locator('#unknownTime').isChecked()).toBe(unknownTime);\n"
     "  const chartRequestPromise = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/charts'));\n"
     "  await page.getByRole('button', { name: 'Собрать живую модель' }).click();\n"
     "  const chartRequest = await chartRequestPromise;\n"
@@ -140,13 +150,13 @@ text = text.replace(
 mobile_click = """  await page.locator('button[data-tab="profile"]').click();
   await expect(page.locator('#logicFactors')).toBeVisible();
 """
-mobile_scroll = """  await page.locator('#question').blur();
-  await page.locator('#logicPanel').scrollIntoViewIfNeeded();
+mobile_new = """  await page.locator('#question').blur();
+  await page.locator('button[data-tab="profile"]').click();
   await expect(page.locator('#logicFactors')).toBeVisible();
 """
 if mobile_click not in text:
     raise SystemExit('mobile factor-panel scenario not found')
-text = text.replace(mobile_click, mobile_scroll, 1)
+text = text.replace(mobile_click, mobile_new, 1)
 spec.write_text(text)
 
 # CI browser runs must be deterministic rather than retrying a broken path.
