@@ -6,6 +6,7 @@
   const paywall = document.querySelector('#clonePaywall');
   const jumpToLatest = document.querySelector('#jumpToLatest');
   const TELEGRAM_LINK_PARAM = 'telegram_link';
+  const CHART_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const NEAR_BOTTOM_THRESHOLD = 96;
 
   function resizeComposer() {
@@ -27,12 +28,17 @@
     }
   }
 
+  function normalizedChartId(value) {
+    const id = String(value || '').trim();
+    return CHART_ID_PATTERN.test(id) ? id : null;
+  }
+
   function currentCloneAuth() {
     const params = new URLSearchParams(location.search);
-    const fromUrl = params.get('chart');
     const saved = savedClone();
-    const chartId = fromUrl || saved?.chartId || null;
-    const chartToken = saved?.chartId === chartId ? saved?.token || null : null;
+    const savedChartId = normalizedChartId(saved?.chartId);
+    const chartId = normalizedChartId(params.get('chart')) || savedChartId;
+    const chartToken = savedChartId === chartId ? String(saved?.token || '').trim() || null : null;
     return { chartId, chartToken };
   }
 
@@ -45,7 +51,11 @@
       body: JSON.stringify(body),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Не удалось подключить Telegram.');
+    if (!response.ok) {
+      const error = new Error(data.error || 'Не удалось подключить Telegram.');
+      error.code = data.code || 'TELEGRAM_LINK_FAILED';
+      throw error;
+    }
     return data;
   }
 
@@ -79,15 +89,20 @@
     slot.dataset.nativeTelegramReady = 'true';
     slot.innerHTML = '';
     slot.classList.add('telegram-connect-card');
+    const restoresExistingClone = slot.dataset.telegramMode === 'restore';
 
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'telegram-connect-button';
-    button.innerHTML = '<span class="telegram-connect-icon">✈</span><span><strong>Подключить Telegram</strong><small>Сохранить клона и продолжить без лимита</small></span>';
+    button.innerHTML = restoresExistingClone
+      ? '<span class="telegram-connect-icon">✈</span><span><strong>Открыть через Telegram</strong><small>Найти сохранённого Клона</small></span>'
+      : '<span class="telegram-connect-icon">✈</span><span><strong>Продолжить бесплатно в Telegram</strong><small>Сохранить Клона и историю</small></span>';
 
     const status = document.createElement('p');
     status.className = 'telegram-connect-status';
-    status.textContent = 'Откроется бот. Нажмите «Начать» — возвращаться вручную не обязательно.';
+    status.textContent = restoresExistingClone
+      ? 'Бот безопасно найдёт Клона, связанного с вашим Telegram.'
+      : 'Откроется бот. Нажмите «Начать» — Клон сохранится автоматически.';
     slot.append(button, status);
 
     button.addEventListener('click', async () => {
@@ -96,10 +111,13 @@
       status.textContent = 'Создаём безопасную ссылку входа…';
       const telegramWindow = window.open('about:blank', 'herostarTelegramLogin');
       try {
-        const auth = currentCloneAuth();
+        const auth = restoresExistingClone
+          ? { chartId: null, chartToken: null }
+          : currentCloneAuth();
+        const linkPayload = auth.chartId ? { chartId: auth.chartId } : {};
         const link = await telegramLinkRequest(
           '/api/auth/telegram-link',
-          { chartId: auth.chartId },
+          linkPayload,
           { chartToken: auth.chartToken },
         );
         if (telegramWindow) telegramWindow.location.href = link.telegramUrl;
@@ -108,7 +126,9 @@
         await finishTelegramLink(link.token, status, { reload: !slot.closest('.message') });
       } catch (error) {
         telegramWindow?.close();
-        status.textContent = error.message;
+        status.textContent = error.code === 'INVALID_CHART_ID'
+          ? 'Ссылка на Клона устарела. Обновите страницу и попробуйте ещё раз.'
+          : error.message;
         button.disabled = false;
       }
     });
@@ -222,6 +242,7 @@
       .observe(dialogView, { attributes: true, attributeFilter: ['class'] });
   }
 
+  window.mountCloneTelegramLink = enhanceTelegramSlot;
   enhanceTelegramSlots();
   void resumeTelegramLinkFromUrl();
   resizeComposer();
