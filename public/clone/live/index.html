@@ -42,22 +42,42 @@
         <div class="live-hero-image" role="img" aria-label="Женщина и её звёздный клон смотрят в сторону будущего"></div>
         <div class="live-hero-shade" aria-hidden="true"></div>
         <div class="live-hero-copy">
-          <p class="live-badge"><span>✦</span> Живая модель решений</p>
+          <p class="live-badge"><span>✦</span> Натальная карта в диалоге</p>
           <h1 id="liveTitle">Когда неясно,<br>как поступить</h1>
-          <p class="live-accent">Спросите своего клона по звёздам</p>
-          <p class="live-lead">Он выберет собственный ход по вашей натальной карте и покажет, какие внутренние механизмы сформировали решение.</p>
+          <p class="live-accent">Спросите Клона, собранного по вашей натальной карте</p>
+          <p class="live-lead">Он выделит главное для вашего вопроса, предложит альтернативный ход и объяснит, почему именно он.</p>
           <div class="live-actions">
-            <button class="primary live-primary" data-go-create type="button">Создать клона <span aria-hidden="true">✦</span></button>
+            <button class="primary live-primary" data-go-intent type="button">Начать с вопроса <span aria-hidden="true">↓</span></button>
             <div class="restore-access">
               <button class="ghost" id="restoreCloneAccess" type="button">У меня уже есть клон</button>
               <div class="telegram-login-slot hidden" id="restoreTelegramSlot"></div>
             </div>
           </div>
+          <p class="live-trust-line">Первые 3 ответа — здесь. После Telegram бесплатный диалог продолжается без лимита.</p>
           <div class="live-benefits" aria-label="Преимущества">
             <span><b>✦</b> 3 вопроса бесплатно</span>
             <span><b>◎</b> по натальной карте</span>
             <span><b>◇</b> без регистрации на старте</span>
           </div>
+        </div>
+      </section>
+
+      <section class="live-intent" aria-labelledby="liveIntentTitle">
+        <div>
+          <p class="eyebrow">Можно начать с самой ситуации</p>
+          <h2 id="liveIntentTitle">Что вам нужно решить?</h2>
+          <p>Напишите вопрос сейчас. Мы сохраним его, соберём Клона и сразу передадим ему вашу ситуацию.</p>
+        </div>
+        <form id="heroQuestionForm" class="live-intent-form">
+          <label class="sr-only" for="heroQuestion">Вопрос или описание ситуации</label>
+          <textarea id="heroQuestion" rows="2" maxlength="1600" placeholder="Например: войти в новый проект или сохранить стабильность?" required></textarea>
+          <button class="primary" type="submit">Сохранить вопрос <span aria-hidden="true">↗</span></button>
+          <div class="live-intent-meta"><span id="heroQuestionHint">Можно описать коротко — Клон уточнит важное</span><span id="heroQuestionCount">0 / 1600</span></div>
+        </form>
+        <div class="live-question-examples" aria-label="Примеры вопросов">
+          <button type="button">Сменить работу или остаться?</button>
+          <button type="button">Как ответить человеку?</button>
+          <button type="button">Стоит ли рисковать сейчас?</button>
         </div>
       </section>
 
@@ -68,26 +88,8 @@
         </div>
         <div class="live-steps">
           <article><span class="live-step-number">1</span><i aria-hidden="true">···</i><h3>Опишите ситуацию</h3><p>Расскажите, между чем выбираете и где чувствуете сомнение.</p></article>
-          <article><span class="live-step-number">2</span><i aria-hidden="true">◉</i><h3>Клон выбирает ход</h3><p>Модель действует как отдельный характер, а не повторяет ваши мысли.</p></article>
-          <article><span class="live-step-number">3</span><i aria-hidden="true">✦</i><h3>Карта показывает почему</h3><p>Вы увидите факторы карты, противоречие и условие изменения решения.</p></article>
-        </div>
-      </section>
-
-      <section class="live-intent" aria-labelledby="liveIntentTitle">
-        <div>
-          <p class="eyebrow">Можно начать с самой ситуации</p>
-          <h2 id="liveIntentTitle">Что вам нужно решить?</h2>
-          <p>Напишите вопрос сейчас. Мы сохраним его, соберём клона и сразу передадим ситуацию модели.</p>
-        </div>
-        <form id="heroQuestionForm" class="live-intent-form">
-          <label class="sr-only" for="heroQuestion">Вопрос или описание ситуации</label>
-          <textarea id="heroQuestion" rows="2" maxlength="1600" placeholder="Например: войти в новый проект или сохранить стабильность?" required></textarea>
-          <button class="primary" type="submit">Передать клону <span aria-hidden="true">↗</span></button>
-        </form>
-        <div class="live-question-examples" aria-label="Примеры вопросов">
-          <button type="button">Сменить работу или остаться?</button>
-          <button type="button">Как ответить человеку?</button>
-          <button type="button">Стоит ли рисковать сейчас?</button>
+          <article><span class="live-step-number">2</span><i aria-hidden="true">◉</i><h3>Создайте Клона</h3><p>Укажите дату, точное время и место рождения — это займёт около двух минут.</p></article>
+          <article><span class="live-step-number">3</span><i aria-hidden="true">✦</i><h3>Получите разбор</h3><p>Клон свяжет вопрос с картой, предложит следующий ход и покажет, что его сформировало.</p></article>
         </div>
       </section>
 
@@ -105,8 +107,8 @@
     </section>
 
     <div class="live-sticky-start" id="liveStickyStart" aria-hidden="true">
-      <span><b>3 вопроса бесплатно</b><small>без регистрации на старте</small></span>
-      <button class="primary" data-go-create type="button">Создать клона</button>
+      <span><b>Начните с ситуации</b><small>3 вопроса бесплатно</small></span>
+      <button class="primary" data-go-intent type="button">Задать вопрос</button>
     </div>
 
     <section class="workspace hidden" id="workspace">

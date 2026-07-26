@@ -170,6 +170,7 @@
 
 .live-lead { max-width: 520px; margin: 20px 0 0; color: #bbb8c5; font-size: 17px; line-height: 1.62; }
 .live-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 30px; }
+.live-trust-line { max-width: 520px; margin: 14px 0 0; color: #8f8a99; font-size: 12px; line-height: 1.5; }
 
 .live-product .primary,
 .live-product .ghost,
@@ -408,13 +409,16 @@
   .live-product .topbar { top: max(8px, env(safe-area-inset-top)); }
   .live-home { width: calc(100% - 16px); padding-top: calc(74px + env(safe-area-inset-top)); padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
   .live-hero { min-height: min(710px, calc(100dvh - 84px)); border-radius: 24px; }
-  .live-hero-copy { bottom: 62px; padding: 24px 18px; }
+  .live-hero-copy { bottom: 0; padding: 24px 18px 18px; }
   .live-badge { margin-bottom: 18px; }
   .live-home h1 { font-size: clamp(40px,11.7vw,48px); line-height: 1; }
   .live-accent { font-size: 27px; }
   .live-actions { display: grid; }
   .live-primary,.live-actions .restore-access,.live-actions .ghost { width: 100%; }
-  .live-benefits span { justify-content: flex-start; min-height: 48px; }
+  .live-benefits { position: static; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; margin-top: 14px; transform: none; }
+  .live-benefits span { min-height: 48px; padding: 7px 5px; font-size: 12px; line-height: 1.25; }
+  .live-benefits b { display: none; }
+  .live-hero { margin-bottom: 0; }
   .live-flow { margin-top: 12px; }
   .live-flow,.live-intent { padding: 22px 17px; }
   .live-steps article { padding: 21px; border-radius: 20px; }
