@@ -21,6 +21,20 @@ test('оба публичных адреса клона отдают одну и
   assert.doesNotMatch(canonical, /clone-conversion-hotfix/);
 });
 
+test('Telegram-вход загружается до основного клиента на обеих страницах клона', async () => {
+  const [canonical, live] = await Promise.all([
+    read('public/clone/index.html'),
+    read('public/clone/live/index.html'),
+  ]);
+
+  for (const page of [canonical, live]) {
+    const telegramAuth = page.indexOf('/clone-living.js');
+    const cloneClient = page.indexOf('/clone.js');
+    assert.ok(telegramAuth >= 0, 'страница должна подключать обработчик Telegram-входа');
+    assert.ok(cloneClient > telegramAuth, 'обработчик Telegram-входа должен быть готов до clone.js');
+  }
+});
+
 test('клиент соединяет создание, три ответа до Telegram, свободный базовый диалог и два платных продукта', async () => {
   const [clone, living] = await Promise.all([
     read('public/clone.js'),
