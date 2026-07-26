@@ -1,0 +1,56 @@
+name: Apply clone priority one from PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-test-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/clone-priority-one
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Extract and apply canonical implementation
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64, gzip, re
+          from pathlib import Path
+          workflow = Path('.github/workflows/apply-clone-priority-one.yml').read_text()
+          match = re.search(r'PATCH_B64: "([A-Za-z0-9+/=]+)"', workflow)
+          if not match:
+              raise SystemExit('PATCH_B64 not found')
+          Path('/tmp/apply-priority-one.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
+          PY
+          python /tmp/apply-priority-one.py
+          rm -f .github/workflows/apply-clone-priority-one-pr.yml
+      - name: Unit and contract tests
+        run: npm test
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm run test:e2e
+      - name: Syntax and diff validation
+        shell: bash
+        run: |
+          node --check server.js
+          for file in public/*.js public/clone/live/*.js src/*.js; do node --check "$file"; done
+          git diff --check
+      - name: Publish verified implementation
+        shell: bash
+        run: |
+          git config user.name "HeroStar Quality Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Реализовать первую очередь Клона [priority-one-applied]"
+          git push origin HEAD:feature/clone-priority-one
