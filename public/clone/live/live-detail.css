@@ -79,6 +79,85 @@
   }
 }
 
+.live-product #dialogView .messages > .inline-service-card {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  justify-self: start;
+  width: min(680px, calc(100% - 51px));
+  max-height: none;
+  margin: 8px 0 6px 51px;
+  overflow: visible;
+  padding: 20px;
+  border-color: rgba(177,135,255,.24);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(177,135,255,.11), rgba(242,217,148,.035)),
+    rgba(24,20,39,.94);
+  box-shadow: inset 0 1px rgba(255,255,255,.045);
+}
+
+.live-product #dialogView .inline-service-card h3 {
+  margin: 5px 0 9px;
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.15;
+  letter-spacing: -.035em;
+}
+
+.live-product #dialogView .inline-service-card > p:not(.eyebrow) {
+  margin: 0;
+  color: #bbb3c7;
+  font-size: 13px;
+  line-height: 1.56;
+}
+
+.live-product #dialogView .inline-service-card > small {
+  display: block;
+  margin-top: 9px;
+  color: #91899b;
+  font-size: 11px;
+  text-align: center;
+}
+
+.live-product #dialogView .inline-offer-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.live-product #dialogView .inline-offer-actions button {
+  min-height: 44px;
+}
+
+.live-product #dialogView .inline-offer-actions .primary {
+  flex: 1 1 auto;
+}
+
+.live-product #dialogView .inline-offer-actions .ghost {
+  flex: 0 0 auto;
+  color: #c8c0d0;
+}
+
+.live-product #dialogView .jump-to-latest {
+  position: absolute;
+  left: 50%;
+  bottom: 126px;
+  z-index: 10;
+  min-height: 44px;
+  padding: 9px 15px;
+  border: 1px solid rgba(177,135,255,.28);
+  border-radius: 999px;
+  background: rgba(24,20,39,.96);
+  color: #eee8f7;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  box-shadow: 0 14px 38px rgba(0,0,0,.34);
+  cursor: pointer;
+  transform: translateX(-50%);
+}
+
 /* Mobile app shell: one controlled scroll area, no overlapping floating layers. */
 @media (max-width: 900px) {
   html:has(body.live-product .workspace:not(.hidden)),
@@ -333,19 +412,33 @@
     font-size: 11px;
   }
 
-  .live-product #dialogView .alignment-offer:not(.hidden) {
-    position: absolute;
-    right: 10px;
-    bottom: 78px;
-    left: 10px;
-    z-index: 12;
-    max-height: min(58%, 440px);
-    margin: 0;
-    overflow: auto;
-    padding: 16px;
-    border-radius: 18px;
-    background: rgba(24, 20, 39, .98);
-    box-shadow: 0 24px 70px rgba(0,0,0,.52);
+  .live-product #dialogView .messages > .alignment-offer:not(.hidden) {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    width: calc(100% - 39px);
+    max-height: none;
+    margin: 4px 0 4px 39px;
+    overflow: visible;
+    padding: 15px;
+    border-radius: 17px;
+  }
+
+  .live-product #dialogView .inline-service-card h3 {
+    font-size: 20px;
+  }
+
+  .live-product #dialogView .inline-offer-actions {
+    display: grid;
+  }
+
+  .live-product #dialogView .inline-offer-actions .primary,
+  .live-product #dialogView .inline-offer-actions .ghost {
+    width: 100%;
+  }
+
+  .live-product #dialogView .jump-to-latest {
+    bottom: 72px;
   }
 
   .live-product #dialogView .logic {
