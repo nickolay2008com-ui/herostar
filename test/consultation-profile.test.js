@@ -78,7 +78,7 @@ test('платный промпт равен бесплатному плюс о�
   assert.equal(premiumPrepared.instruction, `${freePrepared.instruction}\n\n${premiumAddon}`);
   assert.equal(premiumPrepared.situation, freePrepared.situation);
   assert.equal(premiumProfile.chartDepth, 'full');
-  assert.deepEqual(premiumProfile.factorBudget, { min: 3, max: 6 });
+  assert.equal(premiumProfile.factorBudget, undefined);
   assert.equal(premiumProfile.historyLimit, 16);
 
   for (const prompt of [
