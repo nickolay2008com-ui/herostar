@@ -23,7 +23,7 @@ const cloneFreeQuestionInstruction = `${cloneBaseQuestionInstruction}
 
 ${cloneFreeDialogueInstruction}`;
 
-const clonePremiumQuestionInstruction = `${cloneBaseQuestionInstruction}
+const clonePremiumQuestionInstruction = `${cloneFreeQuestionInstruction}
 
 добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко`;
 
