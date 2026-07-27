@@ -11,7 +11,6 @@ import {
 } from '../src/consultation-profiles.js';
 
 const serverSource = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
-const premiumAddon = 'добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко';
 const situationMarker = '\n\nСитуация: ';
 
 const forbiddenGenericCloneRules = [
@@ -54,8 +53,7 @@ test('бесплатный клон использует промпт 23.07 11:4
   assert.ok(question.includes('единство'));
   assert.ok(question.includes('уникальность'));
   assert.ok(question.includes('Не называй эти пять элементов пользователю'));
-  assert.ok(!question.includes('Отвечай по имеющимся данным сразу'));
-  assert.ok(!question.includes('Не задавай два уточняющих вопроса подряд'));
+  assert.ok(!question.includes('полную картину одного решения'));
   assert.equal(profile.systemPromptAddon, '');
   assert.equal(profile.chartDepth, 'full');
   assert.deepEqual(profile.factorBudget, { min: 2, max: 4 });
@@ -77,26 +75,35 @@ test('системный промпт клона не дублирует тар�
   assert.ok(!dialog.includes('первый содержательный ответ Звёздного клона'));
 });
 
-test('платный промпт равен бесплатному плюс одна утверждённая фраза', () => {
+test('платный клон даёт полную картину решения через 3–6 факторов', () => {
   const freeProfile = resolveConsultationProfile({ product: 'clone', premium: false });
   const premiumProfile = resolveConsultationProfile({ product: 'clone', premium: true });
   const freePrepared = splitPreparedQuestion(prepareConsultationQuestion(freeProfile, 'Войти ли в новый проект?'));
   const premiumPrepared = splitPreparedQuestion(prepareConsultationQuestion(premiumProfile, 'Войти ли в новый проект?'));
 
   assert.equal(premiumProfile.id, CLONE_PREMIUM_PROFILE_ID);
-  assert.equal(premiumProfile.promptVersion, '2026-07-27.premium-addon');
+  assert.equal(premiumProfile.promptVersion, '2026-07-27.full-decision-v1');
+  assert.equal(premiumProfile.derivedFromPromptVersion, '2026-07-23.1145-five');
   assert.equal(premiumProfile.systemPromptAddon, '');
-  assert.equal(premiumPrepared.instruction, `${freePrepared.instruction}\n\n${premiumAddon}`);
+  assert.ok(premiumPrepared.instruction.includes('3–6 конкретных факторов карты'));
+  assert.ok(!premiumPrepared.instruction.includes('2–4 конкретных фактора карты'));
+  assert.ok(premiumPrepared.instruction.includes('полную картину одного решения'));
+  assert.ok(premiumPrepared.instruction.includes('главное внутреннее противоречие'));
+  assert.ok(premiumPrepared.instruction.includes('один жизнеспособный альтернативный ход'));
+  assert.ok(premiumPrepared.instruction.includes('условие, при котором решение изменится'));
+  assert.ok(premiumPrepared.instruction.includes('один первый проверяемый шаг'));
+  assert.ok(premiumPrepared.instruction.includes('Пиши ёмко и цельно'));
+  assert.ok(premiumPrepared.instruction.includes('действие: есть ли ясный ход'));
   assert.equal(premiumPrepared.situation, freePrepared.situation);
   assert.equal(premiumProfile.chartDepth, 'full');
-  assert.equal(premiumProfile.factorBudget, undefined);
+  assert.deepEqual(premiumProfile.factorBudget, { min: 3, max: 6 });
   assert.equal(premiumProfile.historyLimit, 16);
 
   for (const prompt of [
     consultationSystemPrompt('deep', 'clone', true),
     consultationSystemPrompt('dialog', 'clone', true),
   ]) {
-    assert.ok(!prompt.includes(premiumAddon));
+    assert.ok(!prompt.includes('полную картину одного решения'));
     assertNoGenericFactorConflict(prompt);
   }
 });
