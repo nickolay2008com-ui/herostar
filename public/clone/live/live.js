@@ -9,6 +9,7 @@
   const questionForm = document.querySelector('#questionForm');
   const dialogView = document.querySelector('#dialogView');
   const workspace = document.querySelector('#workspace');
+  const messages = document.querySelector('#messages');
   const sticky = document.querySelector('#liveStickyStart');
   const primaryHeroButton = document.querySelector('.live-hero [data-go-intent]');
   const creationButton = document.querySelector('[data-go-create]');
@@ -33,6 +34,8 @@
   function installQuestionMeta() {
     if (!heroForm || !heroQuestion) return null;
     heroQuestion.setAttribute('aria-describedby', 'heroQuestionHint heroQuestionCount');
+    const submit = heroForm.querySelector('button[type="submit"]');
+    if (submit) submit.innerHTML = 'Узнать, как поступил бы Клон <span aria-hidden="true">→</span>';
     return {
       hint: document.querySelector('#heroQuestionHint'),
       count: document.querySelector('#heroQuestionCount'),
@@ -74,7 +77,7 @@
     if (submit) {
       submit.disabled = true;
       submit.classList.add('is-busy');
-      submit.firstChild.textContent = 'Сохраняем вопрос ';
+      submit.firstChild.textContent = 'Передаём ситуацию ';
     }
     if (questionMeta?.hint) {
       questionMeta.hint.textContent = 'Вопрос сохранён — вернём его после создания клона';
@@ -115,6 +118,77 @@
         if (!question.disabled && question.value.trim() === pending) questionForm.requestSubmit();
       }, prefersReducedMotion ? 0 : 520);
     }
+  }
+
+  function installFirstAnswerStyles() {
+    if (document.querySelector('#cloneFirstAnswerStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'cloneFirstAnswerStyles';
+    style.textContent = `
+      .message.clone.clone-first-answer{position:relative;margin-top:22px;border:1px solid rgba(167,139,250,.34);background:linear-gradient(145deg,rgba(91,61,170,.18),rgba(17,20,34,.96));box-shadow:0 18px 52px rgba(0,0,0,.22)}
+      .clone-first-answer-label{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:#d8c9ff;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+      .clone-first-answer-label span{color:#f2cf78}
+      .clone-next-label{margin:16px 0 9px;color:rgba(226,232,240,.68);font-size:12px}
+      .clone-next-actions{display:flex;flex-wrap:wrap;gap:8px}
+      .clone-next-actions button{border:1px solid rgba(167,139,250,.24);border-radius:999px;background:rgba(167,139,250,.07);color:#ded7ef;padding:8px 11px;font:inherit;font-size:12px;cursor:pointer}
+      .clone-next-actions button:hover{border-color:rgba(167,139,250,.52);background:rgba(167,139,250,.13);color:#fff}
+    `;
+    document.head.append(style);
+  }
+
+  function setContinuation(text) {
+    if (!question || question.disabled) return;
+    question.value = text;
+    question.dispatchEvent(new Event('input', { bubbles: true }));
+    question.focus({ preventScroll: true });
+    question.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+  }
+
+  function enhanceFirstAnswer() {
+    if (!messages || messages.querySelector('.clone-first-answer')) return;
+    const items = [...messages.querySelectorAll('.message')];
+    const firstUserIndex = items.findIndex((item) => item.classList.contains('user'));
+    if (firstUserIndex < 0) return;
+    const answer = items.slice(firstUserIndex + 1).find((item) => {
+      if (!item.classList.contains('clone')) return false;
+      const text = String(item.textContent || '');
+      return text.trim() && !/готовит ответ|сопоставляю|думаю над/i.test(text);
+    });
+    if (!answer) return;
+
+    installFirstAnswerStyles();
+    answer.classList.add('clone-first-answer');
+    const content = answer.querySelector('div') || answer;
+    const title = document.createElement('div');
+    title.className = 'clone-first-answer-label';
+    title.innerHTML = '<span>✦</span> Первый ответ вашего Клона';
+    content.prepend(title);
+
+    const label = document.createElement('p');
+    label.className = 'clone-next-label';
+    label.textContent = 'Уточнить решение:';
+    content.append(label);
+
+    const actions = document.createElement('div');
+    actions.className = 'clone-next-actions';
+    [
+      ['Показать главный риск', 'Какой главный риск Клон видит в этом решении?'],
+      ['Выбрать сильнейший ход', 'Какой ход Клон выбрал бы как главный и почему?'],
+      ['Что изменит решение', 'Какой новый факт мог бы изменить решение Клона?'],
+    ].forEach(([caption, prompt]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = caption;
+      button.addEventListener('click', () => setContinuation(prompt));
+      actions.append(button);
+    });
+    content.append(actions);
+
+    try { window.ym?.(110937602, 'reachGoal', 'clone_first_answer_shown'); } catch {}
+  }
+
+  if (messages) {
+    new MutationObserver(enhanceFirstAnswer).observe(messages, { childList: true, subtree: true, characterData: true });
   }
 
   if (dialogView) {
@@ -217,4 +291,5 @@
   syncQuestionState();
   syncScrollUi();
   deliverPendingQuestion();
+  enhanceFirstAnswer();
 })();
