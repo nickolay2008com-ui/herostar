@@ -28,7 +28,7 @@ ${await read('public/clone.js')}`;
 
 test('платный профиль наследует обновлённую бесплатную основу без отдельного диапазона факторов', async () => {
   const source = await read('src/consultation-profiles.js');
-  assert.match(source, /promptVersion: '2026-07-27\.free-dialog'/);
+  assert.match(source, /promptVersion: '2026-07-27\.answer-first'/);
   assert.match(source, /derivedFromPromptVersion: '2026-07-23\.1145'/);
   assert.match(source, /promptVersion: '2026-07-27\.premium-addon'/);
   assert.match(source, /const clonePremiumQuestionInstruction = `\$\{cloneFreeQuestionInstruction\}/);
@@ -37,4 +37,15 @@ test('платный профиль наследует обновлённую б
   assert.match(source, /historyLimit: 8/);
   assert.match(source, /historyLimit: 16/);
   assert.match(source, /добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона\. пиши кротко/);
+});
+
+test('первый ответ не получает универсальные кнопки, которые спорят с вопросом Клона', async () => {
+  const source = await read('public/clone/live/live.js');
+  assert.match(source, /Первый ответ вашего Клона/);
+  assert.match(source, /Клон ответит по имеющимся данным/);
+  assert.doesNotMatch(source, /Уточнить решение:/);
+  assert.doesNotMatch(source, /Показать главный риск/);
+  assert.doesNotMatch(source, /Выбрать сильнейший ход/);
+  assert.doesNotMatch(source, /Что изменит решение/);
+  assert.doesNotMatch(source, /clone-next-actions/);
 });

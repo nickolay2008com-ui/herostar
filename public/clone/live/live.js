@@ -57,7 +57,7 @@
     if (questionMeta?.count) questionMeta.count.textContent = `${length} / ${heroQuestion.maxLength || 1600}`;
     if (questionMeta?.hint?.classList.contains('is-saved')) {
       questionMeta.hint.classList.remove('is-saved');
-      questionMeta.hint.textContent = 'Можно описать коротко — клон уточнит важное';
+      questionMeta.hint.textContent = 'Можно описать коротко — Клон ответит по имеющимся данным';
     }
     resizeHeroQuestion();
   }
@@ -128,20 +128,8 @@
       .message.clone.clone-first-answer{position:relative;margin-top:22px;border:1px solid rgba(167,139,250,.34);background:linear-gradient(145deg,rgba(91,61,170,.18),rgba(17,20,34,.96));box-shadow:0 18px 52px rgba(0,0,0,.22)}
       .clone-first-answer-label{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:#d8c9ff;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
       .clone-first-answer-label span{color:#f2cf78}
-      .clone-next-label{margin:16px 0 9px;color:rgba(226,232,240,.68);font-size:12px}
-      .clone-next-actions{display:flex;flex-wrap:wrap;gap:8px}
-      .clone-next-actions button{border:1px solid rgba(167,139,250,.24);border-radius:999px;background:rgba(167,139,250,.07);color:#ded7ef;padding:8px 11px;font:inherit;font-size:12px;cursor:pointer}
-      .clone-next-actions button:hover{border-color:rgba(167,139,250,.52);background:rgba(167,139,250,.13);color:#fff}
     `;
     document.head.append(style);
-  }
-
-  function setContinuation(text) {
-    if (!question || question.disabled) return;
-    question.value = text;
-    question.dispatchEvent(new Event('input', { bubbles: true }));
-    question.focus({ preventScroll: true });
-    question.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
   }
 
   function enhanceFirstAnswer() {
@@ -163,26 +151,6 @@
     title.className = 'clone-first-answer-label';
     title.innerHTML = '<span>✦</span> Первый ответ вашего Клона';
     content.prepend(title);
-
-    const label = document.createElement('p');
-    label.className = 'clone-next-label';
-    label.textContent = 'Уточнить решение:';
-    content.append(label);
-
-    const actions = document.createElement('div');
-    actions.className = 'clone-next-actions';
-    [
-      ['Показать главный риск', 'Какой главный риск Клон видит в этом решении?'],
-      ['Выбрать сильнейший ход', 'Какой ход Клон выбрал бы как главный и почему?'],
-      ['Что изменит решение', 'Какой новый факт мог бы изменить решение Клона?'],
-    ].forEach(([caption, prompt]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = caption;
-      button.addEventListener('click', () => setContinuation(prompt));
-      actions.append(button);
-    });
-    content.append(actions);
 
     try { window.ym?.(110937602, 'reachGoal', 'clone_first_answer_shown'); } catch {}
   }
