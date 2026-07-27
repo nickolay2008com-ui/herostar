@@ -1,0 +1,46 @@
+name: Bump clone polish cache
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    if: github.event.head_commit.message == 'Обновить кеш точечных правок клона'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump live stats asset version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('public/clone/live/index.html')
+          text = path.read_text(encoding='utf-8')
+          old = '/clone/live/live-stats.js?v=20260726-priority2'
+          new = '/clone/live/live-stats.js?v=20260727-frame2'
+          if old not in text:
+              raise SystemExit('live-stats version marker not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          Path('.github/workflows/bump-clone-polish-cache.yml').unlink()
+          PY
+          git diff --check
+
+      - name: Publish
+        shell: bash
+        run: |
+          git config user.name "HeroStar Quality Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/clone/live/index.html .github/workflows/bump-clone-polish-cache.yml
+          git commit -m "Обновить версию точечных правок клона"
+          git push origin HEAD:main
