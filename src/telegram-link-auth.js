@@ -7,7 +7,8 @@ const TELEGRAM_POLL_TIMEOUT_SECONDS = 25;
 const COOKIE_NAME = 'herostar_session';
 const memoryLinks = new Map();
 let poolPromise = null;
-let fallbackPollingRuntime = null;
+let telegramUpdateRuntime = null;
+const telegramUpdateHandlers = new Set();
 let botIdentityCache = { username: null, expiresAt: 0 };
 
 function compact(value = '') {
@@ -52,13 +53,21 @@ function publicBaseUrl() {
   return railwayDomain ? `https://${railwayDomain.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : '';
 }
 
-function fallbackPollingRequired() {
-  const practiceEnabled = String(process.env.PRACTICE_NOTIFICATIONS_ENABLED || 'true').toLowerCase() !== 'false';
-  return !practiceEnabled || !compact(process.env.DATABASE_URL);
-}
-
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function waitForPromiseOrTimeout(promise, timeoutMs) {
+  let timeoutId = null;
+  const timeout = new Promise((resolve) => {
+    timeoutId = setTimeout(resolve, timeoutMs);
+    timeoutId.unref?.();
+  });
+  try {
+    await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function telegramApiRequest(fetchImpl, token, method, payload = {}, timeoutMs = 10_000) {
@@ -136,6 +145,12 @@ async function authPool() {
         );
         CREATE INDEX IF NOT EXISTS telegram_login_links_expires_idx
           ON telegram_login_links(expires_at);
+
+        CREATE TABLE IF NOT EXISTS telegram_update_runtime (
+          key TEXT PRIMARY KEY,
+          value TEXT,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
       `);
       return pool;
     })().catch((error) => {
@@ -373,42 +388,93 @@ export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThi
   }
 }
 
-export function startTelegramLinkUpdatePolling({ fetchImpl = globalThis.fetch } = {}) {
-  if (!fallbackPollingRequired() || fallbackPollingRuntime) return fallbackPollingRuntime;
+async function readTelegramUpdateOffset() {
+  try {
+    const pool = await authPool();
+    if (!pool) return 0;
+    const result = await pool.query(
+      'SELECT value FROM telegram_update_runtime WHERE key = $1 LIMIT 1',
+      ['get_updates_offset'],
+    );
+    return Math.max(0, Number(result.rows[0]?.value) || 0);
+  } catch (error) {
+    console.error('HeroStar Telegram offset load failed:', error.message);
+    return 0;
+  }
+}
+
+async function writeTelegramUpdateOffset(offset) {
+  try {
+    const pool = await authPool();
+    if (!pool) return;
+    await pool.query(
+      `INSERT INTO telegram_update_runtime (key, value, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      ['get_updates_offset', String(Math.max(0, Number(offset) || 0))],
+    );
+  } catch (error) {
+    console.error('HeroStar Telegram offset save failed:', error.message);
+  }
+}
+
+export function registerTelegramUpdateHandler(handler) {
+  if (typeof handler !== 'function') return () => {};
+  telegramUpdateHandlers.add(handler);
+  return () => telegramUpdateHandlers.delete(handler);
+}
+
+async function dispatchTelegramUpdates(updates, { fetchImpl }) {
+  await handleTelegramLinkUpdates(updates, { fetchImpl });
+  for (const handler of [...telegramUpdateHandlers]) {
+    try {
+      await handler(updates, { fetchImpl });
+    } catch (error) {
+      console.error('HeroStar Telegram update handler failed:', error.message);
+    }
+  }
+}
+
+export function startTelegramUpdateRuntime({ fetchImpl = globalThis.fetch, updateHandlers = [] } = {}) {
+  for (const handler of updateHandlers) registerTelegramUpdateHandler(handler);
+  if (telegramUpdateRuntime) return telegramUpdateRuntime;
 
   const botToken = compact(process.env.TELEGRAM_BOT_TOKEN);
   if (!botToken) return null;
 
   let stopped = false;
-  let offset = 0;
   const done = (async () => {
-    console.log('HeroStar Telegram-вход использует самостоятельный канал обновлений.');
+    let offset = await readTelegramUpdateOffset();
+    console.log('HeroStar Telegram использует единый канал обновлений для входа и практик.');
     while (!stopped) {
       try {
         const updates = await telegramApiRequest(fetchImpl, botToken, 'getUpdates', {
           offset,
           timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
-          allowed_updates: ['message'],
+          allowed_updates: ['message', 'callback_query'],
         }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
 
-        await handleTelegramLinkUpdates(updates, { fetchImpl });
+        await dispatchTelegramUpdates(updates || [], { fetchImpl });
         for (const update of updates || []) {
           offset = Math.max(offset, Number(update.update_id) + 1);
         }
+        if ((updates || []).length) await writeTelegramUpdateOffset(offset);
       } catch (error) {
         if (stopped) break;
-        console.error('HeroStar Telegram login polling failed:', error.message);
+        console.error('HeroStar Telegram polling failed:', error.message);
         await sleep(5000);
       }
     }
   })();
 
-  fallbackPollingRuntime = {
+  telegramUpdateRuntime = {
+    registerUpdateHandler: registerTelegramUpdateHandler,
     async stop() {
       stopped = true;
-      await Promise.race([done, sleep(36_000)]);
-      fallbackPollingRuntime = null;
+      await waitForPromiseOrTimeout(done, 36_000);
+      telegramUpdateRuntime = null;
+      telegramUpdateHandlers.clear();
     },
   };
-  return fallbackPollingRuntime;
+  return telegramUpdateRuntime;
 }

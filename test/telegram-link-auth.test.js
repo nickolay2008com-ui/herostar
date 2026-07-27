@@ -29,16 +29,24 @@ test('Telegram-ссылка проверяет право на конкретн�
   assert.match(auth, /token_hash TEXT PRIMARY KEY/);
 });
 
-test('Telegram-вход не зависит от включённой Сонастройки', async () => {
+test('Telegram-вход не зависит от запуска Сонастройки и владеет единственным getUpdates', async () => {
   const [auth, bootstrap, practice] = await Promise.all([
     read('src/telegram-link-auth.js'),
     read('bootstrap.js'),
     read('src/practice-notifications.js'),
   ]);
-  assert.match(auth, /startTelegramLinkUpdatePolling/);
-  assert.match(auth, /PRACTICE_NOTIFICATIONS_ENABLED/);
-  assert.match(bootstrap, /startTelegramLinkUpdatePolling/);
-  assert.match(practice, /handleTelegramLinkUpdates\(updates/);
+  assert.match(auth, /startTelegramUpdateRuntime/);
+  assert.match(auth, /telegram_update_runtime/);
+  assert.match(auth, /allowed_updates: \['message', 'callback_query'\]/);
+  assert.doesNotMatch(auth, /fallbackPollingRequired/);
+  assert.doesNotMatch(auth, /PRACTICE_NOTIFICATIONS_ENABLED/);
+  assert.match(bootstrap, /handlePracticeTelegramUpdates/);
+  assert.match(bootstrap, /updateHandlers:/);
+  assert.match(practice, /export async function handlePracticeTelegramUpdates/);
+  assert.match(practice, /pendingPracticeUpdates/);
+  assert.doesNotMatch(practice, /handleTelegramLinkUpdates/);
+  assert.doesNotMatch(practice, /getUpdates/);
+  assert.equal((`${auth}\n${practice}`.match(/'getUpdates'/g) || []).length, 1);
   assert.doesNotMatch(bootstrap, /globalThis\.fetch\s*=/);
 });
 

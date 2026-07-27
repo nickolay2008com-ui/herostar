@@ -1,7 +1,7 @@
 import express from 'express';
 import { scopeCloneAccess } from './src/clone-access-middleware.js';
 import {
-  startTelegramLinkUpdatePolling,
+  startTelegramUpdateRuntime,
   telegramLinkAuthMiddleware,
 } from './src/telegram-link-auth.js';
 
@@ -49,8 +49,21 @@ void startPaymentRecovery().catch((error) => {
   console.error('Не удалось запустить восстановление платежей:', error);
 });
 
-const { startPracticeNotifications } = await import('./src/practice-notifications.js');
-void startPracticeNotifications().catch((error) => {
-  console.error('Не удалось запустить практические Telegram-уведомления:', error);
+let practiceModule = null;
+try {
+  practiceModule = await import('./src/practice-notifications.js');
+} catch (error) {
+  console.error('Не удалось загрузить модуль практических Telegram-уведомлений:', error);
+}
+
+startTelegramUpdateRuntime({
+  updateHandlers: practiceModule?.handlePracticeTelegramUpdates
+    ? [practiceModule.handlePracticeTelegramUpdates]
+    : [],
 });
-startTelegramLinkUpdatePolling();
+
+if (practiceModule?.startPracticeNotifications) {
+  void practiceModule.startPracticeNotifications().catch((error) => {
+    console.error('Не удалось запустить практические Telegram-уведомления:', error);
+  });
+}
