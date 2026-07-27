@@ -58,6 +58,16 @@ test('глубокий ответ остаётся естественным, а 
   assert.match(prompt, /простой запрос заслуживает более короткого ответа/i);
 });
 
+test('промпт не навязывает небольшой обратимый способ', () => {
+  for (const prompt of [
+    consultationSystemPrompt('deep', 'clone', false),
+    consultationSystemPrompt('dialog', 'clone', true),
+    consultationSystemPrompt('deep', 'herostar', false),
+  ]) {
+    assert.doesNotMatch(prompt, /один небольшой, конкретный и обратимый способ/i);
+  }
+});
+
 test('продолжение разговора не повторяет полный разбор', () => {
   const prompt = consultationSystemPrompt('dialog');
   assert.match(prompt, /не повторяй прежний разбор/i);
