@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node bootstrap.js",
     "dev": "node --watch bootstrap.js",
-    "test": "node --test",
+    "test": "node --test --test-reporter=dot",
     "test:e2e": "playwright test"
   },
   "dependencies": {
