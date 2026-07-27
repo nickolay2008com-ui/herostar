@@ -220,14 +220,29 @@ export function publicConsultationFactors(factors = []) {
   }));
 }
 
-export function compactCloneEvidence(chart, factors = []) {
+export function compactCloneEvidence(chart) {
+  const unknownTime = Boolean(chart?.birth?.unknownTime);
+  const planets = (chart?.planets || [])
+    .filter((item) => !unknownTime || item.key !== 'moon')
+    .map(({ key, name, sign, oppositeSign, element, mode, degreeLabel, house, houseArea, retrograde }) => ({
+      key, name, sign, oppositeSign, element, mode, degreeLabel,
+      house: unknownTime ? null : house,
+      houseArea: unknownTime ? null : houseArea,
+      retrograde,
+    }));
+  const aspects = (chart?.aspects || [])
+    .filter((item) => !unknownTime || (item.from !== 'moon' && item.to !== 'moon'));
+
   return {
     version: chart?.version || null,
-    birth: {
-      unknownTime: Boolean(chart?.birth?.unknownTime),
-      date: chart?.birth?.date || null,
-    },
+    person: chart?.person || null,
+    birth: chart?.birth || null,
     system: chart?.system || null,
-    selectedFactors: publicConsultationFactors(factors),
+    houses: unknownTime ? null : chart?.houses || null,
+    angles: unknownTime ? null : chart?.angles || null,
+    planets,
+    northNode: chart?.northNode || null,
+    aspects,
+    scope: 'full',
   };
 }
