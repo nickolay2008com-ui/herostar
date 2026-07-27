@@ -1,0 +1,95 @@
+name: Apply clone intent focus polish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'Запустить точечную правку выделения вопроса'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply precise focus polish
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          css_path = Path('public/clone/live/live.css')
+          css = css_path.read_text(encoding='utf-8')
+
+          focus_pattern = re.compile(
+              r"\.live-intent-form:focus-within \{\n"
+              r"\s*border-color: rgba\(169,132,255,\.54\);\n"
+              r"\s*box-shadow: 0 24px 62px rgba\(0,0,0,\.38\), 0 0 0 4px rgba\(151,113,255,\.09\), inset 0 1px rgba\(255,255,255,\.045\);\n"
+              r"\s*transform: translateY\(-1px\);\n"
+              r"\}",
+          )
+          replacement = """.live-intent-form:focus-within {
+            border-color: rgba(169,132,255,.46);
+            box-shadow: 0 22px 54px rgba(0,0,0,.34), 0 0 0 2px rgba(151,113,255,.075), inset 0 1px rgba(255,255,255,.04);
+            transform: none;
+          }"""
+          css, changed = focus_pattern.subn(replacement, css, count=1)
+          if changed != 1:
+              raise SystemExit(f'focus-within block replacements: {changed}')
+
+          marker = '.live-intent-form textarea::placeholder { color: #777582; }\n'
+          override = """.live-intent-form textarea::placeholder { color: #777582; }
+
+          /* The form itself is the accessible focus indicator; avoid a competing gold frame on the textarea. */
+          .live-product .live-intent-form textarea:focus,
+          .live-product .live-intent-form textarea:focus-visible {
+            outline: 0;
+            outline-offset: 0;
+            box-shadow: none;
+          }
+          """
+          if css.count(marker) != 1:
+              raise SystemExit(f'textarea placeholder marker count: {css.count(marker)}')
+          css = css.replace(marker, override, 1)
+          css_path.write_text(css, encoding='utf-8')
+
+          html_path = Path('public/clone/live/index.html')
+          html = html_path.read_text(encoding='utf-8')
+          html, versioned = re.subn(
+              r'/clone/live/live\.css\?v=[A-Za-z0-9._-]+',
+              '/clone/live/live.css?v=20260727-focus1',
+              html,
+              count=1,
+          )
+          if versioned != 1:
+              raise SystemExit(f'live.css version replacements: {versioned}')
+          html_path.write_text(html, encoding='utf-8')
+
+          workflow = Path('.github/workflows/apply-clone-intent-focus-polish.yml')
+          workflow.unlink()
+          PY
+
+      - name: Validate change
+        shell: bash
+        run: |
+          grep -Fq '.live-product .live-intent-form textarea:focus-visible' public/clone/live/live.css
+          grep -Fq '/clone/live/live.css?v=20260727-focus1' public/clone/live/index.html
+          ! grep -Fq '0 0 0 4px rgba(151,113,255,.09)' public/clone/live/live.css
+          git diff --check
+
+      - name: Publish
+        shell: bash
+        run: |
+          git config user.name "HeroStar Quality Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/clone/live/live.css public/clone/live/index.html .github/workflows/apply-clone-intent-focus-polish.yml
+          git commit -m "Убрать двойное выделение поля вопроса"
+          git push origin HEAD:main
