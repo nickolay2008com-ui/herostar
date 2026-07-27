@@ -19,12 +19,18 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Prompt contract diagnostics
+      - name: Consultation profile contract
+        run: node --test --test-reporter=spec test/consultation-profile.test.js
+      - name: Clone product promise contract
+        run: node --test --test-reporter=spec test/clone-product-promise.test.js
+      - name: Remaining prompt contracts
         shell: bash
         run: |
-          files="$(grep -lE 'consultationSystemPrompt|consultation-profiles|promptVersion' test/*.test.js)"
-          printf 'Prompt contract files:\n%s\n' "$files"
-          node --test --test-reporter=spec $files
+          files="$(grep -lE 'consultationSystemPrompt|consultation-profiles|promptVersion' test/*.test.js | grep -vE 'consultation-profile|clone-product-promise' || true)"
+          if [ -n "$files" ]; then
+            printf 'Remaining prompt contract files:\n%s\n' "$files"
+            node --test --test-reporter=spec $files
+          fi
       - run: npm test
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
