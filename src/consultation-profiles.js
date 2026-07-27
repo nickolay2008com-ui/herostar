@@ -25,7 +25,6 @@ export const consultationProfiles = Object.freeze({
     sourceCommit: '9040f9f5d396c48f782373327959a6968ebab6f3',
     systemPromptAddon: '',
     questionInstruction: clonePremiumQuestionInstruction,
-    factorBudget: Object.freeze({ min: 3, max: 6 }),
     historyLimit: 16,
     chartDepth: 'full',
   }),
