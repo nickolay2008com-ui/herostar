@@ -11,7 +11,7 @@ import {
 } from '../src/consultation-profiles.js';
 
 const serverSource = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
-const premiumAddon = 'добавь больше благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко';
+const premiumAddon = 'добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко';
 const situationMarker = '\n\nСитуация: ';
 
 const forbiddenGenericCloneRules = [
