@@ -1,13 +1,14 @@
-import { handleTelegramLinkUpdates } from './telegram-link-auth.js';
-
 const DEFAULT_CADENCE_HOURS = 24;
 const DEFAULT_FIRST_DELAY_MINUTES = 30;
 const DEFAULT_CYCLE_INTERVAL_MS = 60_000;
 const DEFAULT_REMINDER_HOURS = 6;
-const TELEGRAM_POLL_TIMEOUT_SECONDS = 25;
 const WEEKLY_RESULT_SIZE = 7;
 
 let startedRuntime = null;
+const MAX_PENDING_PRACTICE_UPDATES = 100;
+const pendingPracticeUpdates = new Map();
+let practiceUpdateContext = null;
+let practiceUpdatesState = 'waiting';
 
 function boundedNumber(value, fallback, min, max) {
   const number = Number(value);
@@ -260,11 +261,6 @@ async function ensureSchema(pool) {
       ON practice_deliveries(user_id, chart_id, outcome_at DESC)
       WHERE outcome IS NOT NULL;
 
-    CREATE TABLE IF NOT EXISTS practice_runtime (
-      key TEXT PRIMARY KEY,
-      value TEXT,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
   `);
 }
 
@@ -568,20 +564,6 @@ async function runDeliveryCycle(pool, token, options) {
   for (const subscription of due) await deliverPractice(pool, token, subscription, options);
 }
 
-async function getRuntimeValue(pool, key) {
-  const result = await pool.query('SELECT value FROM practice_runtime WHERE key = $1', [key]);
-  return result.rows[0]?.value || null;
-}
-
-async function setRuntimeValue(pool, key, value) {
-  await pool.query(
-    `INSERT INTO practice_runtime (key, value, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-    [key, String(value)],
-  );
-}
-
 async function setSubscriptionEnabled(pool, userId, enabled) {
   const status = await loadAlignmentStatus(pool, userId);
   if (!status.active) return { subscription: null, active: false, until: status.clone_alignment_until };
@@ -810,6 +792,64 @@ async function handlePracticeCallback(pool, token, callback, reminderHours) {
   return false;
 }
 
+const PRACTICE_COMMANDS = new Set([
+  '/start', '/on', '/resume', '/stop', '/off', '/pause', '/status',
+]);
+
+function isPracticeTelegramUpdate(update) {
+  const callbackData = compactText(update?.callback_query?.data);
+  if (callbackData.startsWith('alignment:')) return true;
+
+  const rawText = compactText(update?.message?.text);
+  if (!rawText || /^\/start(?:@\w+)?\s+login_/i.test(rawText)) return false;
+  const command = rawText.toLowerCase().split(/\s+/)[0].split('@')[0];
+  return PRACTICE_COMMANDS.has(command);
+}
+
+function queuePracticeTelegramUpdates(updates) {
+  for (const update of updates) {
+    const numericId = Number(update?.update_id);
+    const key = Number.isFinite(numericId)
+      ? String(numericId)
+      : `fallback:${JSON.stringify(update).slice(0, 500)}`;
+    pendingPracticeUpdates.set(key, update);
+  }
+  while (pendingPracticeUpdates.size > MAX_PENDING_PRACTICE_UPDATES) {
+    pendingPracticeUpdates.delete(pendingPracticeUpdates.keys().next().value);
+  }
+}
+
+async function dispatchPracticeTelegramUpdates(updates, context) {
+  for (const update of updates) {
+    try {
+      await handleTelegramUpdate(context.pool, context.token, update, context.options.reminderHours);
+    } catch (error) {
+      console.error(`HeroStar Telegram practice update ${update?.update_id ?? 'unknown'} failed:`, error.message);
+    }
+  }
+}
+
+export async function handlePracticeTelegramUpdates(updates = []) {
+  const relevant = Array.isArray(updates) ? updates.filter(isPracticeTelegramUpdate) : [];
+  if (!relevant.length) return;
+  if (['disabled', 'failed', 'stopped'].includes(practiceUpdatesState)) return;
+  if (!practiceUpdateContext) {
+    queuePracticeTelegramUpdates(relevant);
+    return;
+  }
+  await dispatchPracticeTelegramUpdates(relevant, practiceUpdateContext);
+}
+
+async function activatePracticeTelegramUpdates(context) {
+  practiceUpdateContext = context;
+  practiceUpdatesState = 'ready';
+  const queued = [...pendingPracticeUpdates.values()].sort(
+    (left, right) => Number(left?.update_id || 0) - Number(right?.update_id || 0),
+  );
+  pendingPracticeUpdates.clear();
+  if (queued.length) await dispatchPracticeTelegramUpdates(queued, context);
+}
+
 async function handleTelegramUpdate(pool, token, update, reminderHours) {
   const callback = update.callback_query;
   if (callback) {
@@ -862,37 +902,6 @@ async function handleTelegramUpdate(pool, token, update, reminderHours) {
   }
 }
 
-async function pollTelegramUpdates(pool, token, signal, options) {
-  let offset = Number(await getRuntimeValue(pool, 'telegram_update_offset')) || 0;
-  while (!signal.aborted) {
-    try {
-      const updates = await telegramRequest(token, 'getUpdates', {
-        offset,
-        timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
-        allowed_updates: ['message', 'callback_query'],
-      }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
-
-      await handleTelegramLinkUpdates(updates || [], { fetchImpl: globalThis.fetch }).catch((error) => {
-        console.error('HeroStar Telegram login update dispatch failed:', error.message);
-      });
-      for (const update of updates || []) {
-        try {
-          await handleTelegramUpdate(pool, token, update, options.reminderHours);
-        } catch (error) {
-          console.error(`HeroStar Telegram update ${update.update_id} failed:`, error.message);
-        } finally {
-          offset = Math.max(offset, Number(update.update_id) + 1);
-        }
-      }
-      if ((updates || []).length) await setRuntimeValue(pool, 'telegram_update_offset', offset);
-    } catch (error) {
-      if (signal.aborted) break;
-      console.error('HeroStar Telegram update polling failed:', error.message);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-  }
-}
-
 export async function startPracticeNotifications() {
   if (startedRuntime) return startedRuntime;
   startedRuntime = (async () => {
@@ -900,9 +909,12 @@ export async function startPracticeNotifications() {
     const databaseUrl = compactText(process.env.DATABASE_URL);
     const token = compactText(process.env.TELEGRAM_BOT_TOKEN);
     if (!enabled || !databaseUrl || !token) {
+      practiceUpdatesState = 'disabled';
+      pendingPracticeUpdates.clear();
       console.warn('Telegram-практика не запущена: нужен DATABASE_URL и TELEGRAM_BOT_TOKEN.');
       return { stop: async () => {} };
     }
+    practiceUpdatesState = 'starting';
 
     const pgModule = await import('pg');
     const Pool = pgModule.Pool || pgModule.default?.Pool;
@@ -921,6 +933,7 @@ export async function startPracticeNotifications() {
       batchSize: boundedNumber(process.env.PRACTICE_BATCH_SIZE, 20, 1, 100),
       reminderHours: boundedNumber(process.env.PRACTICE_REMINDER_HOURS, DEFAULT_REMINDER_HOURS, 1, 24),
     };
+    await activatePracticeTelegramUpdates({ pool, token, options });
 
     let cycleRunning = false;
     const cycle = async () => {
@@ -938,17 +951,24 @@ export async function startPracticeNotifications() {
     await cycle();
     const interval = setInterval(cycle, options.cycleIntervalMs);
     interval.unref?.();
-    const controller = new AbortController();
-    void pollTelegramUpdates(pool, token, controller.signal, options);
 
     console.log(`HeroStar practice notifications started: every ${options.cadenceHours}h.`);
     return {
       async stop() {
         clearInterval(interval);
-        controller.abort();
+        if (practiceUpdateContext?.pool === pool) practiceUpdateContext = null;
+        practiceUpdatesState = 'stopped';
+        pendingPracticeUpdates.clear();
         await pool.end();
+        startedRuntime = null;
       },
     };
-  })();
+  })().catch((error) => {
+    practiceUpdateContext = null;
+    practiceUpdatesState = 'failed';
+    pendingPracticeUpdates.clear();
+    startedRuntime = null;
+    throw error;
+  });
   return startedRuntime;
 }
