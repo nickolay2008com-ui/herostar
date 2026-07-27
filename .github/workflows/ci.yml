@@ -19,7 +19,21 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: npm test
+      - name: Unit tests with diagnostic report
+        run: |
+          set +e
+          node --test --test-reporter=junit > test-results.xml
+          status=$?
+          echo "$status" > test-exit-code
+          exit 0
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: test-results.xml
+      - name: Enforce unit test result
+        run: exit "$(cat test-exit-code)"
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Browser tests
