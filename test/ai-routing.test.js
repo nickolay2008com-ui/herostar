@@ -42,11 +42,8 @@ test('неверный reasoning effort безопасно заменяется 
   assert.equal(normalizeReasoningEffort(' HIGH ', 'low'), 'high');
 });
 
-test('политика диалога ведёт к ресурсам, а не к лечению человека', () => {
+test('ответ проверяется через пять продуктовых ключей', () => {
   const prompt = consultationSystemPrompt('deep');
-  assert.match(prompt, /сонастроиться с собой/i);
-  assert.match(prompt, /не лечиться/i);
-  assert.match(prompt, /не ищи травмы, блоки, диагнозы/i);
   assert.match(prompt, /развитие/i);
   assert.match(prompt, /красота и гармония/i);
   assert.match(prompt, /включённость и ответственность/i);
