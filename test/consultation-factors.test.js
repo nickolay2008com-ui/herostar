@@ -55,6 +55,13 @@ test('неизвестное время исключает дома, углы, �
   assert.ok(selected.factors.every((item) => !item.position.includes('дом')));
 });
 
+test('платный флаг не назначает отдельный диапазон факторов', () => {
+  const ordinary = selectConsultationFactors({ chart: chart(), question: 'Войти ли в новый проект?' });
+  const premium = selectConsultationFactors({ chart: chart(), question: 'Войти ли в новый проект?', premium: true });
+  assert.deepEqual(premium.factors, ordinary.factors);
+  assert.ok(premium.factors.length <= 4);
+});
+
 test('модель получает только тот набор факторов, который возвращается интерфейсу', () => {
   const selected = selectConsultationFactors({ chart: chart(), question: 'Войти ли в новый проект?', factorBudget: { min: 2, max: 4 } });
   const evidence = compactCloneEvidence(chart(), selected.factors);

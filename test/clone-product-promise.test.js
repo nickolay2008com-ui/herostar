@@ -26,12 +26,12 @@ ${await read('public/clone.js')}`;
   assert.match(source, /услови(?:е|я).*решени/i);
 });
 
-test('тарифные профили сохраняют техническую разницу глубины', async () => {
+test('платный профиль не назначает отдельный диапазон факторов', async () => {
   const source = await read('src/consultation-profiles.js');
   assert.match(source, /promptVersion: '2026-07-23\.1145'/);
   assert.match(source, /promptVersion: '2026-07-27\.premium-addon'/);
   assert.match(source, /factorBudget: Object\.freeze\(\{ min: 2, max: 4 \}\)/);
-  assert.match(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
+  assert.doesNotMatch(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
   assert.match(source, /historyLimit: 8/);
   assert.match(source, /historyLimit: 16/);
   assert.match(source, /добавь больше благоприятных факторов из натальной карты для благоприятного решения задачи клона\. пиши кротко/);
