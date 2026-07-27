@@ -23,15 +23,18 @@ test('анонимный пользователь получает три отв
   assert.ok(!clone.includes("openPaywall('clone_day');\n  return false"));
 });
 
-test('бесплатный профиль восстановлен из 11:45 и получает полную карту', async () => {
+test('бесплатный профиль сохраняет основу 11:45, полный контекст и новый диалоговый слой', async () => {
   const [profiles, ai] = await Promise.all([
     read('src/consultation-profiles.js'),
     read('src/ai.js'),
   ]);
 
-  assert.ok(profiles.includes("promptVersion: '2026-07-23.1145'"));
+  assert.ok(profiles.includes("promptVersion: '2026-07-27.free-dialog'"));
+  assert.ok(profiles.includes("derivedFromPromptVersion: '2026-07-23.1145'"));
   assert.ok(profiles.includes("sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1'"));
   assert.ok(profiles.includes('2–4 конкретных фактора карты'));
+  assert.ok(profiles.includes('В первой реплике оцени, достаточно ли данных для точного решения'));
+  assert.ok(profiles.includes('действие, гармония и красота, ответственность и включённость, единство, уникальность'));
   assert.ok(!profiles.includes("chartDepth: 'core'"));
   assert.equal(profiles.split("chartDepth: 'full'").length - 1, 2);
   assert.ok(ai.includes('northNode: chart.northNode'));
