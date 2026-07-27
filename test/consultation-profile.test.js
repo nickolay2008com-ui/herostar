@@ -35,26 +35,27 @@ function splitPreparedQuestion(value) {
   };
 }
 
-test('бесплатный клон сначала даёт полезный ход и только затем уточняет', () => {
+test('бесплатный клон использует промпт 23.07 11:45 и формулу пяти элементов', () => {
   const profile = resolveConsultationProfile({ product: 'clone', premium: false });
   const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
 
   assert.equal(profile.id, CLONE_FREE_PROFILE_ID);
-  assert.equal(profile.promptVersion, '2026-07-27.answer-first');
+  assert.equal(profile.promptVersion, '2026-07-23.1145-five');
   assert.equal(profile.derivedFromPromptVersion, '2026-07-23.1145');
   assert.equal(profile.sourceCommit, 'ad915b2bf870b27552eaf185a842702987d80da1');
   assert.ok(question.includes('Рассмотри описанную ситуацию не как прогноз поступка человека'));
+  assert.ok(question.includes('Всегда говори «клон поступил бы»'));
   assert.ok(question.includes('2–4 конкретных фактора карты'));
   assert.ok(question.includes('аспект, ретроградность, ASC/DSC, MC/IC'));
-  assert.ok(question.includes('Отвечай по имеющимся данным сразу'));
-  assert.ok(question.includes('Не откладывай решение ради уточнений'));
-  assert.ok(question.includes('сделай разумное условное предположение'));
-  assert.ok(question.includes('Не задавай два уточняющих вопроса подряд'));
-  assert.ok(question.includes('Свяжи 2–4 релевантных фактора карты в одну причинную механику'));
-  assert.ok(question.includes('действие, гармония и красота, ответственность и включённость, единство, уникальность'));
-  assert.ok(question.includes('Пиши ёмко, короткими абзацами и без повторов'));
-  assert.ok(!question.includes('В первой реплике оцени, достаточно ли данных'));
-  assert.ok(!question.includes('Не начинай большой разбор до ответа человека'));
+  assert.ok(question.includes('один уточняющий вопрос, только если он действительно меняет решение'));
+  assert.ok(question.includes('действие: есть ли ясный ход'));
+  assert.ok(question.includes('гармония и красота'));
+  assert.ok(question.includes('ответственность и включённость'));
+  assert.ok(question.includes('единство'));
+  assert.ok(question.includes('уникальность'));
+  assert.ok(question.includes('Не называй эти пять элементов пользователю'));
+  assert.ok(!question.includes('Отвечай по имеющимся данным сразу'));
+  assert.ok(!question.includes('Не задавай два уточняющих вопроса подряд'));
   assert.equal(profile.systemPromptAddon, '');
   assert.equal(profile.chartDepth, 'full');
   assert.deepEqual(profile.factorBudget, { min: 2, max: 4 });
