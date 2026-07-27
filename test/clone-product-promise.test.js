@@ -26,10 +26,13 @@ ${await read('public/clone.js')}`;
   assert.match(source, /услови(?:е|я).*решени/i);
 });
 
-test('тарифные профили не изменены', async () => {
+test('тарифные профили сохраняют техническую разницу глубины', async () => {
   const source = await read('src/consultation-profiles.js');
   assert.match(source, /promptVersion: '2026-07-23\.1145'/);
-  assert.match(source, /sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1'/);
-  assert.match(source, /promptVersion: '2026-07-24\.current'/);
-  assert.match(source, /sourceCommit: '9040f9f5d396c48f782373327959a6968ebab6f3'/);
+  assert.match(source, /promptVersion: '2026-07-27\.premium-addon'/);
+  assert.match(source, /factorBudget: Object\.freeze\(\{ min: 2, max: 4 \}\)/);
+  assert.match(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
+  assert.match(source, /historyLimit: 8/);
+  assert.match(source, /historyLimit: 16/);
+  assert.match(source, /добавь больше благоприятных факторов из натальной карты для благоприятного решения задачи клона\. пиши кротко/);
 });
