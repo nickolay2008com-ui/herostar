@@ -1,0 +1,35 @@
+name: Diagnose PR 134 e2e compact
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/diagnose-pr-134-e2e-compact.yml
+
+permissions:
+  actions: read
+  pull-requests: write
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.event.head_commit.message == 'Снять компактную диагностику e2e PR 134'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: nickolay2008com-ui/herostar
+    steps:
+      - name: Extract concise failure
+        shell: bash
+        run: |
+          gh run view 30283615765 --job 90035840305 --log-failed > failed.log 2>&1 || true
+          grep -E '([0-9]+\) \[|Test timeout|Error:|Call log:|waiting for locator|Expected|Received|at /home/runner)' failed.log | head -n 160 > concise.log || true
+          {
+            echo '### Компактная причина e2e'
+            echo
+            echo '```text'
+            cat concise.log
+            echo '```'
+          } > comment.md
+          gh pr comment 134 --body-file comment.md
