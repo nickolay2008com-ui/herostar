@@ -23,14 +23,6 @@ jobs:
         run: node --test --test-reporter=spec test/consultation-profile.test.js
       - name: Clone product promise contract
         run: node --test --test-reporter=spec test/clone-product-promise.test.js
-      - name: Remaining prompt contracts
-        shell: bash
-        run: |
-          files="$(grep -lE 'consultationSystemPrompt|consultation-profiles|promptVersion' test/*.test.js | grep -vE 'consultation-profile|clone-product-promise' || true)"
-          if [ -n "$files" ]; then
-            printf 'Remaining prompt contract files:\n%s\n' "$files"
-            node --test --test-reporter=spec $files
-          fi
       - run: npm test
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -41,3 +33,33 @@ jobs:
           node --check server.js
           for file in public/*.js public/clone/live/*.js; do node --check "$file"; done
           for file in src/*.js; do node --check "$file"; done
+
+  discover-prompt-contracts:
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.discover.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: discover
+        shell: bash
+        run: |
+          files="$(grep -lE 'consultationSystemPrompt|consultation-profiles|promptVersion' test/*.test.js | grep -vE 'consultation-profile|clone-product-promise' || true)"
+          json="$(printf '%s\n' "$files" | node -e "let s=''; process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.stringify(s.split(/\\n/).map(v=>v.trim()).filter(Boolean))))")"
+          echo "files=$json" >> "$GITHUB_OUTPUT"
+
+  remaining-prompt-contract:
+    needs: discover-prompt-contracts
+    if: ${{ needs.discover-prompt-contracts.outputs.files != '[]' }}
+    name: Prompt contract · ${{ matrix.file }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.discover-prompt-contracts.outputs.files) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node --test --test-reporter=spec "${{ matrix.file }}"
