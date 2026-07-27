@@ -40,11 +40,18 @@ test('бесплатный клон использует утверждённу�
   const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
 
   assert.equal(profile.id, CLONE_FREE_PROFILE_ID);
-  assert.equal(profile.promptVersion, '2026-07-23.1145');
+  assert.equal(profile.promptVersion, '2026-07-27.free-dialog');
+  assert.equal(profile.derivedFromPromptVersion, '2026-07-23.1145');
   assert.equal(profile.sourceCommit, 'ad915b2bf870b27552eaf185a842702987d80da1');
   assert.ok(question.includes('Рассмотри описанную ситуацию не как прогноз поступка человека'));
   assert.ok(question.includes('2–4 конкретных фактора карты'));
   assert.ok(question.includes('аспект, ретроградность, ASC/DSC, MC/IC'));
+  assert.ok(question.includes('В первой реплике оцени, достаточно ли данных для точного решения'));
+  assert.ok(question.includes('задай один различающий вопрос'));
+  assert.ok(question.includes('Если запрос уже ясен, не задавай формальный вопрос'));
+  assert.ok(question.includes('свяжи 2–4 фактора карты в одну причинную механику'));
+  assert.ok(question.includes('действие, гармония и красота, ответственность и включённость, единство, уникальность'));
+  assert.ok(question.includes('Пиши ёмко, короткими абзацами'));
   assert.equal(profile.systemPromptAddon, '');
   assert.equal(profile.chartDepth, 'full');
   assert.deepEqual(profile.factorBudget, { min: 2, max: 4 });
