@@ -31,7 +31,19 @@ jobs:
           cache: npm
           cache-dependency-path: work/package-lock.json
       - name: Apply final engineering review
-        run: python source/scripts/finalize-unified-telegram-runtime.py work
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('source/scripts/finalize-unified-telegram-runtime.py')
+          source = path.read_text()
+          old = "    5,\n    'runtime state naming',"
+          new = "    6,\n    'runtime state naming',"
+          if source.count(old) != 1:
+              raise SystemExit('runtime naming count guard not found exactly once')
+          path.write_text(source.replace(old, new, 1))
+          PY
+          python source/scripts/finalize-unified-telegram-runtime.py work
       - name: Install dependencies
         working-directory: work
         run: npm install --ignore-scripts --no-audit --no-fund
