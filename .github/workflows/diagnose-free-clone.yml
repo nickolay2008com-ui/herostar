@@ -1,0 +1,24 @@
+name: Diagnose free clone prompt
+
+on:
+  push:
+    branches: ["codex/compact-free-clone-dialog"]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Capture unit test output
+        run: npm test > unit-test.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-log
+          path: unit-test.log
