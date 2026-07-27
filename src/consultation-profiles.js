@@ -6,7 +6,7 @@ const cloneFreeQuestionInstruction = `Рассмотри описанную си
 
 const clonePremiumQuestionInstruction = `${cloneFreeQuestionInstruction}
 
-добавь больше благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко`;
+добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко`;
 
 export const consultationProfiles = Object.freeze({
   [CLONE_FREE_PROFILE_ID]: Object.freeze({
