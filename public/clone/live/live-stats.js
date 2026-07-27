@@ -31,6 +31,32 @@
     .live-product .place-results:empty {
       display: none;
     }
+
+    .live-product .message.clone.clone-first-answer {
+      border: 0 !important;
+      background: linear-gradient(145deg, rgba(91,61,170,.12), rgba(17,20,34,.72)) !important;
+      box-shadow: none !important;
+    }
+
+    .live-product .message.clone.clone-first-answer > div {
+      border: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    .live-product #clonePassport .passport-section,
+    .live-product #clonePassport .passport-section:focus,
+    .live-product #clonePassport .passport-section:focus-visible,
+    .live-product #clonePassport .passport-section:focus-within {
+      outline: 0 !important;
+      border-color: rgba(255,255,255,.075) !important;
+      box-shadow: inset 0 1px rgba(255,255,255,.025) !important;
+    }
+
+    .live-product .side nav button:focus-visible {
+      outline: 0 !important;
+      box-shadow: 0 0 0 2px rgba(167,139,250,.16) !important;
+    }
   `;
   document.head.append(polish);
 
