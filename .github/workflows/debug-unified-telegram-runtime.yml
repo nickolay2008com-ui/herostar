@@ -1,0 +1,42 @@
+name: Debug unified Telegram runtime
+
+on:
+  push:
+    branches:
+      - codex/unify-telegram-runtime-bootstrap
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  test-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/unified-telegram-runtime
+          fetch-depth: 0
+          show-progress: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts --no-audit --no-fund >/dev/null
+      - name: Isolated Telegram runtime test
+        shell: bash
+        run: |
+          set +e
+          node --test --test-reporter=spec test/telegram-update-runtime.test.js > telegram-runtime-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            git config user.name "HeroStar Quality Bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f telegram-runtime-test.log
+            git commit -m "Диагностика теста Telegram runtime"
+            git push --force origin HEAD:refs/heads/agent/unified-telegram-runtime-test-error
+            cat telegram-runtime-test.log
+          fi
+          exit "$status"
