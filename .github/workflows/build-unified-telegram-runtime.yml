@@ -1,12 +1,7 @@
 name: Build unified Telegram runtime
 
 on:
-  push:
-    branches:
-      - codex/unify-telegram-runtime-bootstrap
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
