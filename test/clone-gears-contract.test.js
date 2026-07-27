@@ -29,7 +29,7 @@ test('вопрос и ответ сохраняются одной транза�
   ]);
   assert.match(store, /saveConsultationExchange/);
   assert.match(store, /BEGIN[\s\S]+COMMIT/);
-  assert.ok(server.indexOf('answerConsultation({') < server.indexOf('saveConsultationExchange({'));
+  assert.ok(server.indexOf('answerConsultationWithFactors({') < server.indexOf('saveConsultationExchange({'));
   assert.match(auth, /req\.cloneReservationId = reservation\.reservationId/);
   assert.doesNotMatch(auth, /req\.body\.question = `\[\[clone-reservation:/);
 });
@@ -42,7 +42,8 @@ test('режим клона закреплён на сервере и имеет
   assert.match(ai, /resolveConsultationProfile/);
   assert.match(ai, /product === 'clone'/);
   assert.match(ai, /Ваш звёздный клон, вероятнее всего/);
-  assert.match(profiles, /не прогноз поступков пользователя/);
+  assert.match(profiles, /Рассмотри описанную ситуацию не как прогноз поступка человека/);
+  assert.match(profiles, /добавь больше благоприятных факторов из натальной карты/);
 });
 
 test('заявленная карта больше не открывается старым анонимным ключом', async () => {

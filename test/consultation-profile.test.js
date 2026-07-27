@@ -11,6 +11,8 @@ import {
 } from '../src/consultation-profiles.js';
 
 const serverSource = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
+const premiumAddon = 'добавь больше благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко';
+const situationMarker = '\n\nСитуация: ';
 
 const forbiddenGenericCloneRules = [
   'Выбирай только 1–3 элемента карты',
@@ -24,7 +26,16 @@ function assertNoGenericFactorConflict(prompt) {
   }
 }
 
-test('бесплатный клон точно использует механику диалога 23 июля 11:45', () => {
+function splitPreparedQuestion(value) {
+  const markerIndex = value.lastIndexOf(situationMarker);
+  assert.ok(markerIndex >= 0, 'Подготовленный вопрос должен содержать ситуацию');
+  return {
+    instruction: value.slice(0, markerIndex),
+    situation: value.slice(markerIndex + situationMarker.length),
+  };
+}
+
+test('бесплатный клон использует утверждённую инструкцию вопроса', () => {
   const profile = resolveConsultationProfile({ product: 'clone', premium: false });
   const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
 
@@ -34,43 +45,47 @@ test('бесплатный клон точно использует механи
   assert.ok(question.includes('Рассмотри описанную ситуацию не как прогноз поступка человека'));
   assert.ok(question.includes('2–4 конкретных фактора карты'));
   assert.ok(question.includes('аспект, ретроградность, ASC/DSC, MC/IC'));
+  assert.equal(profile.systemPromptAddon, '');
   assert.equal(profile.chartDepth, 'full');
   assert.deepEqual(profile.factorBudget, { min: 2, max: 4 });
   assert.equal(profile.historyLimit, 8);
-  assert.ok(question.includes('Ситуация: Войти ли в новый проект?'));
+  assert.equal(splitPreparedQuestion(question).situation, 'Войти ли в новый проект?');
 });
 
-test('механика 11:45 является единственным правилом факторов в первом ответе и продолжении', () => {
+test('системный промпт клона не дублирует тарифную инструкцию вопроса', () => {
   const deep = consultationSystemPrompt('deep', 'clone', false);
   const dialog = consultationSystemPrompt('dialog', 'clone', false);
 
   for (const prompt of [deep, dialog]) {
-    assert.ok(prompt.includes('профиля 2026-07-23.1145'));
-    assert.ok(prompt.includes('2–4 конкретных релевантных факторов'));
-    assert.ok(prompt.includes('Сначала кратко скажи, как поступил бы клон'));
+    assert.ok(!prompt.includes('2026-07-23.1145'));
+    assert.ok(!prompt.includes('2–4 конкретных фактора карты'));
     assertNoGenericFactorConflict(prompt);
   }
 
   assert.ok(deep.includes('первый содержательный ответ Звёздного клона'));
-  assert.ok(dialog.includes('Не сужай разбор только потому, что это продолжение'));
+  assert.ok(!dialog.includes('первый содержательный ответ Звёздного клона'));
 });
 
-test('платный клон использует только правило 3–6 связей без ограничений обычного HeroStar', () => {
-  const profile = resolveConsultationProfile({ product: 'clone', premium: true });
-  const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
-  const deep = consultationSystemPrompt('deep', 'clone', true);
-  const dialog = consultationSystemPrompt('dialog', 'clone', true);
+test('платный промпт равен бесплатному плюс одна утверждённая фраза', () => {
+  const freeProfile = resolveConsultationProfile({ product: 'clone', premium: false });
+  const premiumProfile = resolveConsultationProfile({ product: 'clone', premium: true });
+  const freePrepared = splitPreparedQuestion(prepareConsultationQuestion(freeProfile, 'Войти ли в новый проект?'));
+  const premiumPrepared = splitPreparedQuestion(prepareConsultationQuestion(premiumProfile, 'Войти ли в новый проект?'));
 
-  assert.equal(profile.id, CLONE_PREMIUM_PROFILE_ID);
-  assert.equal(question, 'Войти ли в новый проект?');
-  assert.equal(profile.chartDepth, 'full');
-  assert.deepEqual(profile.factorBudget, { min: 3, max: 6 });
-  assert.equal(profile.historyLimit, 16);
+  assert.equal(premiumProfile.id, CLONE_PREMIUM_PROFILE_ID);
+  assert.equal(premiumProfile.promptVersion, '2026-07-27.premium-addon');
+  assert.equal(premiumProfile.systemPromptAddon, '');
+  assert.equal(premiumPrepared.instruction, `${freePrepared.instruction}\n\n${premiumAddon}`);
+  assert.equal(premiumPrepared.situation, freePrepared.situation);
+  assert.equal(premiumProfile.chartDepth, 'full');
+  assert.deepEqual(premiumProfile.factorBudget, { min: 3, max: 6 });
+  assert.equal(premiumProfile.historyLimit, 16);
 
-  for (const prompt of [deep, dialog]) {
-    assert.ok(prompt.includes('Режим «Звёздный клон» имеет приоритет'));
-    assert.ok(prompt.includes('карту как единую сеть'));
-    assert.ok(prompt.includes('3–6 наиболее значимых связей'));
+  for (const prompt of [
+    consultationSystemPrompt('deep', 'clone', true),
+    consultationSystemPrompt('dialog', 'clone', true),
+  ]) {
+    assert.ok(!prompt.includes(premiumAddon));
     assertNoGenericFactorConflict(prompt);
   }
 });
@@ -83,8 +98,6 @@ test('обычный HeroStar сохраняет собственную комп
   assert.ok(deep.includes('Выбирай только 1–3 элемента карты'));
   assert.ok(deep.includes('не более двух поддерживающих элементов'));
   assert.ok(dialog.includes('обычно используй 1–2 элемента карты'));
-  assert.ok(!deep.includes('Режим «Звёздный клон»'));
-  assert.ok(!dialog.includes('Режим «Звёздный клон»'));
 });
 
 test('уровень доступа выбирается только на сервере', () => {
