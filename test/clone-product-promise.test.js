@@ -34,5 +34,5 @@ test('платный профиль не назначает отдельный �
   assert.doesNotMatch(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
   assert.match(source, /historyLimit: 8/);
   assert.match(source, /historyLimit: 16/);
-  assert.match(source, /добавь больше благоприятных факторов из натальной карты для благоприятного решения задачи клона\. пиши кротко/);
+  assert.match(source, /добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона\. пиши кротко/);
 });
