@@ -141,6 +141,8 @@ test('единый Telegram runtime проводит полный вход и п
     ]);
 
     assert.deepEqual(receivedByPractice.map((update) => update.update_id), [40, 41]);
+    assert.equal(getUpdatesPayloads[0].offset, 0);
+    assert.equal(getUpdatesPayloads[0].timeout, 25);
     assert.deepEqual(getUpdatesPayloads[0].allowed_updates, ['message', 'callback_query']);
     assert.equal(sentMessages.length, 1);
     assert.equal(sentMessages[0].chat_id, 7);
