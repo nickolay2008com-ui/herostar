@@ -738,7 +738,7 @@ function renderFactorsFromChart(chart) {
   empty.classList.remove('hidden');
   empty.textContent = chart?.birth?.unknownTime
     ? 'Клон создан без точного времени. После ответа здесь появятся только устойчивые факторы даты — без домов, ASC/MC и Луны.'
-    : 'Задайте ситуацию. После ответа здесь появятся только те параметры карты, которые действительно были переданы модели для этого хода.';
+    : 'Задайте ситуацию. Клон получит полную карту и сам выберет 2–4 фактора, важные именно для ответа. Здесь появятся технические ориентиры по теме.';
   const technical = $('#technicalBasis');
   if (technical) {
     technical.textContent = chart?.birth?.unknownTime
@@ -756,7 +756,7 @@ function renderAnswerFactors(factors = [], scope = null) {
     list.classList.add('hidden');
     list.innerHTML = '';
     empty.classList.remove('hidden');
-    empty.textContent = scope?.note || 'Для этого ответа не удалось сформировать проверяемый след факторов.';
+    empty.textContent = scope?.note || 'Клон рассмотрел полную карту, но отдельные технические ориентиры для панели не сформированы.';
     return;
   }
   empty.classList.add('hidden');

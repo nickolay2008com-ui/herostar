@@ -14,7 +14,7 @@ async function startFromQuestion(page, questionText) {
   await mockPlaces(page);
   await page.goto('/clone/live/');
   await page.locator('#heroQuestion').fill(questionText);
-  await page.locator('#heroQuestionForm').getByRole('button', { name: /Сохранить вопрос/ }).click();
+  await page.locator('#heroQuestionForm button[type="submit"]').click();
   await expect(page.locator('#createView')).toBeVisible();
 }
 
@@ -75,11 +75,12 @@ test('ответ и его факторный след восстанавлив�
   test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект или пока сохранить стабильность?');
   await createClone(page);
-  const answer = await page.locator('#messages .message.clone').last().locator('p').innerText();
+  const answerParagraph = page.locator('#messages .message.clone').last().locator('p').first();
+  const answer = await answerParagraph.innerText();
   const factors = await page.locator('#logicFactors').innerText();
   await page.reload();
   await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator('#messages .message.clone').last().locator('p')).toContainText(answer.slice(0, 35));
+  await expect(page.locator('#messages .message.clone').last().locator('p').first()).toContainText(answer.slice(0, 35));
   await expect(page.locator('#logicFactors')).toContainText(factors.split('\n').find(Boolean));
 });
 

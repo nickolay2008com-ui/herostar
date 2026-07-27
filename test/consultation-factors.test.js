@@ -62,9 +62,19 @@ test('платный флаг не назначает отдельный диа�
   assert.ok(premium.factors.length <= 4);
 });
 
-test('модель получает только тот набор факторов, который возвращается интерфейсу', () => {
-  const selected = selectConsultationFactors({ chart: chart(), question: 'Войти ли в новый проект?', factorBudget: { min: 2, max: 4 } });
-  const evidence = compactCloneEvidence(chart(), selected.factors);
-  assert.deepEqual(evidence.selectedFactors, publicConsultationFactors(selected.factors));
-  assert.equal('planets' in evidence, false);
+test('модель получает полную надёжную карту и сама выбирает релевантные факторы', () => {
+  const evidence = compactCloneEvidence(chart());
+  assert.equal(evidence.scope, 'full');
+  assert.equal(evidence.planets.length, 10);
+  assert.ok(evidence.houses);
+  assert.ok(evidence.angles);
+  assert.ok(evidence.northNode);
+  assert.equal(evidence.aspects.length, 2);
+  assert.equal('selectedFactors' in evidence, false);
+
+  const withoutTime = compactCloneEvidence(chart({ unknownTime: true }));
+  assert.equal(withoutTime.houses, null);
+  assert.equal(withoutTime.angles, null);
+  assert.ok(withoutTime.planets.every((item) => item.key !== 'moon'));
+  assert.ok(withoutTime.aspects.every((item) => item.from !== 'moon' && item.to !== 'moon'));
 });
