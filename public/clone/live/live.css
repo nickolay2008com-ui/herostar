@@ -305,9 +305,9 @@
 }
 
 .live-intent-form:focus-within {
-  border-color: rgba(169,132,255,.54);
-  box-shadow: 0 24px 62px rgba(0,0,0,.38), 0 0 0 4px rgba(151,113,255,.09), inset 0 1px rgba(255,255,255,.045);
-  transform: translateY(-1px);
+  border-color: rgba(169,132,255,.46);
+  box-shadow: 0 22px 54px rgba(0,0,0,.34), 0 0 0 2px rgba(151,113,255,.075), inset 0 1px rgba(255,255,255,.04);
+  transform: none;
 }
 
 .live-intent-form textarea {
@@ -330,6 +330,14 @@
 }
 
 .live-intent-form textarea::placeholder { color: #777582; }
+
+/* The form itself is the accessible focus indicator; avoid a competing gold frame on the textarea. */
+.live-product .live-intent-form textarea:focus,
+.live-product .live-intent-form textarea:focus-visible {
+  outline: 0;
+  outline-offset: 0;
+  box-shadow: none;
+}
 .live-intent-form .primary { align-self: stretch; min-width: 170px; }
 
 .live-intent-meta {
