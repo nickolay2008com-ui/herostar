@@ -7,7 +7,7 @@ const TELEGRAM_POLL_TIMEOUT_SECONDS = 25;
 const COOKIE_NAME = 'herostar_session';
 const memoryLinks = new Map();
 let poolPromise = null;
-let telegramPollingRuntime = null;
+let telegramUpdateRuntime = null;
 const telegramUpdateHandlers = new Set();
 let botIdentityCache = { username: null, expiresAt: 0 };
 
@@ -55,6 +55,19 @@ function publicBaseUrl() {
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function waitForPromiseOrTimeout(promise, timeoutMs) {
+  let timeoutId = null;
+  const timeout = new Promise((resolve) => {
+    timeoutId = setTimeout(resolve, timeoutMs);
+    timeoutId.unref?.();
+  });
+  try {
+    await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function telegramApiRequest(fetchImpl, token, method, payload = {}, timeoutMs = 10_000) {
@@ -422,9 +435,9 @@ async function dispatchTelegramUpdates(updates, { fetchImpl }) {
   }
 }
 
-export function startTelegramLinkUpdatePolling({ fetchImpl = globalThis.fetch, updateHandlers = [] } = {}) {
+export function startTelegramUpdateRuntime({ fetchImpl = globalThis.fetch, updateHandlers = [] } = {}) {
   for (const handler of updateHandlers) registerTelegramUpdateHandler(handler);
-  if (telegramPollingRuntime) return telegramPollingRuntime;
+  if (telegramUpdateRuntime) return telegramUpdateRuntime;
 
   const botToken = compact(process.env.TELEGRAM_BOT_TOKEN);
   if (!botToken) return null;
@@ -454,14 +467,14 @@ export function startTelegramLinkUpdatePolling({ fetchImpl = globalThis.fetch, u
     }
   })();
 
-  telegramPollingRuntime = {
+  telegramUpdateRuntime = {
     registerUpdateHandler: registerTelegramUpdateHandler,
     async stop() {
       stopped = true;
-      await Promise.race([done, sleep(36_000)]);
-      telegramPollingRuntime = null;
+      await waitForPromiseOrTimeout(done, 36_000);
+      telegramUpdateRuntime = null;
       telegramUpdateHandlers.clear();
     },
   };
-  return telegramPollingRuntime;
+  return telegramUpdateRuntime;
 }

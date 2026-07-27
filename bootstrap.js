@@ -1,7 +1,7 @@
 import express from 'express';
 import { scopeCloneAccess } from './src/clone-access-middleware.js';
 import {
-  startTelegramLinkUpdatePolling,
+  startTelegramUpdateRuntime,
   telegramLinkAuthMiddleware,
 } from './src/telegram-link-auth.js';
 
@@ -56,7 +56,7 @@ try {
   console.error('Не удалось загрузить модуль практических Telegram-уведомлений:', error);
 }
 
-startTelegramLinkUpdatePolling({
+startTelegramUpdateRuntime({
   updateHandlers: practiceModule?.handlePracticeTelegramUpdates
     ? [practiceModule.handlePracticeTelegramUpdates]
     : [],

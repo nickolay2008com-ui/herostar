@@ -35,7 +35,7 @@ test('Telegram-вход не зависит от запуска Сонастро
     read('bootstrap.js'),
     read('src/practice-notifications.js'),
   ]);
-  assert.match(auth, /startTelegramLinkUpdatePolling/);
+  assert.match(auth, /startTelegramUpdateRuntime/);
   assert.match(auth, /telegram_update_runtime/);
   assert.match(auth, /allowed_updates: \['message', 'callback_query'\]/);
   assert.doesNotMatch(auth, /fallbackPollingRequired/);
