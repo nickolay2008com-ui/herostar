@@ -26,12 +26,17 @@ ${await read('public/clone.js')}`;
   assert.match(source, /услови(?:е|я).*решени/i);
 });
 
-test('платный профиль наследует обновлённую бесплатную основу без отдельного диапазона факторов', async () => {
+test('платный профиль наследует основу 23.07 с пятью элементами без отдельного диапазона факторов', async () => {
   const source = await read('src/consultation-profiles.js');
-  assert.match(source, /promptVersion: '2026-07-27\.answer-first'/);
+  assert.match(source, /promptVersion: '2026-07-23\.1145-five'/);
   assert.match(source, /derivedFromPromptVersion: '2026-07-23\.1145'/);
   assert.match(source, /promptVersion: '2026-07-27\.premium-addon'/);
   assert.match(source, /const clonePremiumQuestionInstruction = `\$\{cloneFreeQuestionInstruction\}/);
+  assert.match(source, /действие: есть ли ясный ход/);
+  assert.match(source, /гармония и красота/);
+  assert.match(source, /ответственность и включённость/);
+  assert.match(source, /единство/);
+  assert.match(source, /уникальность/);
   assert.match(source, /factorBudget: Object\.freeze\(\{ min: 2, max: 4 \}\)/);
   assert.doesNotMatch(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
   assert.match(source, /historyLimit: 8/);
