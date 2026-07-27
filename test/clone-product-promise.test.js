@@ -26,22 +26,28 @@ ${await read('public/clone.js')}`;
   assert.match(source, /услови(?:е|я).*решени/i);
 });
 
-test('платный профиль наследует основу 23.07 с пятью элементами без отдельного диапазона факторов', async () => {
+test('платный профиль превращает обещание 3–6 факторов в полный разбор решения', async () => {
   const source = await read('src/consultation-profiles.js');
   assert.match(source, /promptVersion: '2026-07-23\.1145-five'/);
   assert.match(source, /derivedFromPromptVersion: '2026-07-23\.1145'/);
-  assert.match(source, /promptVersion: '2026-07-27\.premium-addon'/);
-  assert.match(source, /const clonePremiumQuestionInstruction = `\$\{cloneFreeQuestionInstruction\}/);
+  assert.match(source, /promptVersion: '2026-07-27\.full-decision-v1'/);
+  assert.match(source, /derivedFromPromptVersion: '2026-07-23\.1145-five'/);
+  assert.match(source, /const clonePremiumQuestionInstruction = `\$\{cloneFreeQuestionInstruction\.replace/);
+  assert.match(source, /3–6 конкретных факторов карты/);
+  assert.match(source, /полную картину одного решения/);
+  assert.match(source, /главное внутреннее противоречие/);
+  assert.match(source, /жизнеспособный альтернативный ход/);
+  assert.match(source, /условие, при котором решение изменится/);
+  assert.match(source, /первый проверяемый шаг/);
   assert.match(source, /действие: есть ли ясный ход/);
   assert.match(source, /гармония и красота/);
   assert.match(source, /ответственность и включённость/);
   assert.match(source, /единство/);
   assert.match(source, /уникальность/);
   assert.match(source, /factorBudget: Object\.freeze\(\{ min: 2, max: 4 \}\)/);
-  assert.doesNotMatch(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
+  assert.match(source, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
   assert.match(source, /historyLimit: 8/);
   assert.match(source, /historyLimit: 16/);
-  assert.match(source, /добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона\. пиши кротко/);
 });
 
 test('первый ответ не получает универсальные кнопки, которые спорят с вопросом Клона', async () => {

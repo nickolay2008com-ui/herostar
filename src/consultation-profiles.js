@@ -16,9 +16,20 @@ const cloneFreeQuestionInstruction = `${cloneBaseQuestionInstruction}
 
 ${cloneFiveElementsInstruction}`;
 
-const clonePremiumQuestionInstruction = `${cloneFreeQuestionInstruction}
+const clonePremiumQuestionInstruction = `${cloneFreeQuestionInstruction.replace(
+  '2–4 конкретных фактора карты',
+  '3–6 конкретных факторов карты',
+)}
 
-добавь больше сильных благоприятных факторов из натальной карты для благоприятного решения задачи клона. пиши кротко`;
+В полном режиме собери полную картину одного решения. Ответ должен дать:
+— ясный ход клона;
+— единую причинную механику из 3–6 наиболее значимых факторов карты;
+— главное внутреннее противоречие, которое влияет на выбор;
+— один жизнеспособный альтернативный ход;
+— конкретное условие, при котором решение изменится;
+— один первый проверяемый шаг в реальности.
+
+Пиши ёмко и цельно. Не повторяй одну мысль разными словами и не разбирай фактор, если он не меняет решение. Уточняющий вопрос задавай только тогда, когда без него нельзя различить два реальных маршрута.`;
 
 export const consultationProfiles = Object.freeze({
   [CLONE_FREE_PROFILE_ID]: Object.freeze({
@@ -34,10 +45,12 @@ export const consultationProfiles = Object.freeze({
   }),
   [CLONE_PREMIUM_PROFILE_ID]: Object.freeze({
     id: CLONE_PREMIUM_PROFILE_ID,
-    promptVersion: '2026-07-27.premium-addon',
-    sourceCommit: '9040f9f5d396c48f782373327959a6968ebab6f3',
+    promptVersion: '2026-07-27.full-decision-v1',
+    sourceCommit: '7c49541e31f1165ded05318c025a3f6b47ed418b',
+    derivedFromPromptVersion: '2026-07-23.1145-five',
     systemPromptAddon: '',
     questionInstruction: clonePremiumQuestionInstruction,
+    factorBudget: Object.freeze({ min: 3, max: 6 }),
     historyLimit: 16,
     chartDepth: 'full',
   }),
