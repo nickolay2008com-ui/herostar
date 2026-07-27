@@ -43,7 +43,8 @@ test('режим клона закреплён на сервере и имеет
   assert.match(ai, /product === 'clone'/);
   assert.match(ai, /Ваш звёздный клон, вероятнее всего/);
   assert.match(profiles, /Рассмотри описанную ситуацию не как прогноз поступка человека/);
-  assert.match(profiles, /добавь больше сильных благоприятных факторов из натальной карты/);
+  assert.match(profiles, /полную картину одного решения/);
+  assert.match(profiles, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);
 });
 
 test('заявленная карта больше не открывается старым анонимным ключом', async () => {
