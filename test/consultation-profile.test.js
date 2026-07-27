@@ -35,23 +35,26 @@ function splitPreparedQuestion(value) {
   };
 }
 
-test('бесплатный клон использует утверждённую инструкцию вопроса', () => {
+test('бесплатный клон сначала даёт полезный ход и только затем уточняет', () => {
   const profile = resolveConsultationProfile({ product: 'clone', premium: false });
   const question = prepareConsultationQuestion(profile, 'Войти ли в новый проект?');
 
   assert.equal(profile.id, CLONE_FREE_PROFILE_ID);
-  assert.equal(profile.promptVersion, '2026-07-27.free-dialog');
+  assert.equal(profile.promptVersion, '2026-07-27.answer-first');
   assert.equal(profile.derivedFromPromptVersion, '2026-07-23.1145');
   assert.equal(profile.sourceCommit, 'ad915b2bf870b27552eaf185a842702987d80da1');
   assert.ok(question.includes('Рассмотри описанную ситуацию не как прогноз поступка человека'));
   assert.ok(question.includes('2–4 конкретных фактора карты'));
   assert.ok(question.includes('аспект, ретроградность, ASC/DSC, MC/IC'));
-  assert.ok(question.includes('В первой реплике оцени, достаточно ли данных для точного решения'));
-  assert.ok(question.includes('задай один различающий вопрос'));
-  assert.ok(question.includes('Если запрос уже ясен, не задавай формальный вопрос'));
-  assert.ok(question.includes('свяжи 2–4 фактора карты в одну причинную механику'));
+  assert.ok(question.includes('Отвечай по имеющимся данным сразу'));
+  assert.ok(question.includes('Не откладывай решение ради уточнений'));
+  assert.ok(question.includes('сделай разумное условное предположение'));
+  assert.ok(question.includes('Не задавай два уточняющих вопроса подряд'));
+  assert.ok(question.includes('Свяжи 2–4 релевантных фактора карты в одну причинную механику'));
   assert.ok(question.includes('действие, гармония и красота, ответственность и включённость, единство, уникальность'));
-  assert.ok(question.includes('Пиши ёмко, короткими абзацами'));
+  assert.ok(question.includes('Пиши ёмко, короткими абзацами и без повторов'));
+  assert.ok(!question.includes('В первой реплике оцени, достаточно ли данных'));
+  assert.ok(!question.includes('Не начинай большой разбор до ответа человека'));
   assert.equal(profile.systemPromptAddon, '');
   assert.equal(profile.chartDepth, 'full');
   assert.deepEqual(profile.factorBudget, { min: 2, max: 4 });
