@@ -154,10 +154,10 @@ export function factorScopeForChart(chart) {
   };
 }
 
-export function selectConsultationFactors({ chart, question, factorBudget = {}, premium = false }) {
+export function selectConsultationFactors({ chart, question, factorBudget = {} }) {
   const scope = factorScopeForChart(chart);
-  const min = Math.max(2, Number(factorBudget.min || (premium ? 3 : 2)));
-  const max = Math.max(min, Math.min(6, Number(factorBudget.max || (premium ? 5 : 4))));
+  const min = Math.max(2, Number(factorBudget.min || 2));
+  const max = Math.max(min, Math.min(6, Number(factorBudget.max || 4)));
   const rule = bestHouseRule(question);
   const factors = [];
   const selectedPlanetKeys = new Set();
