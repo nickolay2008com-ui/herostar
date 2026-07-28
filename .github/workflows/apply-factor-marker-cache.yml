@@ -1,0 +1,51 @@
+name: Apply factor marker cache version
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'Запустить обновление версии маркеров'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump live stats cache version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('public/clone/live/index.html')
+          html = path.read_text(encoding='utf-8')
+          old = '/clone/live/live-stats.js?v=20260727-frame2'
+          new = '/clone/live/live-stats.js?v=20260728-factors1'
+          if html.count(old) != 1:
+              raise SystemExit(f'expected one cache reference, found {html.count(old)}')
+          path.write_text(html.replace(old, new, 1), encoding='utf-8')
+          Path('.github/workflows/apply-factor-marker-cache.yml').unlink()
+          PY
+
+      - name: Validate
+        shell: bash
+        run: |
+          grep -Fq '/clone/live/live-stats.js?v=20260728-factors1' public/clone/live/index.html
+          git diff --check
+
+      - name: Publish
+        shell: bash
+        run: |
+          git config user.name "HeroStar Quality Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/clone/live/index.html .github/workflows/apply-factor-marker-cache.yml
+          git commit -m "Обновить кеш выравнивания факторов"
+          git push origin HEAD:main
