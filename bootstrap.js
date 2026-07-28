@@ -1,5 +1,6 @@
 import express from 'express';
 import { scopeCloneAccess } from './src/clone-access-middleware.js';
+import { publicCloneFunnelHandler } from './src/public-clone-funnel.js';
 import {
   startTelegramUpdateRuntime,
   telegramLinkAuthMiddleware,
@@ -13,6 +14,10 @@ express.application.use = function patchedUse(...handlers) {
   if (handlers.some((handler) => typeof handler === 'function' && handler.name === 'attachUser')) {
     originalUse.call(this, scopeCloneAccess);
     originalUse.call(this, telegramLinkAuthMiddleware);
+    if (!this.locals.publicCloneFunnelMounted) {
+      this.locals.publicCloneFunnelMounted = true;
+      this.get('/api/public/clone-funnel', publicCloneFunnelHandler);
+    }
   }
   return result;
 };
