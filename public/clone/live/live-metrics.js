@@ -102,10 +102,54 @@
     });
   });
 
+  const messages = document.querySelector('#messages');
   document.querySelector('#questionForm')?.addEventListener('submit', () => {
     const length = document.querySelector('#question')?.value.trim().length || 0;
-    if (length) goal('clone_question_sent', { question_length: length });
+    if (!length) return;
+
+    const questionNumber = Math.max(1, messages?.querySelectorAll('.message.user').length || 0);
+    goal('clone_question_sent', { question_length: length, question_number: questionNumber });
+
+    if (questionNumber === 2) {
+      once('second_question_sent', () => {
+        goal('clone_second_question', { question_length: length });
+        track('consultant_opened', 'clone_second_question_sent', {
+          questionNumber: 2,
+          questionLength: length,
+        });
+      });
+    }
   });
+
+  function detectSecondAnswer() {
+    if (!messages) return;
+    const children = [...messages.children];
+    const users = children.filter((item) => item.matches?.('.message.user'));
+    const secondUser = users[1];
+    if (!secondUser) return;
+
+    const secondUserIndex = children.indexOf(secondUser);
+    const answer = children.slice(secondUserIndex + 1).find((item) => {
+      if (!item.matches?.('.message.clone')) return false;
+      const text = String(item.textContent || '').trim();
+      return text && !/готовит ответ|размышляет|подключите telegram|вход не завершён/i.test(text);
+    });
+    if (!answer) return;
+
+    once('second_answer_received', () => {
+      goal('clone_second_answer');
+      track('card_opened', 'clone_second_answered', { questionNumber: 2 });
+    });
+  }
+
+  if (messages) {
+    detectSecondAnswer();
+    new MutationObserver(detectSecondAnswer).observe(messages, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
 
   document.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target : null;
