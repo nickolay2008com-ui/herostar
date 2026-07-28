@@ -57,8 +57,65 @@
       outline: 0 !important;
       box-shadow: 0 0 0 2px rgba(167,139,250,.16) !important;
     }
+
+    .live-product #logicFactors .factor-title-aligned {
+      display: grid !important;
+      grid-template-columns: 12px minmax(0,1fr);
+      align-items: start;
+      column-gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .live-product #logicFactors .factor-title-aligned::before {
+      content: none !important;
+    }
+
+    .live-product #logicFactors .factor-title-marker {
+      display: block;
+      width: 12px;
+      color: var(--live-gold, #f2d994);
+      font-size: 11px;
+      line-height: 1.3;
+      text-align: center;
+      transform: translateY(1px);
+    }
+
+    .live-product #logicFactors .factor-title-text {
+      min-width: 0;
+      line-height: 1.3;
+    }
   `;
   document.head.append(polish);
+
+  function alignFactorTitles() {
+    document.querySelectorAll('#logicFactors .factor > strong:not(.factor-title-aligned)').forEach((title) => {
+      const raw = String(title.textContent || '').trim();
+      if (!raw) return;
+
+      const leading = raw.match(/^([^\p{L}\p{N}]+)\s*(.+)$/u);
+      const marker = leading?.[1]?.trim() || '•';
+      const label = leading?.[2]?.trim() || raw;
+
+      const markerNode = document.createElement('span');
+      markerNode.className = 'factor-title-marker';
+      markerNode.setAttribute('aria-hidden', 'true');
+      markerNode.textContent = marker;
+
+      const textNode = document.createElement('span');
+      textNode.className = 'factor-title-text';
+      textNode.textContent = label;
+
+      title.textContent = '';
+      title.classList.add('factor-title-aligned');
+      title.append(markerNode, textNode);
+    });
+  }
+
+  const factorRoot = document.querySelector('#logicFactors');
+  if (factorRoot) {
+    alignFactorTitles();
+    new MutationObserver(alignFactorTitles).observe(factorRoot, { childList: true, subtree: true });
+  }
 
   const target = document.querySelector('#liveRealStats');
   if (!target) return;
