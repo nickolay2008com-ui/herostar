@@ -107,7 +107,8 @@
     const length = document.querySelector('#question')?.value.trim().length || 0;
     if (!length) return;
 
-    const questionNumber = Math.max(1, messages?.querySelectorAll('.message.user').length || 0);
+    // Capture phase runs before clone.js clears the textarea and appends the user message.
+    const questionNumber = (messages?.querySelectorAll('.message.user').length || 0) + 1;
     goal('clone_question_sent', { question_length: length, question_number: questionNumber });
 
     if (questionNumber === 2) {
@@ -119,7 +120,7 @@
         });
       });
     }
-  });
+  }, { capture: true });
 
   function detectSecondAnswer() {
     if (!messages) return;
