@@ -2,6 +2,7 @@
   const PENDING_KEY = 'starClonePendingQuestion';
   const AUTO_KEY = 'starClonePendingAutoSubmit';
   const RETURN_KEY = 'starCloneReturnPath';
+  const LIVE_CHAT_PATH = '/clone/live/chat';
   const body = document.body;
   const heroForm = document.querySelector('#heroQuestionForm');
   const heroQuestion = document.querySelector('#heroQuestion');
@@ -14,6 +15,8 @@
   const primaryHeroButton = document.querySelector('.live-hero [data-go-intent]');
   const creationButton = document.querySelector('[data-go-create]');
   const hero = document.querySelector('.live-hero');
+  const homeLink = document.querySelector('#liveHomeLink');
+  const productLabel = document.querySelector('#productLabel');
   const insightSlider = document.querySelector('#cloneInsightSlider');
   const insightViewport = document.querySelector('#cloneInsightViewport');
   const insightSlides = [...document.querySelectorAll('.clone-insight-slide')];
@@ -24,7 +27,15 @@
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-  localStorage.setItem(RETURN_KEY, '/clone/live/');
+  const isChatPage = /^\/clone\/live\/chat\/?$/.test(location.pathname);
+  localStorage.setItem(RETURN_KEY, LIVE_CHAT_PATH);
+  body.classList.toggle('live-chat-page', isChatPage);
+  if (homeLink) homeLink.hidden = !isChatPage;
+  if (productLabel) productLabel.hidden = isChatPage;
+
+  homeLink?.addEventListener('click', () => {
+    try { window.ym?.(110937602, 'reachGoal', 'clone_return_home'); } catch {}
+  });
 
   function rememberQuestion(value, autoSubmit = false) {
     const text = String(value || '').trim();

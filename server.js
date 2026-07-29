@@ -839,7 +839,7 @@ app.get('/auth/telegram/callback', async (req, res, next) => {
     if (rawState.startsWith('clone:')) {
       const candidate = rawState.slice('clone:'.length);
       const cloneChartId = isUuid(candidate) ? candidate : null;
-      return res.redirect(`/clone/live/?auth=ok${cloneChartId ? `&chart=${encodeURIComponent(cloneChartId)}` : ''}`);
+      return res.redirect(`/clone/live/chat?auth=ok${cloneChartId ? `&chart=${encodeURIComponent(cloneChartId)}` : ''}`);
     }
     const chartId = rawState.replace(/[^a-f0-9-]/gi, '');
     return res.redirect(`/?auth=ok${chartId ? `&chart=${encodeURIComponent(chartId)}` : ''}#map`);
@@ -926,6 +926,10 @@ for (const kind of ['privacy', 'consent', 'terms', 'offer', 'refunds']) {
 
 app.get('/admin', (_req, res) => {
   res.redirect('/admin.html');
+});
+
+app.get(['/clone/live/chat', '/clone/live/chat/'], (_req, res) => {
+  res.sendFile('public/clone/live/index.html', { root: process.cwd() });
 });
 
 app.get('/api/admin/overview', requireAdmin, async (req, res, next) => {

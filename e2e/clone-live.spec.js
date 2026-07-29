@@ -50,6 +50,22 @@ async function createClone(page, { unknownTime = false } = {}) {
   await expect(page.locator('#messages .message.clone').last()).not.toContainText('Клон готовит ответ', { timeout: 30_000 });
 }
 
+test('главная и чат имеют отдельные адреса с явным возвратом', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  await page.goto('/clone/live/');
+  await expect(page).toHaveURL(/\/clone\/live\/$/);
+  await expect(page.locator('#intro')).toBeVisible();
+
+  await page.goto('/clone/live/chat');
+  await expect(page).toHaveURL(/\/clone\/live\/chat$/);
+  await expect(page.locator('#workspace')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'На главную' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'На главную' }).click();
+  await expect(page).toHaveURL(/\/clone\/live\/$/);
+  await expect(page.locator('#intro')).toBeVisible();
+});
+
 test('вопрос проходит через создание Клона и показывает реальные факторы ответа', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект, если роли и деньги пока не определены?');

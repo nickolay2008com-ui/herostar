@@ -59,6 +59,30 @@ test('слайдер доказывает пользу Клона и перед�
   assert.match(metrics, /clone_second_question/);
 });
 
+test('главная и диалог разделены каноническим маршрутом без дублирования интерфейса', async () => {
+  const [html, live, clone, gears, server, telegram] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone/live/live.js'),
+    read('public/clone.js'),
+    read('public/clone-ui-gears.js'),
+    read('server.js'),
+    read('src/telegram-link-auth.js'),
+  ]);
+
+  assert.match(html, /id="liveHomeLink" href="\/clone\/live\/" hidden/);
+  assert.match(html, /> На главную</);
+  assert.match(server, /app\.get\(\['\/clone\/live\/chat', '\/clone\/live\/chat\/'\]/);
+  assert.match(server, /sendFile\('public\/clone\/live\/index\.html'/);
+  assert.match(clone, /const LIVE_CHAT_PATH = '\/clone\/live\/chat'/);
+  assert.match(clone, /function isLiveHomePage\(\)/);
+  assert.match(clone, /if \(!isLiveHomePage\(\)\) \{/);
+  assert.match(clone, /url\.pathname = location\.pathname\.startsWith\('\/clone\/live'\) \? LIVE_CHAT_PATH : '\/clone\/'/);
+  assert.match(live, /localStorage\.setItem\(RETURN_KEY, LIVE_CHAT_PATH\)/);
+  assert.match(gears, /storedReturnPath\.startsWith\('\/clone\/live'\)[\s\S]*?'\/clone\/live\/chat'/);
+  assert.match(telegram, /\$\{baseUrl\}\/clone\/live\/chat\?/);
+  assert.doesNotMatch(server, /public\/clone\/live\/chat\/index\.html/);
+});
+
 test('мобильные преимущества компактны, а sticky CTA не появляется до осознанного скролла', async () => {
   const [styles, live] = await Promise.all([
     read('public/clone/live/live.css'),

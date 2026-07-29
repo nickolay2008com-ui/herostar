@@ -3,6 +3,7 @@ const FREE_PREAUTH_QUESTIONS = 3;
 const STORAGE_KEY = 'starClone';
 const ATTRIBUTION_KEY = 'starCloneAttribution';
 const OFFER_DISMISSAL_KEY_PREFIX = 'starCloneOfferDismissed:';
+const LIVE_CHAT_PATH = '/clone/live/chat';
 const dismissedOffers = new Set();
 
 const state = {
@@ -26,6 +27,31 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+function isLiveHomePage() {
+  return /^\/clone\/live\/?$/.test(location.pathname);
+}
+
+function isLiveChatPage() {
+  return /^\/clone\/live\/chat\/?$/.test(location.pathname);
+}
+
+function openLiveChat() {
+  const url = new URL(location.href);
+  url.pathname = LIVE_CHAT_PATH;
+  location.assign(`${url.pathname}${url.search}${url.hash}`);
+}
+
+function openWorkspace(view) {
+  if (isLiveHomePage()) {
+    openLiveChat();
+    return false;
+  }
+  $('#intro').classList.add('hidden');
+  $('#workspace').classList.remove('hidden');
+  show(view);
+  return true;
+}
 
 function escapeHtml(value = '') {
   return String(value)
@@ -1017,9 +1043,7 @@ function applyChartView(data, savedName) {
   state.passport = data.clonePassport || null;
   $('#cloneName').textContent = savedName || data.chart?.person?.name || data.chart?.birth?.name || 'Ваш звёздный клон';
   $('#cloneStatus').textContent = data.access?.cloneAccessActive ? accessLabel() : 'модель сохранена';
-  $('#intro').classList.add('hidden');
-  $('#workspace').classList.remove('hidden');
-  show('#dialogView');
+  openWorkspace('#dialogView');
   renderFactorsFromChart(data.chart);
   renderPassport(data.clonePassport);
   renderCommerceUi();
@@ -1143,6 +1167,10 @@ async function verifyPaymentReturn() {
 }
 
 $('#restoreCloneAccess')?.addEventListener('click', async () => {
+  if (isLiveHomePage()) {
+    openLiveChat();
+    return;
+  }
   try {
     if (state.user) {
       const restored = await restoreLatestOwnedClone();
@@ -1161,9 +1189,7 @@ $('#restoreCloneAccess')?.addEventListener('click', async () => {
 $$('[data-go-create]').forEach((button) => button.addEventListener('click', () => {
   track('form_started', 'clone_creation_started');
   goal('clone_start');
-  $('#intro').classList.add('hidden');
-  $('#workspace').classList.remove('hidden');
-  show('#createView');
+  if (!openWorkspace('#createView')) return;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }));
 
@@ -1307,7 +1333,7 @@ $('#birthForm').addEventListener('submit', async (event) => {
     $('#cloneStatus').textContent = payload.unknownTime ? 'модель без домов' : 'модель создана';
     persistState({ name: payload.name });
     const url = new URL(location.href);
-    url.pathname = location.pathname.startsWith('/clone/live') ? '/clone/live/' : '/clone/';
+    url.pathname = location.pathname.startsWith('/clone/live') ? LIVE_CHAT_PATH : '/clone/';
     url.searchParams.set('chart', state.chartId);
     history.replaceState(null, '', url);
     renderFactorsFromChart(data.chart);
@@ -1413,6 +1439,7 @@ document.addEventListener('keydown', (event) => {
   syncComposerSubmitState();
   track('page_view', 'clone_page_view', { path: location.pathname });
   try {
+    if (isLiveChatPage()) openWorkspace('#createView');
     state.config = await loadConfig();
     state.user = state.config.user;
     prepareOffer('clone_day');
@@ -1420,23 +1447,25 @@ document.addEventListener('keydown', (event) => {
     renderAllowance();
     renderCommerceUi();
 
-    const params = new URLSearchParams(location.search);
-    const requestedChartId = params.get('chart');
-    const saved = savedState();
-    let restored = false;
-    if (requestedChartId && state.user) {
-      restored = await restoreClone({
-        chartId: requestedChartId,
-        token: saved?.chartId === requestedChartId ? saved.token : null,
-        name: saved?.chartId === requestedChartId ? saved.name : null,
-        questionCount: 0,
-        messages: [],
-      }).catch(() => false);
+    if (!isLiveHomePage()) {
+      const params = new URLSearchParams(location.search);
+      const requestedChartId = params.get('chart');
+      const saved = savedState();
+      let restored = false;
+      if (requestedChartId && state.user) {
+        restored = await restoreClone({
+          chartId: requestedChartId,
+          token: saved?.chartId === requestedChartId ? saved.token : null,
+          name: saved?.chartId === requestedChartId ? saved.name : null,
+          questionCount: 0,
+          messages: [],
+        }).catch(() => false);
+      }
+      if (!restored && saved) restored = await restoreClone(saved).catch(() => false);
+      if (!restored && saved) localStorage.removeItem(STORAGE_KEY);
+      if (!restored && state.user) restored = await restoreLatestOwnedClone().catch(() => false);
+      if (params.get('payment') === 'return') await verifyPaymentReturn();
     }
-    if (!restored && saved) restored = await restoreClone(saved).catch(() => false);
-    if (!restored && saved) localStorage.removeItem(STORAGE_KEY);
-    if (!restored && state.user) restored = await restoreLatestOwnedClone().catch(() => false);
-    if (params.get('payment') === 'return') await verifyPaymentReturn();
   } catch (error) {
     toast(error.message);
   }

@@ -94,7 +94,7 @@ test('сервер содержит все звенья публичного и 
   }
 
   assert.match(server, /rawState\.startsWith\('clone:'\)/);
-  assert.match(server, /res\.redirect\(`\/clone\/live\/\?auth=ok/);
+  assert.match(server, /res\.redirect\(`\/clone\/live\/chat\?auth=ok/);
   assert.match(server, /requireUser/);
   assert.match(server, /requireAdmin/);
   assert.match(server, /express\.static\('public'/);

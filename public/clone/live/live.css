@@ -56,6 +56,24 @@
 .live-product .brand span { transition: transform .28s ease, box-shadow .28s ease; }
 .live-product .brand:hover span { transform: rotate(12deg) scale(1.04); box-shadow: 0 0 24px rgba(242,217,148,.2), inset 0 0 0 1px rgba(255,255,255,.1); }
 
+.live-home-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 4px;
+  color: #d6cede;
+  font-size: 13px;
+  font-weight: 720;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .2s ease, transform .2s ease;
+}
+
+.live-home-link[hidden] { display: none; }
+.live-home-link:hover { color: #fff; transform: translateX(-2px); }
+.live-home-link:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; border-radius: 8px; }
+
 .live-home {
   display: block;
   width: min(1240px, calc(100% - 32px));
