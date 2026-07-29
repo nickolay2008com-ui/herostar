@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/clone-living-fixes.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone-web-search.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone/live/live-assets.css?v=20260726-auth2">
-  <link rel="stylesheet" href="/clone/live/live.css?v=20260727-focus1">
+  <link rel="stylesheet" href="/clone/live/live.css?v=20260729-insights1">
   <link rel="stylesheet" href="/clone/live/live-detail.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone/live/live-visual-polish.css?v=20260726-auth2">
 </head>
@@ -76,10 +76,53 @@
           <button class="primary" type="submit">Сохранить вопрос <span aria-hidden="true">↗</span></button>
           <div class="live-intent-meta"><span id="heroQuestionHint">Можно описать коротко — Клон уточнит важное</span><span id="heroQuestionCount">0 / 1600</span></div>
         </form>
-        <div class="live-question-examples" aria-label="Примеры вопросов">
-          <button type="button">Сменить работу или остаться?</button>
-          <button type="button">Как ответить человеку?</button>
-          <button type="button">Стоит ли рисковать сейчас?</button>
+        <div class="clone-insight-slider" id="cloneInsightSlider" role="region" aria-roledescription="карусель" aria-labelledby="cloneInsightTitle">
+          <div class="clone-insight-head">
+            <div>
+              <p class="eyebrow">Примеры пользы</p>
+              <h3 id="cloneInsightTitle">Что можно узнать у своего Клона</h3>
+              <p>Выберите тему — Клон разберёт её по вашей карте.</p>
+            </div>
+            <div class="clone-insight-controls">
+              <button id="cloneInsightPrev" type="button" aria-label="Предыдущий пример">←</button>
+              <output id="cloneInsightCount" aria-live="polite">1 из 4</output>
+              <button id="cloneInsightNext" type="button" aria-label="Следующий пример">→</button>
+            </div>
+          </div>
+          <p class="clone-insight-context"><strong>Пример по реальной карте · разработчик</strong><span>У вас ответ будет другим — по вашей карте.</span></p>
+          <div class="clone-insight-viewport" id="cloneInsightViewport" tabindex="0" aria-label="Примеры вопросов и ответов Клона">
+            <div class="clone-insight-track">
+              <article class="clone-insight-slide" role="group" aria-roledescription="слайд" aria-label="1 из 4" data-insight-topic="daily" data-clone-prompt="Какие личные лайфхаки помогут мне в общении, важных делах и повседневной жизни?">
+                <h4>Личные приёмы на каждый день</h4>
+                <p class="clone-insight-question"><span>Можно спросить</span>Какие личные лайфхаки помогут мне в общении, важных делах и повседневной жизни?</p>
+                <div class="clone-insight-answer"><span>Пример ответа</span><p>В важном разговоре сначала назовите общий интерес, затем — свою конкретную позицию. Так легче сохранить контакт, не размывая собственную мысль.</p></div>
+                <details><summary>Почему именно так?</summary><p>Меркурий и Марс в Весах.</p></details>
+                <button class="primary clone-insight-cta" type="button" data-insight-cta>Получить ответ по моей карте <span aria-hidden="true">→</span></button>
+              </article>
+              <article class="clone-insight-slide" role="group" aria-roledescription="слайд" aria-label="2 из 4" data-insight-topic="work" data-clone-prompt="Как выстроить работу, чтобы мои сильные стороны давали больше результата?">
+                <h4>Сильные стороны в работе</h4>
+                <p class="clone-insight-question"><span>Можно спросить</span>Как выстроить работу, чтобы мои сильные стороны давали больше результата?</p>
+                <div class="clone-insight-answer"><span>Пример ответа</span><p>Ваша сильная роль — не просто выполнить задачу, а найти скрытую механику проблемы и превратить её в ясную систему.</p></div>
+                <details><summary>Почему именно так?</summary><p>Солнце в Скорпионе в 3 доме и Асцендент в Деве.</p></details>
+                <button class="primary clone-insight-cta" type="button" data-insight-cta>Получить ответ по моей карте <span aria-hidden="true">→</span></button>
+              </article>
+              <article class="clone-insight-slide" role="group" aria-roledescription="слайд" aria-label="3 из 4" data-insight-topic="decisions" data-clone-prompt="Как мне принимать решения по-своему — и что заставляет меня сомневаться?">
+                <h4>Решения без лишних сомнений</h4>
+                <p class="clone-insight-question"><span>Можно спросить</span>Как мне принимать решения по-своему — и что заставляет меня сомневаться?</p>
+                <div class="clone-insight-answer"><span>Пример ответа</span><p>Не требуйте от себя мгновенного ответа. Спокойно соберите решение, затем проверьте его одним небольшим обратимым действием.</p></div>
+                <details><summary>Почему именно так?</summary><p>Стационарный Меркурий и Луна в Тельце.</p></details>
+                <button class="primary clone-insight-cta" type="button" data-insight-cta>Получить ответ по моей карте <span aria-hidden="true">→</span></button>
+              </article>
+              <article class="clone-insight-slide" role="group" aria-roledescription="слайд" aria-label="4 из 4" data-insight-topic="income" data-clone-prompt="Какие способы заработка подходят моему стилю работы — и какой стоит проверить первым?">
+                <h4>Подходящий способ заработка</h4>
+                <p class="clone-insight-question"><span>Можно спросить</span>Какие способы заработка подходят моему стилю работы — и какой стоит проверить первым?</p>
+                <div class="clone-insight-answer"><span>Пример ответа</span><p>Сильнее выглядит собственный практический продукт: глубоко разобрать узкую проблему и дать человеку понятный результат. Начать — с одного тестового кейса.</p></div>
+                <details><summary>Почему именно так?</summary><p>МС и Луна в Тельце, Солнце в Скорпионе в 3 доме, Северный узел в Овне.</p></details>
+                <p class="clone-insight-caveat">Рабочая гипотеза, не финансовый прогноз.</p>
+                <button class="primary clone-insight-cta" type="button" data-insight-cta>Получить ответ по моей карте <span aria-hidden="true">→</span></button>
+              </article>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -200,7 +243,7 @@
   <script src="/clone-living.js?v=20260726-auth2" defer></script>
   <script src="/clone.js?v=20260726-priority1" defer></script>
   <script src="/clone/live/live-stats.js?v=20260728-factors1" defer></script>
-  <script src="/clone/live/live-metrics.js?v=20260728-funnel1" defer></script>
-  <script src="/clone/live/live.js?v=20260726-auth2" defer></script>
+  <script src="/clone/live/live-metrics.js?v=20260729-insights1" defer></script>
+  <script src="/clone/live/live.js?v=20260729-insights1" defer></script>
 </body>
 </html>
