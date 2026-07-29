@@ -12,7 +12,7 @@
   const workspace = document.querySelector('#workspace');
   const messages = document.querySelector('#messages');
   const sticky = document.querySelector('#liveStickyStart');
-  const primaryHeroAction = heroForm?.querySelector('button[type="submit"]');
+  const primaryHeroButton = document.querySelector('.live-hero [data-go-intent]');
   const creationButton = document.querySelector('[data-go-create]');
   const hero = document.querySelector('.live-hero');
   const homeLink = document.querySelector('#liveHomeLink');
@@ -283,20 +283,20 @@
     sticky.setAttribute('aria-hidden', show ? 'false' : 'true');
   }
 
-  if (sticky && primaryHeroAction && heroForm && 'IntersectionObserver' in window) {
+  if (sticky && primaryHeroButton && heroForm && 'IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        if (entry.target === primaryHeroAction) primaryActionVisible = entry.isIntersecting;
+        if (entry.target === primaryHeroButton) primaryActionVisible = entry.isIntersecting;
         if (entry.target === heroForm) intentFormVisible = entry.isIntersecting;
       });
       syncSticky();
     }, { threshold: .15 });
-    observer.observe(primaryHeroAction);
+    observer.observe(primaryHeroButton);
     observer.observe(heroForm);
   }
 
   function installRevealMotion() {
-    const items = document.querySelectorAll('.live-flow, .live-insights, .live-alternate, .live-steps article');
+    const items = document.querySelectorAll('.live-flow, .live-intent, .live-alternate, .live-steps article');
     if (prefersReducedMotion || !('IntersectionObserver' in window)) {
       items.forEach((item) => item.classList.add('is-visible'));
       return;
