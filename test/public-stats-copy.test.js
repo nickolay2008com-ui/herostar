@@ -8,4 +8,6 @@ test('главная показывает активность за послед
   assert.match(source, /за последний день/);
   assert.doesNotMatch(source, /за сутки/);
   assert.doesNotMatch(source, /за последние 24 часа/);
+  assert.doesNotMatch(source, /за последние 7 дней/);
+  assert.match(source, /const recentCharts = charts24h \|\| charts7d/);
 });
