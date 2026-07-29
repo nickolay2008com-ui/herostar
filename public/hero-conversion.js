@@ -66,10 +66,9 @@ function renderSocialProof(stats) {
 
   if (!activityNode) return;
 
-  if (charts24h > 0) {
-    activityNode.textContent = `${numberFormat.format(charts24h)} ${wordForm(charts24h, ['новая карта', 'новые карты', 'новых карт'])} за последний день`;
-  } else if (charts7d > 0) {
-    activityNode.textContent = `${numberFormat.format(charts7d)} ${wordForm(charts7d, ['новая карта', 'новые карты', 'новых карт'])} за последние 7 дней`;
+  const recentCharts = charts24h || charts7d;
+  if (recentCharts > 0) {
+    activityNode.textContent = `${numberFormat.format(recentCharts)} ${wordForm(recentCharts, ['новая карта', 'новые карты', 'новых карт'])} за последний день`;
   } else {
     activityNode.textContent = 'Статистика обновляется автоматически по созданным картам';
   }
