@@ -41,6 +41,7 @@ const els = {
   telegramSlot: $('#telegramSlot'),
   payButton: $('#payButton'),
   priceLabel: $('#priceLabel'),
+  originalPriceLabel: $('#originalPriceLabel'),
   receiptContact: $('#receiptContact'),
   receiptContactHint: $('#receiptContactHint'),
   toast: $('#toast'),
@@ -113,6 +114,11 @@ function clearStoredChart() {
 async function loadConfig() {
   state.config = await api('/api/config');
   els.priceLabel.textContent = `${new Intl.NumberFormat('ru-RU').format(state.config.price)} ₽`;
+  const originalPrice = Number(state.config.originalPrice || 0);
+  els.originalPriceLabel.textContent = originalPrice
+    ? `${new Intl.NumberFormat('ru-RU').format(originalPrice)} ₽`
+    : '';
+  els.originalPriceLabel.classList.toggle('hidden', !originalPrice);
   const paymentReady = Boolean(state.config.paymentsConfigured);
   els.payButton.disabled = !paymentReady;
   els.payButton.dataset.paymentReady = String(paymentReady);
@@ -488,7 +494,7 @@ async function startPayment() {
       paymentId: result.paymentId,
       paymentRef: result.paymentRef,
       chartId: state.current?.id || null,
-      amount: Number(state.config?.price || 990),
+      amount: Number(result.amount || state.config?.price || 199),
       createdAt: new Date().toISOString(),
     }));
     location.href = result.confirmationUrl;
@@ -658,7 +664,7 @@ async function verifyPaymentReturn() {
         clearPaymentReturnState();
         toast('Полная карта открыта.');
         window.dispatchEvent(new CustomEvent('herostar:purchase-success', {
-          detail: { price: Number(payment.amount || state.config.price || 990), currency: 'RUB' },
+          detail: { price: Number(payment.amount || state.config.price || 199), currency: 'RUB' },
         }));
         return;
       }
