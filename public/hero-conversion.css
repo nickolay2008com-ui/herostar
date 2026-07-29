@@ -1,8 +1,31 @@
 /* Conversion layer for the first screen. Kept isolated from core chart/payment styles. */
 .hero {
+  grid-template-areas:
+    "copy panel"
+    "support panel";
   grid-template-columns: minmax(0, 1.05fr) minmax(410px, .78fr);
-  gap: clamp(36px, 5vw, 72px);
+  grid-template-rows: auto auto;
+  column-gap: clamp(36px, 5vw, 72px);
+  row-gap: 0;
+  align-content: center;
   padding-block: 36px 54px;
+}
+
+.hero-copy {
+  grid-area: copy;
+  align-self: end;
+  min-width: 0;
+}
+
+.hero-supporting {
+  grid-area: support;
+  align-self: start;
+  min-width: 0;
+}
+
+.birth-panel {
+  grid-area: panel;
+  align-self: center;
 }
 
 .hero h1 {
@@ -241,14 +264,22 @@
 @keyframes purchase-line { to { transform: translateX(0); } }
 
 @media (max-width: 1120px) and (min-width: 951px) {
-  .hero { grid-template-columns: minmax(0, 1fr) minmax(380px, .78fr); gap: 32px; }
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(380px, .78fr); column-gap: 32px; }
   .hero h1 { font-size: clamp(46px, 5vw, 66px); }
   .value-slide { grid-template-columns: 32px minmax(0,1fr); }
   .value-slide > div { display: none; }
 }
 
 @media (max-width: 950px) {
-  .hero { padding-top: 48px; gap: 34px; }
+  .hero {
+    grid-template-areas:
+      "copy"
+      "panel"
+      "support";
+    grid-template-rows: auto;
+    padding-top: 48px;
+    row-gap: 34px;
+  }
   .hero-social-proof, .value-carousel { margin-inline: auto; text-align: left; }
   .value-slide { text-align: left; }
 }
@@ -256,17 +287,75 @@
 @media (max-width: 660px) {
   .hero { padding-top: 33px; gap: 34px; }
   .hero h1 { font-size: clamp(42px, 13vw, 52px); margin-bottom: 15px; }
-  .hero-social-proof { grid-template-columns: 1fr; gap: 10px; padding: 14px; }
-  .social-proof-symbols { justify-content: center; }
-  .social-proof-copy { text-align: center; }
-  .social-proof-live { justify-content: center; }
+  .hero-social-proof {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 8px 10px;
+    padding: 13px;
+  }
+  .social-proof-symbols {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: flex-start;
+  }
+  .social-proof-symbols span {
+    width: 27px;
+    height: 27px;
+    margin-left: -9px;
+    font-size: 12px;
+  }
+  .social-proof-copy { display: contents; }
+  .social-proof-kicker {
+    grid-column: 2;
+    align-self: center;
+    text-align: left;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .social-proof-copy strong {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .social-proof-live {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 11px;
+  }
+  .hero-supporting { width: 100%; }
   .value-carousel { min-height: 172px; }
   .value-carousel-viewport { min-height: 116px; }
+  .value-carousel-controls button {
+    width: 44px;
+    height: 44px;
+  }
   .value-slide { grid-template-columns: 34px minmax(0,1fr); align-content: start; }
   .value-slide > div { grid-column: 1 / -1; min-width: 0; margin-left: 45px; padding: 9px 0 0; border-left: 0; border-top: 1px solid rgba(255,255,255,.07); }
   .value-carousel-dots { margin-left: 45px; }
-  .proof-row { margin-top: 16px; }
+  .proof-row {
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .text-button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+  .top-actions .ghost-button,
+  .mode-tabs button {
+    min-height: 44px;
+  }
+  .field input {
+    min-width: 0;
+    font-size: 16px;
+  }
   .birth-panel h2 { font-size: 27px; }
+}
+
+@media (max-width: 360px) {
+  .social-proof-kicker { letter-spacing: .08em; }
+  .proof-row { gap: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
