@@ -37,7 +37,7 @@ test('на телефоне форма идёт раньше вторичног�
   expect(supporting).not.toBeNull();
   expect(panel.y).toBeLessThan(supporting.y);
 
-  const touchTargets = await page.locator('.birth-panel input, .birth-panel .primary-button').evaluateAll((elements) =>
+  const touchTargets = await page.locator('.birth-panel .field input, .birth-panel .primary-button').evaluateAll((elements) =>
     elements.map((element) => element.getBoundingClientRect().height),
   );
   expect(touchTargets.every((height) => height >= 44)).toBeTruthy();
