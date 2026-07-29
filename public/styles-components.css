@@ -102,54 +102,153 @@
 .modal-icon { border: 1px solid rgba(231,199,130,.17); background: rgba(231,199,130,.07); }
 
 @media (max-width: 950px) {
-  .hero { grid-template-columns: 1fr; padding-top: 70px; }
-  .hero-copy { text-align: center; }
-  .hero-lead { margin-inline: auto; }
-  .proof-row { justify-content: center; }
+  .hero { grid-template-columns: 1fr; padding-top: 56px; }
+  .hero-copy { text-align: left; }
+  .hero-lead { margin-inline: 0; }
+  .proof-row { justify-content: flex-start; }
   .birth-panel { width: min(620px,100%); margin: 0 auto; }
   .map-dashboard { grid-template-columns: 1fr; }
   .identity-panel { position: relative; top: 0; display: grid; grid-template-columns: 230px 1fr; column-gap: 22px; }
   .wheel-wrap { grid-row: span 4; margin: 0; }
   .mode-tabs { top: 74px; }
   .synthesis-grid { grid-template-columns: 1fr; }
-  .treasure-legend { margin-inline: auto; text-align: left; }
-  .treasure-progress { margin-inline: auto; text-align: left; }
+  .treasure-legend { margin-inline: 0; text-align: left; }
+  .treasure-progress { margin-inline: 0; text-align: left; }
 }
+
 @media (max-width: 660px) {
-  .topbar { padding: 13px 15px; }
+  .topbar {
+    min-height: 58px;
+    padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+  }
+  .brand { gap: 8px; font-size: 18px; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 10px; }
+  .top-actions { min-width: 0; gap: 7px; }
   .status-pill { display: none; }
-  .top-actions .ghost-button { padding: 9px 10px; font-size: 11px; }
+  .top-actions .ghost-button {
+    min-width: 0;
+    min-height: 44px;
+    max-width: 52vw;
+    overflow: hidden;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .section-shell { width: min(100% - 24px, 1240px); }
-  .hero { padding-block: 45px 70px; gap: 45px; }
-  .hero h1 { font-size: 48px; }
-  .hero-lead { font-size: 16px; }
-  .discount-offer { justify-content: center; font-size: 12px; }
+  .hero { min-height: auto; padding-block: 28px 52px; gap: 24px; }
+  .hero h1 { font-size: clamp(36px, 11vw, 44px); }
+  .hero-lead { font-size: 15px; line-height: 1.55; }
+  .discount-offer { justify-content: flex-start; max-width: 100%; text-align: left; font-size: 12px; }
   .discount-offer-map { justify-content: flex-start; }
-  .proof-row { gap: 18px; }
-  .proof-row span { font-size: 10px; }
-  .birth-panel { padding: 24px 18px; border-radius: 25px; }
+  .proof-row { gap: 12px; }
+  .proof-row span { font-size: 10px; line-height: 1.3; }
+  .birth-panel { width: 100%; margin: 0; padding: 21px 16px; border-radius: 23px; }
   .field-grid { grid-template-columns: 1fr; gap: 0; }
-  .map-section { padding-top: 55px; }
-  .map-head { align-items: start; flex-direction: column; }
-  .map-head h2 { font-size: 39px; }
-  .identity-panel { display: block; padding: 19px; }
-  .wheel-wrap { max-width: 290px; margin-inline: auto; }
-  .mode-tabs { top: 62px; margin-inline: -2px; }
-  .card-trigger { grid-template-columns: 42px minmax(0,1fr) 30px; gap: 11px; padding: 17px 14px; }
-  .card-icon { width: 42px; height: 42px; }
-  .card-title strong { font-size: 17px; }
-  .card-content { padding: 0 15px 20px; }
+  .field input,
+  .payment-contact input,
+  .consult-form textarea { font-size: 16px; }
+  .primary-button,
+  .map-actions .ghost-button,
+  .unlock-box button,
+  .question-chips button { min-height: 44px; }
+  .map-section { padding: 42px 0 96px; }
+  .map-head { align-items: stretch; flex-direction: column; gap: 17px; margin-bottom: 20px; }
+  .map-head h2 { margin-top: 8px; font-size: clamp(32px, 10vw, 39px); }
+  .map-head p { margin-bottom: 0; line-height: 1.55; }
+  .map-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 8px; }
+  .identity-panel { display: block; padding: 17px; border-radius: 23px; }
+  .wheel-wrap { max-width: 250px; margin-inline: auto; }
+  .identity-name { font-size: 24px; }
+  .archetype-box { margin-top: 16px; padding-top: 15px; }
+  .mode-tabs {
+    top: calc(58px + env(safe-area-inset-top));
+    margin-inline: -12px;
+    padding: 8px 12px;
+    border-radius: 0;
+    border-right: 0;
+    border-left: 0;
+    scrollbar-width: none;
+  }
+  .mode-tabs::-webkit-scrollbar,
+  .question-chips::-webkit-scrollbar { display: none; }
+  .card-stack { gap: 10px; }
+  .treasure-card { border-radius: 20px; }
+  .card-trigger { grid-template-columns: 40px minmax(0,1fr) 32px; gap: 10px; padding: 15px 12px; }
+  .card-icon { width: 40px; height: 40px; border-radius: 14px; }
+  .card-title strong { font-size: 16px; line-height: 1.3; }
+  .card-title span { line-height: 1.4; }
+  .card-content { padding: 0 13px 18px; }
+  .card-question { margin-bottom: 14px; font-size: 15px; }
+  .card-content p { font-size: 14px; line-height: 1.62; }
   .insight-grid { grid-template-columns: 1fr; }
-  .unlock-overlay { inset: 0 8px 8px; }
-  .synthesis { padding: 25px 18px; }
-  .synthesis-head { align-items: start; flex-direction: column; }
+  .insight { padding: 14px; }
+  .action-box { flex-direction: column; gap: 9px; padding: 14px; }
+  .action-box b { margin-top: 0; }
+  .evidence-row span { font-size: 10px; line-height: 1.35; }
+  .locked-card .card-content { min-height: 210px; }
+  .unlock-overlay { inset: 0 8px 8px; padding: 16px; }
+  .synthesis { padding: 23px 16px; border-radius: 24px; }
+  .synthesis-head { align-items: start; flex-direction: column; gap: 15px; padding-bottom: 18px; }
   .formula { font-size: 15px; }
-  .consult-fab { right: 13px; bottom: 13px; }
+  .synthesis-grid { gap: 12px; margin-top: 18px; }
+  .synthesis-block { padding: 16px; }
+  .consult-fab {
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    min-width: 52px;
+    min-height: 52px;
+    padding: 8px;
+  }
+  .consult-fab span { width: 36px; height: 36px; }
   .consult-fab b { display: none; }
-  .modal { padding: 30px 18px 23px; }
-  .treasure-legend { grid-template-columns: 1fr 1fr; }
+  .consult-panel { width: 100%; border-left: 0; }
+  .consult-head { padding: calc(15px + env(safe-area-inset-top)) 14px 15px; }
+  .consult-head h3 { max-width: 280px; font-size: 18px; line-height: 1.3; }
+  .consult-head button,
+  .modal-close { width: 44px; height: 44px; flex: 0 0 auto; }
+  .question-chips { gap: 8px; padding: 10px 12px; }
+  .question-chips button { padding: 9px 12px; font-size: 11px; }
+  .chat { padding: 14px 12px; gap: 10px; }
+  .message { max-width: 94%; padding: 12px 13px; font-size: 14px; line-height: 1.55; }
+  .consult-form { grid-template-columns: minmax(0,1fr) 46px; padding: 10px 12px; }
+  .consult-form textarea { min-height: 48px; max-height: 124px; }
+  .consult-form button { width: 46px; height: 46px; }
+  .consult-note { padding: 0 12px calc(10px + env(safe-area-inset-bottom)); font-size: 10px; }
+  .modal-backdrop { align-items: end; padding: 0; }
+  .modal {
+    width: 100%;
+    max-height: calc(100dvh - 12px);
+    overflow-y: auto;
+    border-radius: 24px 24px 0 0;
+    padding: 27px 16px calc(18px + env(safe-area-inset-bottom));
+    text-align: left;
+  }
+  .modal-close { right: 12px; top: 12px; }
+  .modal-icon { width: 48px; height: 48px; margin: 0 0 15px; border-radius: 16px; font-size: 21px; }
+  .modal h2 { padding-right: 48px; font-size: 26px; }
+  .modal > p { margin-bottom: 0; line-height: 1.55; }
+  .telegram-slot { justify-items: stretch; margin: 20px 0 14px; }
+  .purchase-modal ul { gap: 8px; margin: 18px 0; padding-left: 20px; font-size: 12px; line-height: 1.45; }
+  .toast { bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .treasure-legend { grid-template-columns: 1fr 1fr; margin-top: 0; }
   .treasure-progress-copy { display: grid; gap: 4px; }
 }
+
+@media (max-width: 380px) {
+  .top-actions .ghost-button { max-width: 56vw; font-size: 10px; }
+  .map-actions { grid-template-columns: 1fr; }
+  .purchase-modal .primary-button { align-items: center; flex-direction: column; gap: 4px; }
+}
+
+@media (hover: none) {
+  .ghost-button:hover,
+  .primary-button:hover,
+  .treasure-card:hover,
+  .value-carousel-controls button:hover { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
