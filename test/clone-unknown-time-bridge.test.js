@@ -17,5 +17,5 @@ test('обновлённый защитный слой не остаётся в 
     read('public/clone/index.html'),
     read('public/clone/live/index.html'),
   ]);
-  assert.ok(pages.every((html) => html.includes('/clone-ui-gears.js?v=20260726-priority1')));
+  assert.ok(pages.every((html) => html.includes('/clone-ui-gears.js?v=20260729-routes1')));
 });

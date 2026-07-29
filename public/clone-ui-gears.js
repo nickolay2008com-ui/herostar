@@ -4,10 +4,19 @@
   const params = new URLSearchParams(location.search);
   const authReturned = params.get('auth') === 'ok';
   const paymentReturned = params.get('payment') === 'return';
-  const currentInterfacePath = location.pathname.startsWith('/clone/live') ? '/clone/live/' : '/clone/';
-  const requestedReturnPath = String(localStorage.getItem(RETURN_KEY) || '').trim();
+  const liveInterface = location.pathname.startsWith('/clone/live');
+  const currentPagePath = /^\/clone\/live\/chat\/?$/.test(location.pathname)
+    ? '/clone/live/chat'
+    : /^\/clone\/live\/?$/.test(location.pathname)
+      ? '/clone/live/'
+      : '/clone/';
+  const currentInterfacePath = liveInterface ? '/clone/live/chat' : '/clone/';
+  const storedReturnPath = String(localStorage.getItem(RETURN_KEY) || '').trim();
+  const requestedReturnPath = storedReturnPath.startsWith('/clone/live')
+    ? '/clone/live/chat'
+    : storedReturnPath;
 
-  if ((authReturned || paymentReturned) && requestedReturnPath && requestedReturnPath !== currentInterfacePath) {
+  if ((authReturned || paymentReturned) && requestedReturnPath && requestedReturnPath !== currentPagePath) {
     const target = new URL(requestedReturnPath, location.origin);
     params.forEach((value, key) => target.searchParams.set(key, value));
     location.replace(target.toString());
@@ -18,7 +27,7 @@
 
   const nativeReplaceState = history.replaceState.bind(history);
   history.replaceState = (state, unused, url) => {
-    if (url && currentInterfacePath === '/clone/live/') {
+    if (url && currentInterfacePath === '/clone/live/chat') {
       try {
         const target = new URL(url, location.href);
         if (target.origin === location.origin && target.pathname === '/clone/') {

@@ -375,7 +375,7 @@ export async function handleTelegramLinkUpdates(updates, { fetchImpl = globalThi
       userId: claimed.user.telegram_id,
     });
     const returnUrl = baseUrl
-      ? `${baseUrl}/clone/live/?${new URLSearchParams({ telegram_link: returnToken, ...(claimed.chartId ? { chart: claimed.chartId } : {}) }).toString()}`
+      ? `${baseUrl}/clone/live/chat?${new URLSearchParams({ telegram_link: returnToken, ...(claimed.chartId ? { chart: claimed.chartId } : {}) }).toString()}`
       : null;
     const confirmationText = claimed.chartId
       ? '✦ Telegram подключён. Клон и история теперь сохранятся за вами. Вернитесь на страницу — разговор продолжится автоматически.'

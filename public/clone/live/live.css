@@ -56,6 +56,24 @@
 .live-product .brand span { transition: transform .28s ease, box-shadow .28s ease; }
 .live-product .brand:hover span { transform: rotate(12deg) scale(1.04); box-shadow: 0 0 24px rgba(242,217,148,.2), inset 0 0 0 1px rgba(255,255,255,.1); }
 
+.live-home-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 4px;
+  color: #d6cede;
+  font-size: 13px;
+  font-weight: 720;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .2s ease, transform .2s ease;
+}
+
+.live-home-link[hidden] { display: none; }
+.live-home-link:hover { color: #fff; transform: translateX(-2px); }
+.live-home-link:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; border-radius: 8px; }
+
 .live-home {
   display: block;
   width: min(1240px, calc(100% - 32px));
@@ -174,7 +192,7 @@
 
 .live-product .primary,
 .live-product .ghost,
-.live-question-examples button {
+.clone-insight-controls button {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -198,7 +216,7 @@
 .live-product .primary:hover::after { left: 120%; opacity: 1; }
 .live-product .primary:active,
 .live-product .ghost:active,
-.live-question-examples button:active { transform: translateY(1px) scale(.985); }
+.clone-insight-controls button:active { transform: translateY(1px) scale(.985); }
 .live-product .primary:disabled { cursor: wait; opacity: .7; filter: saturate(.7); transform: none; }
 
 .live-primary { min-width: 250px; justify-content: center; display: inline-flex; align-items: center; gap: 18px; font-size: 17px; }
@@ -354,9 +372,112 @@
 .live-intent-meta .is-saved { color: #9bd9bf; }
 .live-intent-form.has-value .live-intent-meta { color: #9692a0; }
 
-.live-question-examples { grid-column: 2; display: flex; flex-wrap: wrap; gap: 7px; margin-top: -20px; }
-.live-question-examples button { min-height: 44px; padding: 8px 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.025); color: #9996a2; font: inherit; font-size: 12px; cursor: pointer; }
-.live-question-examples button:hover { border-color: rgba(164,132,255,.3); background: rgba(154,119,255,.07); color: #fff; }
+.clone-insight-slider {
+  grid-column: 2;
+  min-width: 0;
+  margin-top: -14px;
+  transition: opacity .24s ease, transform .24s ease;
+}
+
+.clone-insight-slider.is-hiding {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.clone-insight-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.clone-insight-head .eyebrow { margin-bottom: 5px; font-size: 10px; }
+.clone-insight-head h3 { margin: 0; color: #f2eef7; font-size: 20px; line-height: 1.2; letter-spacing: -.025em; }
+.clone-insight-head p:last-child { margin: 5px 0 0; color: #8f8b98; font-size: 12px; line-height: 1.45; }
+
+.clone-insight-controls { display: flex; flex: 0 0 auto; align-items: center; gap: 7px; }
+.clone-insight-controls button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  background: rgba(255,255,255,.028);
+  color: #d7d1df;
+  font: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+.clone-insight-controls button:hover:not(:disabled) { border-color: rgba(164,132,255,.36); background: rgba(154,119,255,.08); color: #fff; }
+.clone-insight-controls button:disabled { cursor: default; opacity: .32; transform: none; }
+.clone-insight-controls output { min-width: 43px; color: #827e8a; font-size: 11px; text-align: center; }
+
+.clone-insight-context {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 14px;
+  margin: 0 2px 9px;
+  color: #777481;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.clone-insight-context strong { color: #a79caf; font-weight: 650; }
+
+.clone-insight-viewport {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  outline: 0;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.clone-insight-viewport::-webkit-scrollbar { display: none; }
+.clone-insight-viewport:focus-visible { border-radius: 21px; box-shadow: 0 0 0 2px rgba(174,139,255,.36); }
+.clone-insight-track { display: flex; align-items: stretch; gap: 12px; }
+
+.clone-insight-slide {
+  display: flex;
+  flex: 0 0 100%;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 320px;
+  padding: 20px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  border: 1px solid rgba(177,140,255,.18);
+  border-radius: 21px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(164,126,255,.1), transparent 38%),
+    linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
+}
+
+.clone-insight-slide h4 { margin: 0; color: #f4f0f7; font-size: 19px; line-height: 1.2; letter-spacing: -.025em; }
+.clone-insight-question { margin: 12px 0 0; color: #c7c2cd; font-size: 13px; line-height: 1.5; }
+.clone-insight-question span,
+.clone-insight-answer > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #8e8698;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.clone-insight-answer { margin-top: 13px; padding: 13px 14px; border-left: 2px solid rgba(190,155,255,.48); border-radius: 0 14px 14px 0; background: rgba(154,119,255,.055); }
+.clone-insight-answer p { margin: 0; color: #e1dbe8; font-size: 13px; line-height: 1.55; }
+.clone-insight-slide details { margin: 10px 0 0; color: #96909e; font-size: 11px; }
+.clone-insight-slide summary { width: fit-content; color: #bca8e7; cursor: pointer; list-style-position: inside; }
+.clone-insight-slide details p { margin: 6px 0 0 16px; color: #8d8794; line-height: 1.45; }
+.clone-insight-caveat { margin: 8px 0 0; color: #77727e; font-size: 10px; line-height: 1.4; }
+.clone-insight-cta { width: 100%; min-height: 48px; margin-top: auto; padding: 11px 15px; justify-content: center; }
+.clone-insight-cta span { margin-left: 8px; }
 
 .live-alternate { min-height: 330px; display: grid; grid-template-columns: minmax(0,.9fr) minmax(360px,1.1fr); }
 .live-alternate-copy { position: relative; z-index: 2; padding: 42px; }
@@ -411,7 +532,7 @@
   .live-intent { grid-template-columns: 1fr; }
   .live-intent-form { grid-template-columns: 1fr; }
   .live-intent-form .primary { min-height: 52px; }
-  .live-question-examples { grid-column: 1; margin-top: -18px; }
+  .clone-insight-slider { grid-column: 1; margin-top: -8px; }
   .live-alternate { grid-template-columns: 1fr; }
   .live-alternate-copy { padding: 28px 20px; }
   .live-alternate-image { min-height: 280px; order: -1; background-image: linear-gradient(0deg,#0e111c 0%,transparent 48%),var(--live-male-image); }
@@ -438,9 +559,15 @@
   .live-intent-form .primary { min-width: 0; width: 100%; }
   .live-intent-meta { padding-inline: 8px; }
   .live-intent-meta span:first-child { max-width: 72%; }
-  .live-question-examples { overflow: auto; flex-wrap: nowrap; padding-bottom: 3px; scroll-snap-type: x proximity; scrollbar-width: none; }
-  .live-question-examples::-webkit-scrollbar { display: none; }
-  .live-question-examples button { flex: 0 0 auto; scroll-snap-align: start; }
+  .clone-insight-head { align-items: start; }
+  .clone-insight-head h3 { font-size: 19px; }
+  .clone-insight-head p:last-child { max-width: 230px; }
+  .clone-insight-controls { margin-top: -2px; }
+  .clone-insight-controls button { width: 44px; height: 44px; }
+  .clone-insight-controls output { min-width: 38px; }
+  .clone-insight-context { display: grid; justify-content: start; }
+  .clone-insight-track { gap: 9px; padding-right: 22px; }
+  .clone-insight-slide { flex-basis: calc(100% - 22px); min-height: 350px; padding: 18px; }
   .live-sticky-start.visible {
     position: fixed;
     right: 8px;
@@ -475,7 +602,7 @@
 }
 
 @media (forced-colors:active) {
-  .live-hero,.live-flow,.live-intent,.live-alternate,.live-steps article,.live-intent-form { border: 1px solid CanvasText; }
+  .live-hero,.live-flow,.live-intent,.live-alternate,.live-steps article,.live-intent-form,.clone-insight-slide { border: 1px solid CanvasText; }
   .live-accent { color: CanvasText; background: none; }
 }
 

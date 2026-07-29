@@ -12,7 +12,7 @@ test('Telegram возвращает пользователя в live-клон, �
     read('public/clone-admin-page.js'),
   ]);
   assert.match(server, /rawState\.startsWith\('clone:'\)/);
-  assert.match(server, /res\.redirect\(`\/clone\/live\/\?auth=ok/);
+  assert.match(server, /res\.redirect\(`\/clone\/live\/chat\?auth=ok/);
   assert.match(clone, /window\.mountCloneTelegramLink\(container\)/);
   assert.doesNotMatch(clone, /telegram-widget\.js/);
   assert.match(living, /window\.mountCloneTelegramLink = enhanceTelegramSlot/);

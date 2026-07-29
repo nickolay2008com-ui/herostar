@@ -13,7 +13,7 @@ test('live-страница версионирует CSS и JavaScript, сохр
   const assets = [...html.matchAll(/(?:href|src)="([^"]+\.(?:css|js)[^"]*)"/g)].map((match) => match[1]);
   assert.ok(assets.length >= 10);
   assert.ok(assets.every((asset) => /[?&]v=[A-Za-z0-9._-]+/.test(asset)));
-  assert.match(html, /\/clone\.js\?v=20260726-priority1/);
+  assert.match(html, /\/clone\.js\?v=20260729-routes1/);
   assert.match(bootstrap, /isVersionedAsset/);
   assert.match(bootstrap, /public, max-age=31536000, immutable/);
   assert.match(bootstrap, /no-cache, no-store, must-revalidate/);
@@ -56,7 +56,8 @@ test('ключевые мобильные элементы имеют облас
     read('public/clone/live/live-visual-polish.css'),
   ]);
 
-  assert.match(liveStyles, /\.live-question-examples button\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(liveStyles, /\.clone-insight-controls button\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s);
+  assert.match(liveStyles, /\.clone-insight-cta\s*\{[^}]*min-height:\s*48px/s);
   assert.match(polish, /\.live-product \.modal-close\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s);
   assert.match(polish, /\.live-product #dialogView \.chips button\s*\{[^}]*min-height:\s*44px/s);
 });

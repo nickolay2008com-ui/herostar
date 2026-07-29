@@ -65,7 +65,7 @@ test('Telegram-вход одноразовый, а чувствительный 
   assert.match(auth, /if \(result\.status === 'authorized'\)/);
   assert.match(auth, /const returnToken = crypto\.randomBytes\(24\)/);
   assert.match(auth, /telegram_link: returnToken/);
-  assert.match(auth, /\/clone\/live\/\?\$\{new URLSearchParams/);
+  assert.match(auth, /\/clone\/live\/chat\?\$\{new URLSearchParams/);
   assert.match(auth, /\(token_hash, chart_id, expires_at\)[\s\S]+VALUES \(\$1, \$2, \$3\)/);
   assert.match(auth, /VALUES \(\$1, \$2, \$3, \$4, \$5\)/);
   assert.doesNotMatch(auth, /CASE WHEN \$3 IS NULL/);
@@ -87,7 +87,7 @@ test('старый Telegram callback не возвращает повреждё�
   ]);
 
   assert.match(server, /const cloneChartId = isUuid\(candidate\) \? candidate : null/);
-  assert.match(server, /res\.redirect\(`\/clone\/live\/\?auth=ok/);
+  assert.match(server, /res\.redirect\(`\/clone\/live\/chat\?auth=ok/);
   assert.doesNotMatch(server, /slice\('clone:'\.length\)\.replace/);
-  assert.match(client, /location\.pathname\.startsWith\('\/clone\/live'\) \? '\/clone\/live\/' : '\/clone\/'/);
+  assert.match(client, /location\.pathname\.startsWith\('\/clone\/live'\) \? LIVE_CHAT_PATH : '\/clone\/'/);
 });

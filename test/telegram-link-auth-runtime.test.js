@@ -98,7 +98,9 @@ test('восстановление существующего Клона соз�
 
     const confirmation = telegramMessages.at(-1);
     const returnUrl = confirmation.reply_markup.inline_keyboard[0][0].url;
-    const returnToken = new URL(returnUrl).searchParams.get('telegram_link');
+    const parsedReturnUrl = new URL(returnUrl);
+    const returnToken = parsedReturnUrl.searchParams.get('telegram_link');
+    assert.equal(parsedReturnUrl.pathname, '/clone/live/chat');
     assert.match(returnToken, /^[A-Za-z0-9_-]{24,80}$/);
 
     const authorized = await callMiddleware({
