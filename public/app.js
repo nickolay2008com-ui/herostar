@@ -113,12 +113,24 @@ function clearStoredChart() {
 
 async function loadConfig() {
   state.config = await api('/api/config');
-  els.priceLabel.textContent = `${new Intl.NumberFormat('ru-RU').format(state.config.price)} ₽`;
+  const formatPrice = (amount) => `${new Intl.NumberFormat('ru-RU').format(amount)} ₽`;
+  const price = Number(state.config.price);
   const originalPrice = Number(state.config.originalPrice || 0);
+  const hasDiscount = originalPrice > price;
+
+  els.priceLabel.textContent = formatPrice(price);
   els.originalPriceLabel.textContent = originalPrice
-    ? `${new Intl.NumberFormat('ru-RU').format(originalPrice)} ₽`
+    ? formatPrice(originalPrice)
     : '';
   els.originalPriceLabel.classList.toggle('hidden', !originalPrice);
+
+  $$('[data-offer-price]').forEach((node) => { node.textContent = formatPrice(price); });
+  $$('[data-offer-original-price]').forEach((node) => {
+    node.textContent = hasDiscount ? formatPrice(originalPrice) : '';
+    node.classList.toggle('hidden', !hasDiscount);
+  });
+  $$('[data-offer-discount]').forEach((node) => node.classList.toggle('hidden', !hasDiscount));
+
   const paymentReady = Boolean(state.config.paymentsConfigured);
   els.payButton.disabled = !paymentReady;
   els.payButton.dataset.paymentReady = String(paymentReady);
