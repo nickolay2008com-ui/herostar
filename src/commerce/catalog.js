@@ -14,12 +14,16 @@ function money(value, fallback) {
 }
 
 export function offerCatalog(env = process.env) {
+  const fullMapAmount = money(env.FULL_MAP_DISCOUNT_PRICE, 199);
+  const fullMapOriginalAmount = money(env.FULL_MAP_ORIGINAL_PRICE, 999);
+
   return Object.freeze({
     [OFFER_CODES.FULL_MAP]: {
       code: OFFER_CODES.FULL_MAP,
       product: 'herostar',
       title: 'Полная карта HeroStar',
-      amount: money(env.FULL_MAP_PRICE, 990),
+      amount: fullMapAmount,
+      originalAmount: fullMapOriginalAmount > fullMapAmount ? fullMapOriginalAmount : null,
       durationHours: null,
     },
     [OFFER_CODES.CLONE_DAY]: {
