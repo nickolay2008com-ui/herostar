@@ -33,6 +33,32 @@ test('поле ситуации идёт раньше объяснения ме�
   assert.doesNotMatch(live, /document\.createElement\('div'\)[\s\S]*?live-intent-meta/);
 });
 
+test('слайдер доказывает пользу Клона и передаёт выбранный вопрос в существующий поток', async () => {
+  const [html, styles, live, metrics] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('public/clone/live/live.css'),
+    read('public/clone/live/live.js'),
+    read('public/clone/live/live-metrics.js'),
+  ]);
+
+  assert.equal((html.match(/class="clone-insight-slide"/g) || []).length, 4);
+  assert.match(html, /Что можно узнать у своего Клона/);
+  assert.match(html, /У вас ответ будет другим — по вашей карте/);
+  assert.match(html, /Почему именно так\?/);
+  assert.match(html, /data-clone-prompt=/);
+  assert.doesNotMatch(html, /Сменить работу или остаться\?/);
+  assert.match(styles, /scroll-snap-type:\s*x mandatory/);
+  assert.match(styles, /\.clone-insight-slide\s*\{[^}]*flex:\s*0 0 100%/s);
+  assert.match(styles, /flex-basis:\s*calc\(100% - 22px\)/);
+  assert.doesNotMatch(live, /setInterval/);
+  assert.match(live, /rememberQuestion\(prompt, true\)/);
+  assert.match(live, /window\.setTimeout\(openCreation/);
+  assert.match(live, /INSIGHT_INDEX_KEY/);
+  assert.match(metrics, /clone_insight_slider_viewed/);
+  assert.match(metrics, /clone_insight_selected/);
+  assert.match(metrics, /clone_second_question/);
+});
+
 test('мобильные преимущества компактны, а sticky CTA не появляется до осознанного скролла', async () => {
   const [styles, live] = await Promise.all([
     read('public/clone/live/live.css'),
