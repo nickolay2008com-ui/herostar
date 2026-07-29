@@ -61,6 +61,7 @@ const port = Number(process.env.PORT || 3000);
 const freeCardCount = Math.max(1, Number(process.env.FREE_CARD_COUNT || 3));
 const demoMode = String(process.env.DEMO_MODE || 'true').toLowerCase() === 'true';
 const publicChartsBaseline = Math.max(0, Number(process.env.PUBLIC_CHARTS_BASELINE || 5000));
+const publicDailyChartsBaseline = Math.max(0, Number(process.env.PUBLIC_DAILY_CHARTS_BASELINE || 50));
 
 function telegramBotUsername() {
   return String(process.env.TELEGRAM_BOT_USERNAME || '')
@@ -177,7 +178,7 @@ async function publicStats() {
   const value = {
     totalCharts: publicChartsBaseline + Math.max(0, Number(overview.summary?.chartsTotal || 0)),
     charts7d: Math.max(0, charts7d),
-    charts24h: Math.max(0, Number(overview.summary?.charts24h || 0)),
+    charts24h: publicDailyChartsBaseline + Math.max(0, Number(overview.summary?.charts24h || 0)),
     updatedAt: new Date().toISOString(),
   };
 
