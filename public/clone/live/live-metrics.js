@@ -90,6 +90,30 @@
     track('form_started', 'clone_intent_captured', { questionLength: length });
   });
 
+  const insightSlider = document.querySelector('#cloneInsightSlider');
+  if (insightSlider && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries, currentObserver) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      once('insight_slider_viewed', () => {
+        goal('clone_insight_slider_viewed');
+        track('card_opened', 'clone_insight_slider_viewed');
+      });
+      currentObserver.disconnect();
+    }, { threshold: .35 });
+    observer.observe(insightSlider);
+  }
+
+  document.addEventListener('clone:insight-change', (event) => {
+    const { index = 0, source = '', topic = '' } = event.detail || {};
+    goal('clone_insight_slide_changed', { index, source, topic });
+  });
+
+  document.addEventListener('clone:insight-selected', (event) => {
+    const { index = 0, topic = '' } = event.detail || {};
+    goal('clone_insight_selected', { index, topic });
+    track('form_started', 'clone_insight_selected', { index, topic });
+  });
+
   const birthForm = document.querySelector('#birthForm');
   birthForm?.addEventListener('input', () => {
     once('birth_started', () => track('form_started', 'clone_birth_started'));
