@@ -83,9 +83,25 @@ html, body {
   opacity: .58;
 }
 
+.purchase-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.purchase-price-old {
+  color: rgba(12,11,18,.52);
+  font-size: .82em;
+  font-weight: 720;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
 @media (max-width: 660px) {
   .site-footer { width: min(100% - 28px, 1240px); flex-direction: column; margin-top: 50px; }
   .site-footer nav { justify-content: flex-start; }
+  .purchase-modal .primary-button { gap: 8px; font-size: 13px; }
 }
 
 
