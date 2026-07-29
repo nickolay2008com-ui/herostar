@@ -60,7 +60,12 @@ window.fetch = async (input, init = {}) => {
         let request = {};
         try { request = JSON.parse(String(init.body || '{}')); } catch {}
         if (request.product !== 'clone') {
-          reachHeroStarGoal('payment_started', { order_price: 990, currency: 'RUB' });
+          let payment = {};
+          try { payment = await response.clone().json(); } catch {}
+          reachHeroStarGoal('payment_started', {
+            order_price: Number(payment.amount || 199),
+            currency: 'RUB',
+          });
         }
       }
     }
@@ -87,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('herostar:purchase-success', (event) => {
   if (!isHeroStarProductPage()) return;
   reachHeroStarGoal('purchase_success', {
-    order_price: Number(event.detail?.price || 990),
+    order_price: Number(event.detail?.price || 199),
     currency: event.detail?.currency || 'RUB',
   });
 });
