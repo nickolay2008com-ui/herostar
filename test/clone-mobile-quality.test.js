@@ -56,7 +56,8 @@ test('ключевые мобильные элементы имеют облас
     read('public/clone/live/live-visual-polish.css'),
   ]);
 
-  assert.match(liveStyles, /\.live-question-examples button\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(liveStyles, /\.clone-insight-controls button\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s);
+  assert.match(liveStyles, /\.clone-insight-cta\s*\{[^}]*min-height:\s*48px/s);
   assert.match(polish, /\.live-product \.modal-close\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/s);
   assert.match(polish, /\.live-product #dialogView \.chips button\s*\{[^}]*min-height:\s*44px/s);
 });
