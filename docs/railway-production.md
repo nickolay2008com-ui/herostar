@@ -79,6 +79,8 @@ PRACTICE_FIRST_DELAY_MINUTES=30
 DATABASE_URL=... # Railway подключает из Postgres service
 DEMO_MODE=true
 FREE_CARD_COUNT=3
+PUBLIC_CHARTS_BASELINE=5000
+PUBLIC_DAILY_CHARTS_BASELINE=50
 ```
 
 Поиск в диалоге Клона не включается автоматически: сервер запускает отдельный
