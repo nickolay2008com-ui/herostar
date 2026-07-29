@@ -41,9 +41,13 @@ test('слайдер доказывает пользу Клона и перед�
     read('public/clone/live/live-metrics.js'),
   ]);
 
-  assert.equal((html.match(/class="clone-insight-slide"/g) || []).length, 4);
+  assert.equal((html.match(/class="clone-insight-slide"/g) || []).length, 6);
   assert.match(html, /Что можно узнать у своего Клона/);
   assert.match(html, /У вас ответ будет другим — по вашей карте/);
+  assert.match(html, /Партнёр для серьёзных отношений/);
+  assert.match(html, /Не повторять старый сценарий/);
+  assert.match(html, /data-insight-topic="relationship-partner"/);
+  assert.match(html, /data-insight-topic="relationship-pattern"/);
   assert.match(html, /Почему именно так\?/);
   assert.match(html, /data-clone-prompt=/);
   assert.doesNotMatch(html, /Сменить работу или остаться\?/);
@@ -89,8 +93,9 @@ test('мобильные преимущества компактны, а sticky 
     read('public/clone/live/live.js'),
   ]);
 
-  assert.match(styles, /\.live-benefits\s*\{[^}]*position:\s*static[^}]*grid-template-columns:\s*repeat\(3[^}]*margin-top:\s*18px/s);
-  assert.match(styles, /\.live-hero\s*\{[^}]*margin-bottom:\s*0/s);
+  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-hero\s*\{[^}]*min-height:\s*clamp\(210px,58vw,250px\)/);
+  assert.match(styles, /\.live-accent,[\s\S]*?\.live-primary\s*\{\s*display:\s*none/);
+  assert.match(styles, /\.live-actions\s*\{[^}]*position:\s*absolute[^}]*top:\s*10px[^}]*right:\s*10px/s);
   assert.match(live, /window\.scrollY > window\.innerHeight \* \.6/);
   assert.match(live, /!primaryActionVisible && !intentFormVisible/);
   assert.match(live, /observer\.observe\(heroForm\)/);
@@ -103,5 +108,5 @@ test('hero сохраняет спокойную и читаемую визуа�
   assert.match(styles, /\.live-trust-line\s*\{[^}]*color:\s*#b7b0bf[^}]*font-size:\s*13px/s);
   assert.match(styles, /@media\s*\(min-width:901px\)\s*\{[^}]*\.live-actions\s*\{[^}]*margin-bottom:\s*24px/s);
   assert.match(styles, /@media\s*\(max-width:900px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*clamp\(25px,7vw,36px\)/);
-  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*27px/);
+  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-accent,[\s\S]*?\.live-primary\s*\{\s*display:\s*none/);
 });

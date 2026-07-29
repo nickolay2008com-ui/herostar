@@ -541,17 +541,68 @@
 @media (max-width:640px) {
   .live-product .topbar { top: max(8px, env(safe-area-inset-top)); }
   .live-home { width: calc(100% - 16px); padding-top: calc(74px + env(safe-area-inset-top)); padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
-  .live-hero { min-height: min(710px, calc(100dvh - 84px)); border-radius: 24px; }
-  .live-hero-copy { bottom: 0; padding: 24px 18px 18px; }
-  .live-badge { margin-bottom: 18px; }
-  .live-home h1 { font-size: clamp(40px,11.7vw,48px); line-height: 1; }
-  .live-accent { font-size: 27px; }
-  .live-actions { display: grid; }
-  .live-primary,.live-actions .restore-access,.live-actions .ghost { width: 100%; }
-  .live-benefits { position: static; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; margin-top: 18px; transform: none; }
-  .live-benefits span { min-height: 48px; padding: 7px 5px; font-size: 12px; line-height: 1.25; }
-  .live-benefits b { display: none; }
-  .live-hero { margin-bottom: 0; }
+  .live-hero {
+    min-height: clamp(210px,58vw,250px);
+    margin-bottom: 12px;
+    border-radius: 24px;
+  }
+  .live-hero-image {
+    inset: 0;
+    background-position: 52% 47%;
+    transform: none;
+  }
+  .live-hero-shade {
+    background:
+      linear-gradient(0deg,rgba(2,5,13,.9) 0%,rgba(3,7,17,.52) 42%,rgba(3,7,17,.04) 78%),
+      linear-gradient(90deg,rgba(3,7,17,.28),transparent 58%);
+  }
+  .live-hero-copy {
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 16px 16px 18px;
+  }
+  .live-badge {
+    align-self: flex-start;
+    margin: 0 0 9px;
+    padding: 6px 9px;
+    border-color: rgba(255,255,255,.14);
+    background: rgba(7,10,20,.46);
+    font-size: 11px;
+  }
+  .live-home h1 {
+    max-width: 270px;
+    font-size: clamp(31px,9.2vw,38px);
+    line-height: 1;
+    letter-spacing: -.055em;
+    text-shadow: 0 3px 20px rgba(0,0,0,.7);
+  }
+  .live-accent,
+  .live-lead,
+  .live-trust-line,
+  .live-real-stats,
+  .live-benefits,
+  .live-primary { display: none; }
+  .live-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: block;
+    margin: 0;
+  }
+  .live-actions .restore-access,
+  .live-actions .ghost { width: auto; }
+  .live-actions .ghost {
+    min-height: 44px;
+    padding: 7px 10px;
+    border-color: rgba(255,255,255,.14);
+    background: rgba(7,10,20,.44);
+    backdrop-filter: blur(14px);
+    color: rgba(255,255,255,.8);
+    font-size: 11px;
+  }
   .live-hero-image { will-change: auto; }
   .live-flow { margin-top: 12px; }
   .live-flow,.live-intent { padding: 22px 17px; }
