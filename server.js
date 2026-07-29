@@ -35,7 +35,13 @@ import { searchPlaces, unpackSelectedPlace } from './src/places.js';
 import { getLegalConfig, renderLegalPage } from './src/legal.js';
 import { randomToken, sha256, publicError } from './src/utils.js';
 import { historyForProduct } from './src/consultation-history.js';
-import { getCommerceState, hasCloneAccessForChart, initCommerce } from './src/commerce.js';
+import {
+  OFFER_CODES,
+  getCommerceState,
+  hasCloneAccessForChart,
+  initCommerce,
+  offerCatalog,
+} from './src/commerce.js';
 import { buildClonePassport } from './src/clone-passport.js';
 import { isCloneChart } from './src/clone-quota.js';
 import { requirePersonalDataConsent } from './src/consent.js';
@@ -321,6 +327,7 @@ app.get('/api/config', async (req, res, next) => {
     const telegram = await telegramConfiguration();
     const requestedChartId = isUuid(req.query.chartId) ? String(req.query.chartId) : null;
     const commerce = await getCommerceState(req.user, new Date(), requestedChartId);
+    const fullMapOffer = offerCatalog()[OFFER_CODES.FULL_MAP];
     const paymentReadiness = getPaymentReadiness();
     res.json({
       telegramBotUsername: telegram.username,
@@ -332,7 +339,8 @@ app.get('/api/config', async (req, res, next) => {
       adminConfigured: true,
       demoMode,
       freeCardCount,
-      price: Number(process.env.FULL_MAP_PRICE || '990'),
+      price: fullMapOffer.amount,
+      originalPrice: fullMapOffer.originalAmount,
       cloneOffers: commerce.offers,
       legalConfigured: getLegalConfig().configured,
       legalContactUrl: getLegalConfig().contactUrl,
@@ -876,7 +884,12 @@ app.post('/api/payments/create', requireUser, async (req, res, next) => {
       receiptContact: req.body.receiptContact,
       offerCode: req.body.offerCode,
     });
-    res.json({ paymentId: payment.id, paymentRef: payment.returnRef, confirmationUrl: payment.confirmation?.confirmation_url });
+    res.json({
+      paymentId: payment.id,
+      paymentRef: payment.returnRef,
+      amount: Number(payment.amount?.value),
+      confirmationUrl: payment.confirmation?.confirmation_url,
+    });
   } catch (error) {
     next(error);
   }
