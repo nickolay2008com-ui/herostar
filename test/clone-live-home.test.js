@@ -4,24 +4,19 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('единая первая карточка сразу объясняет продукт и принимает ситуацию', async () => {
+test('мобильный вход начинает с ситуации и честно объясняет Telegram', async () => {
   const [html, live] = await Promise.all([
     read('public/clone/live/index.html'),
     read('public/clone/live/live.js'),
   ]);
 
   assert.match(html, />Когда неясно,<br>как поступить</);
-  assert.match(html, /Спросите Клона, собранного по вашей натальной карте\./);
-  assert.match(html, /Опишите ситуацию своими словами — Клон уточнит важное\./);
-  assert.match(html, />Узнать, как поступил бы Клон/);
-  assert.match(html, /3 ответа бесплатно · без регистрации на старте\./);
+  assert.match(html, />Начать с вопроса/);
+  assert.match(html, /Первые 3 ответа — здесь\. После Telegram бесплатный диалог продолжается без лимита\./);
   assert.match(html, /data-go-intent/);
   assert.match(live, /querySelectorAll\('\[data-go-intent\]'\)/);
   assert.match(live, /heroQuestion\.scrollIntoView/);
-  const hero = html.slice(html.indexOf('<section class="live-hero"'), html.indexOf('<section class="live-insights"'));
-  assert.match(hero, /class="live-hero-scene"/);
-  assert.match(hero, /id="heroQuestionForm"/);
-  assert.match(hero, /id="liveIntentTitle"/);
+  const hero = html.slice(html.indexOf('<section class="live-hero"'), html.indexOf('<section class="live-intent"'));
   assert.doesNotMatch(hero, /Premium|Премиум|Полный режим/);
 });
 
@@ -31,8 +26,7 @@ test('поле ситуации идёт раньше объяснения ме�
     read('public/clone/live/live.js'),
   ]);
 
-  assert.ok(html.indexOf('class="live-hero-intent"') < html.indexOf('class="live-flow"'));
-  assert.doesNotMatch(html, /<section class="live-intent"/);
+  assert.ok(html.indexOf('class="live-intent"') < html.indexOf('class="live-flow"'));
   assert.match(html, /class="live-intent-meta"/);
   assert.match(html, /id="heroQuestionHint"/);
   assert.match(html, /id="heroQuestionCount"/);
@@ -89,26 +83,25 @@ test('главная и диалог разделены каноническим
   assert.doesNotMatch(server, /public\/clone\/live\/chat\/index\.html/);
 });
 
-test('мобильная первая карточка сохраняет изображение и sticky CTA не появляется до осознанного скролла', async () => {
+test('мобильные преимущества компактны, а sticky CTA не появляется до осознанного скролла', async () => {
   const [styles, live] = await Promise.all([
     read('public/clone/live/live.css'),
     read('public/clone/live/live.js'),
   ]);
 
-  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-hero-scene\s*\{[^}]*height:\s*138px[^}]*flex-basis:\s*138px/s);
-  assert.match(styles, /@media\s*\(max-width:\s*360px\)[\s\S]*?\.live-hero-scene\s*\{[^}]*height:\s*118px/s);
-  assert.doesNotMatch(styles, /\.live-hero \.live-(?:lead|primary|benefits)\s*\{[^}]*display:\s*none/s);
+  assert.match(styles, /\.live-benefits\s*\{[^}]*position:\s*static[^}]*grid-template-columns:\s*repeat\(3[^}]*margin-top:\s*18px/s);
+  assert.match(styles, /\.live-hero\s*\{[^}]*margin-bottom:\s*0/s);
   assert.match(live, /window\.scrollY > window\.innerHeight \* \.6/);
   assert.match(live, /!primaryActionVisible && !intentFormVisible/);
-  assert.match(live, /observer\.observe\(primaryHeroAction\)/);
   assert.match(live, /observer\.observe\(heroForm\)/);
 });
 
 test('hero сохраняет спокойную и читаемую визуальную иерархию', async () => {
   const styles = await read('public/clone/live/live.css');
 
-  assert.match(styles, /\.live-accent\s*\{[^}]*font-size:\s*clamp\(22px,2\.3vw,31px\)/s);
-  assert.match(styles, /\.live-free-note\s*\{[^}]*font-size:\s*12px[^}]*text-align:\s*center/s);
-  assert.match(styles, /@media\s*\(max-width:900px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*clamp\(23px,5vw,29px\)/);
-  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*21px/);
+  assert.match(styles, /\.live-accent\s*\{[^}]*font-size:\s*clamp\(24px,2\.6vw,36px\)/s);
+  assert.match(styles, /\.live-trust-line\s*\{[^}]*color:\s*#b7b0bf[^}]*font-size:\s*13px/s);
+  assert.match(styles, /@media\s*\(min-width:901px\)\s*\{[^}]*\.live-actions\s*\{[^}]*margin-bottom:\s*24px/s);
+  assert.match(styles, /@media\s*\(max-width:900px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*clamp\(25px,7vw,36px\)/);
+  assert.match(styles, /@media\s*\(max-width:640px\)[\s\S]*?\.live-accent\s*\{[^}]*font-size:\s*27px/);
 });
