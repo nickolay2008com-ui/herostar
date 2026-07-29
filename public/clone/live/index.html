@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/clone-living-fixes.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone-web-search.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone/live/live-assets.css?v=20260726-auth2">
-  <link rel="stylesheet" href="/clone/live/live.css?v=20260729-routes1">
+  <link rel="stylesheet" href="/clone/live/live.css?v=20260729-herocard1">
   <link rel="stylesheet" href="/clone/live/live-detail.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone/live/live-visual-polish.css?v=20260726-auth2">
 </head>
@@ -41,41 +41,36 @@
   <main>
     <section class="hero live-home" id="intro">
       <section class="live-hero" aria-labelledby="liveTitle">
-        <div class="live-hero-image" role="img" aria-label="Женщина и её звёздный клон смотрят в сторону будущего"></div>
-        <div class="live-hero-shade" aria-hidden="true"></div>
-        <div class="live-hero-copy">
-          <p class="live-badge"><span>✦</span> Натальная карта в диалоге</p>
-          <h1 id="liveTitle">Когда неясно,<br>как поступить</h1>
-          <p class="live-accent">Спросите Клона, собранного по вашей натальной карте</p>
-          <p class="live-lead">Клон покажет, как поступил бы он, и объяснит ход через реальные факторы вашей карты, относящиеся к вопросу.</p>
-          <p class="live-trust-line">Первые 3 ответа — здесь. После Telegram бесплатный диалог продолжается без лимита.</p><p class="live-real-stats hidden" id="liveRealStats" aria-live="polite"></p>
-          <div class="live-actions">
-            <button class="primary live-primary" data-go-intent type="button">Начать с вопроса <span aria-hidden="true">↓</span></button>
+        <div class="live-hero-scene" role="img" aria-label="Женщина и её звёздный клон смотрят в сторону будущего">
+          <div class="live-hero-image" aria-hidden="true"></div>
+          <div class="live-hero-shade" aria-hidden="true"></div>
+        </div>
+        <div class="live-hero-body">
+          <div class="live-hero-copy">
+            <p class="live-badge"><span>✦</span> Натальная карта в диалоге</p>
+            <h1 id="liveTitle">Когда неясно,<br>как поступить</h1>
+            <p class="live-accent">Спросите Клона, собранного по вашей натальной карте.</p>
+          </div>
+          <div class="live-hero-intent" aria-labelledby="liveIntentTitle">
+            <h2 id="liveIntentTitle">Что вам нужно решить?</h2>
+            <p class="live-intent-helper">Опишите ситуацию своими словами — Клон уточнит важное.</p>
+            <form id="heroQuestionForm" class="live-intent-form">
+              <label class="sr-only" for="heroQuestion">Вопрос или описание ситуации</label>
+              <textarea id="heroQuestion" rows="2" maxlength="1600" placeholder="Например: войти в новый проект или сохранить стабильность?" required></textarea>
+              <button class="primary" type="submit">Узнать, как поступил бы Клон <span aria-hidden="true">→</span></button>
+              <div class="live-intent-meta"><span id="heroQuestionHint">Можно описать коротко — Клон уточнит важное</span><span id="heroQuestionCount">0 / 1600</span></div>
+            </form>
+            <p class="live-free-note">3 ответа бесплатно · без регистрации на старте.</p>
+            <p class="live-real-stats hidden" id="liveRealStats" aria-live="polite"></p>
             <div class="restore-access">
               <button class="ghost" id="restoreCloneAccess" type="button">У меня уже есть клон</button>
               <div class="telegram-login-slot hidden" id="restoreTelegramSlot" data-telegram-mode="restore"></div>
             </div>
           </div>
-          <div class="live-benefits" aria-label="Преимущества">
-            <span><b>✦</b> 3 вопроса бесплатно</span>
-            <span><b>◎</b> по натальной карте</span>
-            <span><b>◇</b> без регистрации на старте</span>
-          </div>
         </div>
       </section>
 
-      <section class="live-intent" aria-labelledby="liveIntentTitle">
-        <div>
-          <p class="eyebrow">Можно начать с самой ситуации</p>
-          <h2 id="liveIntentTitle">Что вам нужно решить?</h2>
-          <p>Напишите вопрос сейчас. Мы сохраним его, соберём Клона и сразу передадим ему вашу ситуацию.</p>
-        </div>
-        <form id="heroQuestionForm" class="live-intent-form">
-          <label class="sr-only" for="heroQuestion">Вопрос или описание ситуации</label>
-          <textarea id="heroQuestion" rows="2" maxlength="1600" placeholder="Например: войти в новый проект или сохранить стабильность?" required></textarea>
-          <button class="primary" type="submit">Сохранить вопрос <span aria-hidden="true">↗</span></button>
-          <div class="live-intent-meta"><span id="heroQuestionHint">Можно описать коротко — Клон уточнит важное</span><span id="heroQuestionCount">0 / 1600</span></div>
-        </form>
+      <section class="live-insights" aria-labelledby="cloneInsightTitle">
         <div class="clone-insight-slider" id="cloneInsightSlider" role="region" aria-roledescription="карусель" aria-labelledby="cloneInsightTitle">
           <div class="clone-insight-head">
             <div>
@@ -244,6 +239,6 @@
   <script src="/clone.js?v=20260729-routes1" defer></script>
   <script src="/clone/live/live-stats.js?v=20260728-factors1" defer></script>
   <script src="/clone/live/live-metrics.js?v=20260729-insights1" defer></script>
-  <script src="/clone/live/live.js?v=20260729-routes1" defer></script>
+  <script src="/clone/live/live.js?v=20260729-herocard1" defer></script>
 </body>
 </html>
