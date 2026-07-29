@@ -29,6 +29,7 @@ test('публичная цепочка клона открывается на �
       YOOKASSA_SHOP_ID: '',
       YOOKASSA_SECRET_KEY: '',
       DEMO_MODE: 'true',
+      PUBLIC_CHARTS_BASELINE: '5000',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -39,6 +40,9 @@ test('публичная цепочка клона открывается на �
     const response = await fetch(`${base}${path}`);
     assert.equal(response.status, 200, path);
   }
+
+  const publicStats = await (await fetch(`${base}/api/public/stats`)).json();
+  assert.equal(publicStats.totalCharts, 5000);
 
   const clonePage = await (await fetch(`${base}/clone/`)).text();
   assert.match(clonePage, /Звёздный клон/);
