@@ -14,6 +14,13 @@
   const primaryHeroButton = document.querySelector('.live-hero [data-go-intent]');
   const creationButton = document.querySelector('[data-go-create]');
   const hero = document.querySelector('.live-hero');
+  const insightSlider = document.querySelector('#cloneInsightSlider');
+  const insightViewport = document.querySelector('#cloneInsightViewport');
+  const insightSlides = [...document.querySelectorAll('.clone-insight-slide')];
+  const insightPrev = document.querySelector('#cloneInsightPrev');
+  const insightNext = document.querySelector('#cloneInsightNext');
+  const insightCount = document.querySelector('#cloneInsightCount');
+  const INSIGHT_INDEX_KEY = 'starCloneInsightIndex';
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
@@ -72,6 +79,7 @@
   heroForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     if (!rememberQuestion(heroQuestion?.value, true)) return;
+    insightSlider?.classList.add('is-hiding');
 
     const submit = heroForm.querySelector('button[type="submit"]');
     if (submit) {
@@ -88,13 +96,92 @@
     window.setTimeout(openCreation, prefersReducedMotion ? 0 : 220);
   });
 
-  document.querySelectorAll('.live-question-examples button').forEach((button) => {
+  let insightIndex = Math.min(
+    Math.max(Number.parseInt(localStorage.getItem(INSIGHT_INDEX_KEY) || '0', 10) || 0, 0),
+    Math.max(0, insightSlides.length - 1),
+  );
+  let insightScrollTimer = 0;
+  let insightInteraction = '';
+  let insightProgrammatic = false;
+
+  function publishInsightChange(source) {
+    document.dispatchEvent(new CustomEvent('clone:insight-change', {
+      detail: {
+        index: insightIndex + 1,
+        source,
+        topic: insightSlides[insightIndex]?.dataset.insightTopic || '',
+      },
+    }));
+  }
+
+  function syncInsightControls() {
+    if (!insightSlides.length) return;
+    if (insightCount) insightCount.value = `${insightIndex + 1} из ${insightSlides.length}`;
+    if (insightPrev) insightPrev.disabled = insightIndex === 0;
+    if (insightNext) insightNext.disabled = insightIndex === insightSlides.length - 1;
+    localStorage.setItem(INSIGHT_INDEX_KEY, String(insightIndex));
+  }
+
+  function setInsightIndex(nextIndex, source = 'control') {
+    const next = Math.min(Math.max(nextIndex, 0), insightSlides.length - 1);
+    if (!insightViewport || !insightSlides[next]) return;
+    const changed = next !== insightIndex;
+    insightIndex = next;
+    insightProgrammatic = true;
+    insightViewport.scrollTo({
+      left: insightSlides[next].offsetLeft,
+      behavior: prefersReducedMotion || source === 'restore' ? 'auto' : 'smooth',
+    });
+    syncInsightControls();
+    if (changed && source !== 'restore') publishInsightChange(source);
+    window.clearTimeout(insightScrollTimer);
+    insightScrollTimer = window.setTimeout(() => { insightProgrammatic = false; }, prefersReducedMotion ? 0 : 420);
+  }
+
+  function settleInsightScroll() {
+    if (!insightViewport || insightProgrammatic || !insightInteraction) return;
+    const next = insightSlides.reduce((closest, slide, index) => (
+      Math.abs(slide.offsetLeft - insightViewport.scrollLeft)
+        < Math.abs(insightSlides[closest].offsetLeft - insightViewport.scrollLeft) ? index : closest
+    ), 0);
+    const source = insightInteraction;
+    insightInteraction = '';
+    if (next === insightIndex) return;
+    insightIndex = next;
+    syncInsightControls();
+    publishInsightChange(source);
+  }
+
+  insightPrev?.addEventListener('click', () => setInsightIndex(insightIndex - 1, 'arrow'));
+  insightNext?.addEventListener('click', () => setInsightIndex(insightIndex + 1, 'arrow'));
+  insightViewport?.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    setInsightIndex(insightIndex + (event.key === 'ArrowRight' ? 1 : -1), 'keyboard');
+  });
+  insightViewport?.addEventListener('pointerdown', () => { insightInteraction = 'swipe'; }, { passive: true });
+  insightViewport?.addEventListener('wheel', () => { insightInteraction = 'trackpad'; }, { passive: true });
+  insightViewport?.addEventListener('scroll', () => {
+    if (!insightInteraction || insightProgrammatic) return;
+    window.clearTimeout(insightScrollTimer);
+    insightScrollTimer = window.setTimeout(settleInsightScroll, 120);
+  }, { passive: true });
+
+  document.querySelectorAll('[data-insight-cta]').forEach((button) => {
     button.addEventListener('click', () => {
-      if (!heroQuestion) return;
-      heroQuestion.value = button.textContent.trim();
-      heroQuestion.dispatchEvent(new Event('input', { bubbles: true }));
-      heroQuestion.focus({ preventScroll: true });
-      heroQuestion.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+      const slide = button.closest('[data-clone-prompt]');
+      const prompt = slide?.dataset.clonePrompt;
+      if (!rememberQuestion(prompt, true)) return;
+      document.querySelectorAll('[data-insight-cta]').forEach((current) => { current.disabled = true; });
+      button.innerHTML = 'Готовим разбор…';
+      insightSlider?.classList.add('is-hiding');
+      document.dispatchEvent(new CustomEvent('clone:insight-selected', {
+        detail: {
+          index: insightSlides.indexOf(slide) + 1,
+          topic: slide?.dataset.insightTopic || '',
+        },
+      }));
+      window.setTimeout(openCreation, prefersReducedMotion ? 0 : 220);
     });
   });
 
@@ -156,7 +243,11 @@
   }
 
   if (messages) {
-    new MutationObserver(enhanceFirstAnswer).observe(messages, { childList: true, subtree: true, characterData: true });
+    if (messages.querySelector('.message.user')) insightSlider?.classList.add('hidden');
+    new MutationObserver(() => {
+      enhanceFirstAnswer();
+      if (messages.querySelector('.message.user')) insightSlider?.classList.add('hidden');
+    }).observe(messages, { childList: true, subtree: true, characterData: true });
   }
 
   if (dialogView) {
@@ -256,6 +347,7 @@
   }
 
   installRevealMotion();
+  window.requestAnimationFrame(() => setInsightIndex(insightIndex, 'restore'));
   syncQuestionState();
   syncScrollUi();
   deliverPendingQuestion();
