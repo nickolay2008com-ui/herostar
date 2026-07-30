@@ -1,0 +1,64 @@
+/* Mobile composition for the canonical /clone/live hero.
+   The image stays identical to desktop: --live-female-image from live-assets.css. */
+
+@media (max-width: 640px) {
+  .live-product .live-hero {
+    min-height: clamp(292px, 82vw, 344px);
+    margin-bottom: 12px;
+    border-radius: 24px;
+  }
+
+  .live-product .live-hero-image {
+    inset: 0;
+    min-height: 0;
+    background-image: var(--live-female-image);
+    background-size: cover;
+    background-position: 52% 45%;
+    transform: none;
+    will-change: auto;
+  }
+
+  .live-product .live-hero-shade {
+    background:
+      linear-gradient(0deg, rgba(2, 5, 13, .96) 0%, rgba(3, 7, 17, .68) 35%, rgba(3, 7, 17, .08) 72%),
+      linear-gradient(90deg, rgba(3, 7, 17, .5) 0%, rgba(3, 7, 17, .12) 55%, transparent 78%);
+  }
+
+  .live-product .live-hero-copy {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 18px 16px 20px;
+  }
+
+  .live-product .live-badge {
+    align-self: flex-start;
+    margin: 0 0 9px;
+    padding: 6px 9px;
+    border-color: rgba(255, 255, 255, .14);
+    background: rgba(7, 10, 20, .48);
+    font-size: 11px;
+  }
+
+  .live-product .live-home h1 {
+    max-width: 270px;
+    font-size: clamp(31px, 9.2vw, 38px);
+    line-height: 1;
+    letter-spacing: -.055em;
+    text-shadow: 0 3px 20px rgba(0, 0, 0, .78);
+  }
+}
+
+@media (max-width: 360px) {
+  .live-product .live-hero {
+    min-height: clamp(276px, 88vw, 316px);
+  }
+
+  .live-product .live-home h1 {
+    max-width: 238px;
+    font-size: clamp(29px, 9vw, 34px);
+  }
+}
