@@ -3,7 +3,7 @@
 
 @media (max-width: 640px) {
   .live-product .live-hero {
-    min-height: clamp(292px, 82vw, 344px);
+    min-height: clamp(340px, 94vw, 390px);
     margin-bottom: 12px;
     border-radius: 24px;
   }
@@ -20,7 +20,7 @@
 
   .live-product .live-hero-shade {
     background:
-      linear-gradient(0deg, rgba(2, 5, 13, .96) 0%, rgba(3, 7, 17, .68) 35%, rgba(3, 7, 17, .08) 72%),
+      linear-gradient(0deg, rgba(2, 5, 13, .97) 0%, rgba(3, 7, 17, .76) 39%, rgba(3, 7, 17, .1) 75%),
       linear-gradient(90deg, rgba(3, 7, 17, .5) 0%, rgba(3, 7, 17, .12) 55%, transparent 78%);
   }
 
@@ -50,15 +50,32 @@
     letter-spacing: -.055em;
     text-shadow: 0 3px 20px rgba(0, 0, 0, .78);
   }
+
+  .live-product .live-hero .live-accent {
+    display: block;
+    max-width: 292px;
+    margin: 9px 0 0;
+    font-size: clamp(15px, 4.35vw, 18px);
+    font-weight: 740;
+    line-height: 1.18;
+    letter-spacing: -.028em;
+    text-wrap: balance;
+    filter: drop-shadow(0 3px 12px rgba(0, 0, 0, .72));
+  }
 }
 
 @media (max-width: 360px) {
   .live-product .live-hero {
-    min-height: clamp(276px, 88vw, 316px);
+    min-height: clamp(326px, 102vw, 360px);
   }
 
   .live-product .live-home h1 {
     max-width: 238px;
     font-size: clamp(29px, 9vw, 34px);
+  }
+
+  .live-product .live-hero .live-accent {
+    max-width: 254px;
+    font-size: clamp(14px, 4.3vw, 16px);
   }
 }
