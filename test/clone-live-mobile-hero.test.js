@@ -8,7 +8,7 @@ test('мобильный hero использует тот же образ дев
     readFile(new URL('../public/clone/live/live-mobile-hero.css', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(html, /live-mobile-hero\.css\?v=20260730-mobiletitle1/);
+  assert.match(html, /live-mobile-hero\.css\?v=20260730-mobilesubtitle1/);
   assert.match(styles, /background-image:\s*var\(--live-female-image\)/);
   assert.doesNotMatch(styles, /url\(/);
 });
