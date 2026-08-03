@@ -10,15 +10,28 @@ export default defineConfig({
   reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'line',
   use: {
     baseURL: 'http://127.0.0.1:3100',
+    bypassCSP: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
   projects: [
-    { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'android-chromium', use: { ...devices['Pixel 7'] } },
-    { name: 'iphone-webkit', use: { ...devices['iPhone 13'] } },
-    { name: 'tablet-webkit', use: { ...devices['iPad Mini'] } },
+    {
+      name: 'desktop-chromium',
+      use: { ...devices['Desktop Chrome'], extraHTTPHeaders: { 'x-forwarded-for': '192.0.2.11' } },
+    },
+    {
+      name: 'android-chromium',
+      use: { ...devices['Pixel 7'], extraHTTPHeaders: { 'x-forwarded-for': '192.0.2.12' } },
+    },
+    {
+      name: 'iphone-webkit',
+      use: { ...devices['iPhone 13'], extraHTTPHeaders: { 'x-forwarded-for': '192.0.2.13' } },
+    },
+    {
+      name: 'tablet-webkit',
+      use: { ...devices['iPad Mini'], extraHTTPHeaders: { 'x-forwarded-for': '192.0.2.14' } },
+    },
   ],
   webServer: {
     command: 'npm start',
