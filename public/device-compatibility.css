@@ -21,6 +21,23 @@ img, svg, video, canvas { max-width: 100%; }
 button, input, textarea, select { max-width: 100%; }
 input[type="date"], input[type="time"] { min-width: 0; }
 
+/* Grid items with long controls must be allowed to shrink to the viewport. */
+.map-shell,
+.map-dashboard,
+.map-dashboard > *,
+.identity-panel,
+.treasure-panel,
+.card-stack,
+.mode-tabs {
+  min-width: 0;
+  max-width: 100%;
+}
+.map-dashboard { grid-template-columns: minmax(0, 1fr); }
+.identity-panel,
+.treasure-panel,
+.card-stack { width: 100%; }
+.mode-tabs { width: 100%; }
+
 /* Closed off-canvas UI must not enlarge the document canvas. */
 .consult-panel {
   height: 100vh;
@@ -99,6 +116,10 @@ input[type="date"], input[type="time"] { min-width: 0; }
   .value-carousel-controls button { min-width: 44px; }
 }
 
+@media (max-width: 950px) {
+  .map-dashboard { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 720px) {
   .deep-dive-backdrop { min-width: 0; }
 
@@ -118,6 +139,14 @@ input[type="date"], input[type="time"] { min-width: 0; }
 
 @media (max-width: 660px) {
   .section-shell { width: min(1240px, calc(100% - 24px)); }
+  .map-dashboard,
+  .identity-panel,
+  .treasure-panel,
+  .card-stack { width: 100%; }
+  .mode-tabs {
+    width: calc(100% + 24px);
+    max-width: calc(100% + 24px);
+  }
 
   .modal {
     max-height: calc(100vh - 12px);
