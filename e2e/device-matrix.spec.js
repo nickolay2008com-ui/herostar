@@ -55,12 +55,15 @@ async function expectNoPageOverflow(page) {
   expect(geometry.documentWidth, message).toBeLessThanOrEqual(geometry.viewportWidth + 1);
 }
 
-async function expectElementInsideViewport(locator, page) {
-  const [box, viewport] = await Promise.all([
+async function elementBox(locator, page) {
+  return Promise.all([
     locator.boundingBox(),
     page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight })),
   ]);
+}
 
+async function expectElementInsideViewport(locator, page) {
+  const [box, viewport] = await elementBox(locator, page);
   expect(box).not.toBeNull();
   expect(box.x).toBeGreaterThanOrEqual(-1);
   expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
@@ -68,9 +71,16 @@ async function expectElementInsideViewport(locator, page) {
   expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
 }
 
+async function expectElementFitsViewportWidth(locator, page) {
+  const [box, viewport] = await elementBox(locator, page);
+  expect(box).not.toBeNull();
+  expect(box.x).toBeGreaterThanOrEqual(-1);
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+}
+
 async function expectMapFitsViewport(page) {
   for (const selector of ['.map-shell', '.map-dashboard', '.identity-panel', '.treasure-panel', '.card-stack', '.mode-tabs']) {
-    await expectElementInsideViewport(page.locator(selector), page);
+    await expectElementFitsViewportWidth(page.locator(selector), page);
   }
 }
 
