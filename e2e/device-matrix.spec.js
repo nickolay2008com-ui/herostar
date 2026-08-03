@@ -10,14 +10,44 @@ const explicitViewports = [
 ];
 
 async function expectNoPageOverflow(page) {
-  const geometry = await page.evaluate(() => ({
-    viewportWidth: window.innerWidth,
-    documentWidth: document.documentElement.scrollWidth,
-    bodyWidth: document.body.scrollWidth,
-  }));
+  const geometry = await page.evaluate(() => {
+    const viewportWidth = window.innerWidth;
+    const offenders = [...document.querySelectorAll('body *')]
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const overflow = Math.max(0, rect.right - viewportWidth, -rect.left);
+        const internalOverflow = Math.max(0, element.scrollWidth - element.clientWidth);
+        return {
+          selector: `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${[...element.classList].slice(0, 3).map((name) => `.${name}`).join('')}`,
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          overflow: Math.round(overflow),
+          internalOverflow,
+          position: style.position,
+          display: style.display,
+          overflowX: style.overflowX,
+          visibility: style.visibility,
+        };
+      })
+      .filter((item) => item.overflow > 1 || item.internalOverflow > 1)
+      .sort((a, b) => Math.max(b.overflow, b.internalOverflow) - Math.max(a.overflow, a.internalOverflow))
+      .slice(0, 12);
 
-  expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
-  expect(geometry.bodyWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+    return {
+      viewportWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      offenders,
+    };
+  });
+
+  const message = `Горизонтальное переполнение: ${JSON.stringify(geometry, null, 2)}`;
+  expect(geometry.documentWidth, message).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  expect(geometry.bodyWidth, message).toBeLessThanOrEqual(geometry.viewportWidth + 1);
 }
 
 async function expectElementInsideViewport(locator, page) {
