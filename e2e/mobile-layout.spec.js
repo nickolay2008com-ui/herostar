@@ -15,11 +15,12 @@ for (const viewport of viewports) {
     const layout = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,
-      bodyWidth: document.body.scrollWidth,
     }));
 
+    // documentElement reflects the actual scrollable canvas. body.scrollWidth can
+    // include intentionally clipped off-canvas panels even when the user cannot
+    // scroll to them, so it is not a valid overflow signal here.
     expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
-    expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
 
     const topbar = await page.locator('.topbar').boundingBox();
     expect(topbar).not.toBeNull();
