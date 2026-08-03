@@ -4,6 +4,7 @@ const viewports = [
   { name: 'compact', width: 320, height: 568 },
   { name: 'phone', width: 390, height: 844 },
   { name: 'tablet', width: 768, height: 1024 },
+  { name: 'wide-legacy-android', width: 960, height: 1536 },
 ];
 
 for (const viewport of viewports) {
@@ -41,6 +42,39 @@ test('на телефоне форма идёт раньше вторичног�
     elements.map((element) => element.getBoundingClientRect().height),
   );
   expect(touchTargets.every((height) => height >= 44)).toBeTruthy();
+});
+
+test('широкий Android viewport не получает двухколоночный desktop hero', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 1536 });
+  await page.goto('/');
+
+  const layout = await page.evaluate(() => {
+    const hero = document.querySelector('.hero');
+    const copy = document.querySelector('.hero-copy');
+    const panel = document.querySelector('.birth-panel');
+    const supporting = document.querySelector('.hero-supporting');
+    const heroRect = hero.getBoundingClientRect();
+    const copyRect = copy.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const supportingRect = supporting.getBoundingClientRect();
+
+    return {
+      columns: getComputedStyle(hero).gridTemplateColumns,
+      heroWidth: heroRect.width,
+      copyWidth: copyRect.width,
+      copyBottom: copyRect.bottom,
+      panelTop: panelRect.top,
+      panelBottom: panelRect.bottom,
+      panelWidth: panelRect.width,
+      supportingTop: supportingRect.top,
+    };
+  });
+
+  expect(layout.columns.trim().split(/\s+/)).toHaveLength(1);
+  expect(layout.copyWidth).toBeGreaterThan(layout.heroWidth * 0.9);
+  expect(layout.panelTop).toBeGreaterThanOrEqual(layout.copyBottom - 1);
+  expect(layout.supportingTop).toBeGreaterThanOrEqual(layout.panelBottom - 1);
+  expect(layout.panelWidth).toBeLessThanOrEqual(620);
 });
 
 test('мобильная оплата открывается как прокручиваемая нижняя панель', async ({ page }) => {
