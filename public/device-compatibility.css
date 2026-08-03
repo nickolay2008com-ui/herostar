@@ -1,10 +1,22 @@
 /* Cross-device hardening: keep the existing visual system, remove browser and viewport edge cases. */
 html {
+  max-width: 100%;
+  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-body { min-width: 280px; }
+body {
+  min-width: 280px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+  html,
+  body { overflow-x: clip; }
+}
+
 img, svg, video, canvas { max-width: 100%; }
 button, input, textarea, select { max-width: 100%; }
 input[type="date"], input[type="time"] { min-width: 0; }
@@ -15,12 +27,20 @@ input[type="date"], input[type="time"] { min-width: 0; }
   height: 100dvh;
 }
 
+.deep-dive-modal,
+.deep-dive-tabs,
+.deep-dive-progress,
+.deep-dive-scroll,
+.deep-dive-content-inner,
 .deep-dive-heading,
 .deep-dive-heading > div,
 .card-title,
 .modal,
 .purchase-modal,
-.consult-head > div { min-width: 0; }
+.consult-head > div {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .deep-dive-head h2,
 .deep-dive-head p,
@@ -47,7 +67,10 @@ input[type="date"], input[type="time"] { min-width: 0; }
 }
 
 @media (max-width: 720px) {
+  .deep-dive-backdrop { min-width: 0; }
+
   .deep-dive-modal {
+    width: 100%;
     height: min(96vh, 900px);
     height: min(96dvh, 900px);
   }
