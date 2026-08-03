@@ -34,7 +34,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm start',
+    command: 'node scripts/start-playwright-server.mjs',
     url: 'http://127.0.0.1:3100/health',
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,
