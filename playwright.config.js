@@ -6,16 +6,19 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: process.env.CI ? 1 : undefined,
-  retries: 0,
+  retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'line',
   use: {
     baseURL: 'http://127.0.0.1:3100',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
+    { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'android-chromium', use: { ...devices['Pixel 7'] } },
+    { name: 'iphone-webkit', use: { ...devices['iPhone 13'] } },
+    { name: 'tablet-webkit', use: { ...devices['iPad Mini'] } },
   ],
   webServer: {
     command: 'npm start',
