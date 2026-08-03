@@ -32,7 +32,6 @@ input[type="date"], input[type="time"] { min-width: 0; }
   min-width: 0;
   max-width: 100%;
 }
-.map-dashboard { grid-template-columns: minmax(0, 1fr); }
 .identity-panel,
 .treasure-panel,
 .card-stack { width: 100%; }
