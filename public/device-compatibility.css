@@ -1,0 +1,127 @@
+/* Cross-device hardening: keep the existing visual system, remove browser and viewport edge cases. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body { min-width: 280px; }
+img, svg, video, canvas { max-width: 100%; }
+button, input, textarea, select { max-width: 100%; }
+input[type="date"], input[type="time"] { min-width: 0; }
+
+/* Stable viewport height on old mobile browsers, then dynamic viewport where supported. */
+.consult-panel {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.deep-dive-heading,
+.deep-dive-heading > div,
+.card-title,
+.modal,
+.purchase-modal,
+.consult-head > div { min-width: 0; }
+
+.deep-dive-head h2,
+.deep-dive-head p,
+.deep-dive-question,
+.deep-dive-tabs button,
+.deep-step-footer button,
+.modal h2,
+.modal p,
+.card-title strong,
+.card-title span,
+.message,
+.purchase-modal li { overflow-wrap: anywhere; }
+
+@media (pointer: coarse) {
+  .deep-dive-head .modal-close,
+  .deep-dive-tabs button,
+  .deep-step-footer button,
+  .value-carousel-controls button,
+  .question-chips button,
+  .map-actions button { min-height: 44px; }
+
+  .deep-dive-head .modal-close,
+  .value-carousel-controls button { min-width: 44px; }
+}
+
+@media (max-width: 720px) {
+  .deep-dive-modal {
+    height: min(96vh, 900px);
+    height: min(96dvh, 900px);
+  }
+
+  .deep-dive-head .modal-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .deep-dive-tabs button { min-height: 44px; }
+}
+
+@media (max-width: 660px) {
+  .section-shell { width: min(1240px, calc(100% - 24px)); }
+
+  .modal {
+    max-height: calc(100vh - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+
+  .consult-panel {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 359px) {
+  .topbar { gap: 8px; }
+  .brand { flex: 0 1 auto; min-width: 0; }
+  .brand > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  .top-actions { flex: 1 1 auto; justify-content: flex-end; }
+  .top-actions .ghost-button { max-width: 50vw; }
+
+  .deep-dive-head,
+  .deep-dive-question,
+  .deep-dive-progress { padding-inline: 12px; }
+  .deep-dive-tabs { padding-inline: 12px; scroll-padding-inline: 12px; }
+  .deep-dive-scroll { padding-inline: 12px; }
+  .deep-dive-heading { gap: 9px; }
+  .deep-dive-icon { width: 40px; height: 40px; }
+  .deep-life-example { grid-template-columns: 1fr; }
+  .deep-life-example > span { margin-bottom: -3px; }
+  .deep-practice { grid-template-columns: 1fr; }
+  .deep-practice ol { grid-column: 1; }
+}
+
+@media (orientation: landscape) and (max-height: 480px) {
+  .deep-dive-backdrop { padding: 0; }
+  .deep-dive-modal {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  .deep-dive-head { padding-block: 10px 8px; }
+  .deep-dive-icon { width: 38px; height: 38px; border-radius: 12px; }
+  .deep-dive-head h2 { font-size: 22px; }
+  .deep-dive-question { padding-block: 8px; font-size: 14px; }
+  .deep-dive-tabs { padding-block: 6px; }
+  .deep-dive-progress { padding-block: 6px 8px; }
+  .deep-dive-scroll { padding-block: 12px calc(14px + env(safe-area-inset-bottom)); }
+
+  .modal-backdrop { align-items: stretch; }
+  .modal {
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glass-panel,
+  .treasure-card,
+  .deep-formula-card,
+  .deep-life-example,
+  .deep-state,
+  .modal { border-color: rgba(255,255,255,.24); }
+}
