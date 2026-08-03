@@ -115,8 +115,44 @@ input[type="date"], input[type="time"] { min-width: 0; }
   .value-carousel-controls button { min-width: 44px; }
 }
 
-@media (max-width: 950px) {
+/*
+ * Some older low-density Android devices expose a 960-1024 CSS-pixel portrait
+ * viewport. Treat that range as a compact layout instead of forcing the
+ * two-column desktop hero into a physically narrow screen.
+ */
+@media (max-width: 1080px) {
+  .hero.section-shell {
+    width: calc(100% - 40px);
+    max-width: 1240px;
+    grid-template-areas:
+      "copy"
+      "panel"
+      "support" !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+    column-gap: 0;
+    row-gap: 26px;
+  }
+
+  .hero.section-shell > .hero-copy,
+  .hero.section-shell > .hero-supporting,
+  .hero.section-shell > .birth-panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .hero.section-shell > .hero-copy,
+  .hero.section-shell > .hero-supporting { width: 100%; }
+
+  .hero.section-shell > .birth-panel {
+    width: 100%;
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   .map-dashboard { grid-template-columns: minmax(0, 1fr); }
+  .identity-panel { position: relative; top: 0; }
 }
 
 @media (max-width: 720px) {
@@ -137,7 +173,11 @@ input[type="date"], input[type="time"] { min-width: 0; }
 }
 
 @media (max-width: 660px) {
-  .section-shell { width: min(1240px, calc(100% - 24px)); }
+  .section-shell {
+    width: calc(100% - 24px);
+    max-width: 1240px;
+  }
+  .hero.section-shell { width: calc(100% - 24px); }
   .map-dashboard,
   .identity-panel,
   .treasure-panel,
