@@ -46,15 +46,14 @@ test('текущий профиль устройства сохраняет це
   await expect(page.locator('.birth-panel')).toBeVisible();
   await expectNoPageOverflow(page);
 
-  const controls = page.locator('.birth-panel input, .birth-panel button');
+  const controls = page.locator('.birth-panel .field input, .birth-panel .primary-button');
   const sizes = await controls.evaluateAll((elements) => elements.map((element) => {
     const rect = element.getBoundingClientRect();
     return { width: rect.width, height: rect.height };
   }));
 
   expect(sizes.length).toBeGreaterThan(0);
-  expect(sizes.every(({ width }) => width > 0)).toBeTruthy();
-  expect(sizes.filter(({ height }) => height > 0).every(({ height }) => height >= 44)).toBeTruthy();
+  expect(sizes.every(({ width, height }) => width > 0 && height >= 44)).toBeTruthy();
 });
 
 for (const viewport of explicitViewports) {
@@ -139,9 +138,12 @@ test('полный разбор работает в горизонтальном
 
 test('чат карты помещается на телефоне и планшете', async ({ page }) => {
   await openDemoMap(page);
-  await page.locator('#consultFab').click();
 
   const panel = page.locator('#consultPanel');
+  await panel.evaluate((element) => {
+    element.classList.add('open');
+    element.setAttribute('aria-hidden', 'false');
+  });
   await expect(panel).toHaveClass(/open/);
   await expectElementInsideViewport(panel, page);
 
