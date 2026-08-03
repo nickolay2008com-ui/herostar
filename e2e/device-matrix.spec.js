@@ -9,8 +9,8 @@ const explicitViewports = [
   { name: 'wide-desktop', width: 1920, height: 1080 },
 ];
 
-async function expectNoPageOverflow(page) {
-  const geometry = await page.evaluate(() => {
+async function pageGeometry(page) {
+  return page.evaluate(() => {
     const viewportWidth = window.innerWidth;
     const offenders = [...document.querySelectorAll('body *')]
       .map((element) => {
@@ -44,10 +44,15 @@ async function expectNoPageOverflow(page) {
       offenders,
     };
   });
+}
 
-  const message = `Горизонтальное переполнение: ${JSON.stringify(geometry, null, 2)}`;
+async function expectNoPageOverflow(page) {
+  const geometry = await pageGeometry(page);
+  const message = `Глобальное горизонтальное переполнение: ${JSON.stringify(geometry, null, 2)}`;
+
+  // documentElement отражает реальную прокрутку страницы. body.scrollWidth может учитывать
+  // намеренно обрезанные фоновые свечения и внутреннее содержимое scroll-контейнеров.
   expect(geometry.documentWidth, message).toBeLessThanOrEqual(geometry.viewportWidth + 1);
-  expect(geometry.bodyWidth, message).toBeLessThanOrEqual(geometry.viewportWidth + 1);
 }
 
 async function expectElementInsideViewport(locator, page) {
@@ -63,11 +68,18 @@ async function expectElementInsideViewport(locator, page) {
   expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
 }
 
+async function expectMapFitsViewport(page) {
+  for (const selector of ['.map-shell', '.map-dashboard', '.identity-panel', '.treasure-panel', '.card-stack', '.mode-tabs']) {
+    await expectElementInsideViewport(page.locator(selector), page);
+  }
+}
+
 async function openDemoMap(page) {
   await page.goto('/');
   await page.locator('#demoButton').click();
   await expect(page.locator('#map')).toBeVisible({ timeout: 35_000 });
   await expect(page.locator('.deep-dive-button').first()).toBeVisible({ timeout: 10_000 });
+  await expectMapFitsViewport(page);
 }
 
 test('текущий профиль устройства сохраняет целостность главной', async ({ page }) => {
