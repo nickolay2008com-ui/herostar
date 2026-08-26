@@ -51,7 +51,7 @@ async function createClone(page, { unknownTime = false } = {}) {
 }
 
 test('главная и чат имеют отдельные адреса с явным возвратом', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await page.goto('/clone/live/');
   await expect(page).toHaveURL(/\/clone\/live\/$/);
   await expect(page.locator('#intro')).toBeVisible();
@@ -67,7 +67,7 @@ test('главная и чат имеют отдельные адреса с я�
 });
 
 test('вопрос проходит через создание Клона и показывает реальные факторы ответа', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект, если роли и деньги пока не определены?');
   await createClone(page);
   await expect(page.locator('#logicFactors')).toBeVisible();
@@ -77,7 +77,7 @@ test('вопрос проходит через создание Клона и п
 });
 
 test('режим неизвестного времени честно исключает дома, углы и Луну', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Как ответить партнёру и сохранить ясные договорённости?');
   await createClone(page, { unknownTime: true });
   await expect(page.locator('#cloneStatus')).toContainText('без домов');
@@ -88,7 +88,7 @@ test('режим неизвестного времени честно исклю
 });
 
 test('ответ и его факторный след восстанавливаются после перезагрузки', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект или пока сохранить стабильность?');
   await createClone(page);
   const answerParagraph = page.locator('#messages .message.clone').last().locator('p').first();
