@@ -129,6 +129,301 @@
   line-height: 1.45 !important;
 }
 
+/* Live uses voluntary support after value. Legacy fixed-price clone offers stay
+   in the shared DOM only for backwards compatibility and are not surfaced here. */
+.live-product.live-chat-page.live-heart-support #fullModeOffer,
+.live-product.live-chat-page.live-heart-support #alignmentOffer,
+.live-product.live-chat-page.live-heart-support #openPremiumDiscovery,
+.live-product.live-chat-page.live-heart-support #passportPremiumEntry,
+.live-product.live-chat-page.live-heart-support #premiumDiscovery,
+.live-product.live-chat-page.live-heart-support #clonePaywall,
+.live-product.live-chat-page.live-heart-support .web-search-gate .primary {
+  display: none !important;
+}
+
+.live-product .live-support-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  width: min(680px, calc(100% - 24px));
+  margin: 8px auto 16px;
+  padding: 14px 15px;
+  border: 1px solid rgba(184,150,255,.17);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(119,83,196,.12), rgba(20,17,30,.86));
+  box-shadow: 0 14px 36px rgba(0,0,0,.16);
+}
+
+.live-product .live-support-mark,
+.live-product .live-support-modal-mark {
+  display: grid;
+  place-items: center;
+  color: #ccbafa;
+  border: 1px solid rgba(204,186,250,.2);
+  background: rgba(180,145,255,.08);
+}
+
+.live-product .live-support-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  font-size: 19px;
+}
+
+.live-product .live-support-copy {
+  min-width: 0;
+}
+
+.live-product .live-support-copy > strong {
+  display: block;
+  margin: 1px 0 5px;
+  color: #eee7f7;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.live-product .live-support-copy > p {
+  margin: 0;
+  color: #a9a1b2;
+  font-size: 11.5px;
+  line-height: 1.48;
+}
+
+.live-product .live-support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.live-product .live-support-open,
+.live-product .live-support-dismiss,
+.live-product .live-support-suggestions button,
+.live-product .live-support-submit,
+.live-product .live-support-close {
+  min-height: 44px;
+  border-radius: 11px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.live-product .live-support-open,
+.live-product .live-support-submit {
+  border: 1px solid rgba(190,159,255,.34);
+  color: #f7f1ff;
+  background: linear-gradient(135deg, rgba(128,88,218,.9), rgba(93,61,166,.96));
+}
+
+.live-product .live-support-open {
+  padding: 0 14px;
+  font-size: 11.5px;
+  font-weight: 720;
+}
+
+.live-product .live-support-dismiss {
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  color: #9e97a8;
+  background: rgba(255,255,255,.025);
+  font-size: 11.5px;
+}
+
+.live-product .live-support-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(4,4,9,.74);
+  backdrop-filter: blur(10px);
+}
+
+.live-product .live-support-backdrop.hidden {
+  display: none !important;
+}
+
+.live-product .live-support-modal-card {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: min(760px, calc(100dvh - 32px));
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid rgba(194,163,255,.18);
+  border-radius: 22px;
+  background: #0d0b13;
+  box-shadow: 0 28px 90px rgba(0,0,0,.48);
+  overscroll-behavior: contain;
+}
+
+.live-product .live-support-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.08);
+  color: #aaa1b3;
+  background: rgba(255,255,255,.025);
+  font-size: 22px;
+}
+
+.live-product .live-support-modal-mark {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  border-radius: 13px;
+  font-size: 23px;
+}
+
+.live-product .live-support-eyebrow {
+  margin: 0 0 5px;
+  color: #a994d3;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.live-product .live-support-modal-card h2 {
+  margin: 0;
+  color: #f4eefb;
+  font-size: clamp(22px, 5vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+.live-product .live-support-intro {
+  margin: 10px 0 0;
+  color: #b0a8b9;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.live-product .live-support-thanks {
+  display: grid;
+  gap: 4px;
+  margin: 16px 0;
+  padding: 12px 13px;
+  border: 1px solid rgba(184,150,255,.13);
+  border-radius: 13px;
+  background: rgba(151,111,231,.055);
+}
+
+.live-product .live-support-thanks strong {
+  color: #ded2f1;
+  font-size: 11px;
+}
+
+.live-product .live-support-thanks span {
+  color: #a69dae;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.live-product .live-support-form,
+.live-product .live-support-form fieldset {
+  display: grid;
+  gap: 11px;
+}
+
+.live-product .live-support-form fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.live-product .live-support-form legend,
+.live-product .live-support-custom,
+.live-product .live-support-contact {
+  color: #c4bbc9;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.live-product .live-support-form legend {
+  margin-bottom: 8px;
+}
+
+.live-product .live-support-suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.live-product .live-support-suggestions button {
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.09);
+  color: #cfc5d9;
+  background: rgba(255,255,255,.03);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.live-product .live-support-suggestions button[aria-pressed="true"] {
+  border-color: rgba(190,159,255,.48);
+  color: #f3ecfb;
+  background: rgba(138,95,225,.16);
+}
+
+.live-product .live-support-custom,
+.live-product .live-support-contact {
+  display: grid;
+  gap: 6px;
+}
+
+.live-product .live-support-custom input,
+.live-product .live-support-contact input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 11px;
+  outline: none;
+  color: #efe9f4;
+  background: rgba(255,255,255,.028);
+  font: inherit;
+  font-size: 13px;
+}
+
+.live-product .live-support-custom input:focus,
+.live-product .live-support-contact input:focus {
+  border-color: rgba(190,159,255,.48);
+  box-shadow: 0 0 0 3px rgba(138,95,225,.1);
+}
+
+.live-product .live-support-error {
+  min-height: 16px;
+  margin: -2px 0 0;
+  color: #e9a7b7;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.live-product .live-support-submit {
+  width: 100%;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.live-product .live-support-submit:disabled {
+  cursor: default;
+  opacity: .42;
+}
+
+.live-product .live-support-legal {
+  margin: 13px 0 0;
+  color: #817a88;
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.live-product .live-support-legal a {
+  color: #a89bc0;
+}
+
 @media (max-width: 900px) {
   .live-product.live-chat-page.live-app-ready .workspace .side-head,
   .live-product.live-chat-page.live-app-ready .workspace .side-note {
@@ -166,6 +461,40 @@
   .live-product .answer-factor-item,
   .live-product .answer-factor-note {
     padding: 9px 10px;
+  }
+
+  .live-product .live-support-card {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 10px;
+    width: calc(100% - 16px);
+    margin-block: 6px 12px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .live-product .live-support-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
+  .live-product .live-support-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .live-product .live-support-modal-card {
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom)));
+    padding: 20px 16px 18px;
+    border-radius: 18px;
+  }
+
+  .live-product .live-support-suggestions button,
+  .live-product .live-support-open,
+  .live-product .live-support-dismiss,
+  .live-product .live-support-submit,
+  .live-product .live-support-close {
+    min-height: 44px;
   }
 }
 
