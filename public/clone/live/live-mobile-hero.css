@@ -1,5 +1,6 @@
-/* Mobile composition for the canonical /clone/live hero.
-   The image stays identical to desktop: --live-female-image from live-assets.css. */
+/* Mobile composition for the canonical /clone/live landing.
+   The hero keeps the proven image/copy geometry while the sections below it
+   become more compact and action-first on phones. */
 
 @media (max-width: 640px) {
   .live-product .live-hero {
@@ -62,6 +63,160 @@
     text-wrap: balance;
     filter: drop-shadow(0 3px 12px rgba(0, 0, 0, .72));
   }
+
+  /* Keep the promise concise before the first meaningful action. */
+  .live-product .live-hero .live-lead,
+  .live-product .live-hero .live-trust-line,
+  .live-product .live-hero .live-benefits {
+    display: none;
+  }
+
+  /* The question form is the primary mobile entry point. */
+  .live-product .live-intent {
+    margin-top: 0;
+    padding: 18px 16px 17px;
+  }
+
+  .live-product .live-intent .eyebrow {
+    margin-bottom: 5px;
+  }
+
+  .live-product .live-intent h2 {
+    margin: 4px 0 6px;
+    font-size: clamp(23px, 6.6vw, 29px);
+    line-height: 1.06;
+  }
+
+  .live-product .live-intent > div > p:not(.eyebrow) {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .live-product .live-intent-form {
+    margin-top: 12px;
+  }
+
+  .live-product #heroQuestion {
+    min-height: 92px;
+    padding: 14px;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .live-product .live-intent-form > .primary {
+    width: 100%;
+    min-height: 50px;
+    margin-top: 2px;
+    border-radius: 15px;
+    font-size: 15px;
+    font-weight: 760;
+  }
+
+  .live-product .live-intent-meta {
+    gap: 8px;
+    padding-inline: 4px;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  /* Examples remain available, but read as proof after the question field. */
+  .live-product .clone-insight-slider {
+    margin-top: 20px;
+  }
+
+  .live-product .clone-insight-head {
+    margin-bottom: 9px;
+  }
+
+  .live-product .clone-insight-context {
+    margin-bottom: 7px;
+  }
+
+  /* Turn the three explanatory cards into a compact three-step route. */
+  .live-product .live-flow {
+    margin-top: 12px;
+    padding: 18px 16px;
+  }
+
+  .live-product .live-section-head {
+    margin-bottom: 12px;
+  }
+
+  .live-product .live-section-head .eyebrow {
+    margin-bottom: 4px;
+  }
+
+  .live-product .live-section-head h2 {
+    margin-top: 4px;
+    font-size: 24px;
+    line-height: 1.08;
+  }
+
+  .live-product .live-steps {
+    gap: 7px;
+  }
+
+  .live-product .live-steps article {
+    min-height: 0;
+    padding: 13px 13px 13px 50px;
+    border-radius: 17px;
+  }
+
+  .live-product .live-step-number {
+    top: 13px;
+    right: auto;
+    left: 13px;
+    width: 27px;
+    height: 27px;
+  }
+
+  .live-product .live-steps i {
+    display: none;
+  }
+
+  .live-product .live-steps h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .live-product .live-steps p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  /* Keep the secondary explanation, but stop it becoming another full screen. */
+  .live-product .live-alternate {
+    min-height: 0;
+  }
+
+  .live-product .live-alternate-copy {
+    padding: 22px 17px;
+  }
+
+  .live-product .live-alternate-copy h2 {
+    margin-top: 5px;
+    font-size: 24px;
+    line-height: 1.08;
+  }
+
+  .live-product .live-alternate-copy p:not(.eyebrow) {
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .live-product .live-alternate-image {
+    min-height: 190px;
+  }
+
+  .live-product .live-disclaimer {
+    margin-top: 15px;
+    padding-inline: 7px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
 }
 
 @media (max-width: 360px) {
@@ -77,5 +232,9 @@
   .live-product .live-hero .live-accent {
     max-width: 254px;
     font-size: clamp(14px, 4.3vw, 16px);
+  }
+
+  .live-product #heroQuestion {
+    min-height: 88px;
   }
 }
