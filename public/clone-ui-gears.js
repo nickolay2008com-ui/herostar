@@ -134,22 +134,6 @@
     return response;
   };
 
-  function activateTab(name) {
-    document.querySelectorAll('[data-tab]').forEach((button) => {
-      button.classList.toggle('active', button.dataset.tab === name);
-    });
-    const target = name === 'profile' ? document.querySelector('.logic') : document.querySelector('.conversation');
-    if (name === 'profile') {
-      const details = target?.querySelector('details');
-      if (details) details.open = true;
-    }
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  document.querySelectorAll('[data-tab]').forEach((button) => {
-    button.addEventListener('click', () => activateTab(button.dataset.tab));
-  });
-
   const savedQuestion = pendingQuestion();
   if (savedQuestion) {
     const timer = setInterval(() => {
