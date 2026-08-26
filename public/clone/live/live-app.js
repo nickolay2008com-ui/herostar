@@ -276,6 +276,13 @@
             <button class="live-support-dismiss" type="button">Не сейчас</button>
           </div>
         </div>`;
+      const openButton = card.querySelector('.live-support-open');
+      const dismissButton = card.querySelector('.live-support-dismiss');
+      openButton.addEventListener('click', () => openSupportModal(openButton));
+      openButton.addEventListener('pointerup', () => {
+        if (matchMedia('(pointer: coarse)').matches) openSupportModal(openButton);
+      });
+      dismissButton.addEventListener('click', () => dismissSupport(dismissButton));
       supportCard = card;
       return card;
     }
