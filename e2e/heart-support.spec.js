@@ -1,6 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 const CHART_ID = 'chart-support-e2e';
+const TOUCH_PROJECTS = new Set(['android-chromium', 'iphone-webkit', 'tablet-webkit']);
+
+async function activate(locator, testInfo) {
+  if (TOUCH_PROJECTS.has(testInfo.project.name)) {
+    await locator.tap();
+    return;
+  }
+  await locator.click();
+}
 
 async function mountThreeCompletedAnswers(page) {
   await expect(page.locator('body')).toHaveClass(/live-app-ready/);
@@ -84,7 +93,7 @@ test('добровольная поддержка не блокирует Live �
   await expect(page.locator('#alignmentOffer')).toBeHidden();
   await expect(page.locator('#questionForm')).toBeVisible();
 
-  await supportCard.getByRole('button', { name: 'Поддержать HeroStar' }).click();
+  await activate(supportCard.getByRole('button', { name: 'Поддержать HeroStar' }), testInfo);
   const modal = page.locator('#liveHeartSupportModal');
   await expect(modal).toBeVisible();
   await expect(modal).toContainText('Бесплатный диалог останется доступен независимо от оплаты');
@@ -99,18 +108,18 @@ test('добровольная поддержка не блокирует Live �
   expect(viewport).not.toBeNull();
   expect(modalBox.width).toBeLessThanOrEqual(viewport.width + 1);
   expect(modalBox.height).toBeLessThanOrEqual(viewport.height + 1);
-  if (['android-chromium', 'iphone-webkit'].includes(testInfo.project.name)) {
+  if (TOUCH_PROJECTS.has(testInfo.project.name)) {
     const closeBox = await modal.getByRole('button', { name: 'Закрыть' }).boundingBox();
     expect(closeBox.width).toBeGreaterThanOrEqual(44);
     expect(closeBox.height).toBeGreaterThanOrEqual(44);
   }
 
-  await modal.getByRole('button', { name: 'Закрыть' }).click();
+  await activate(modal.getByRole('button', { name: 'Закрыть' }), testInfo);
   await expect(modal).toBeHidden();
   await expect(page.locator('#questionForm')).toBeVisible();
   await expect(supportCard).toBeVisible();
 
-  await supportCard.getByRole('button', { name: 'Поддержать HeroStar' }).click();
+  await activate(supportCard.getByRole('button', { name: 'Поддержать HeroStar' }), testInfo);
   await modal.locator('#liveSupportCustomAmount').fill('350');
   await modal.locator('#liveSupportReceiptContact').fill('test@example.com');
   await expect(modal.locator('.live-support-submit')).toBeEnabled();
@@ -119,7 +128,7 @@ test('добровольная поддержка не блокирует Live �
   const paymentRequestPromise = page.waitForRequest((request) => (
     request.method() === 'POST' && request.url().endsWith('/api/payments/create')
   ));
-  await modal.locator('.live-support-submit').click();
+  await activate(modal.locator('.live-support-submit'), testInfo);
   const paymentRequest = await paymentRequestPromise;
   const paymentPayload = paymentRequest.postDataJSON();
 
