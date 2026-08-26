@@ -13,8 +13,8 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260826-app1/);
-  assert.match(gears, /live-app\.js\?v=20260826-app1/);
+  assert.match(gears, /live-app\.css\?v=20260826-app2/);
+  assert.match(gears, /live-app\.js\?v=20260826-app2/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
   assert.match(app, /conversation\.classList\.toggle\('hidden', profileMode\)/);
@@ -23,6 +23,16 @@ test('Live route загружает отдельный App-shell без втор
   assert.equal((html.match(/id="messages"/g) || []).length, 1);
   assert.doesNotMatch(app, /createElement\('form'\)|createElement\("form"\)/);
   assert.ok(styles.length > 0);
+});
+
+test('Live HTML меняет immutable cache-key загрузчика App при новой поставке', async () => {
+  const [html, bootstrap] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('bootstrap.js'),
+  ]);
+  assert.match(bootstrap, /max-age=31536000, immutable/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260826-support1/);
+  assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
 });
 
 test('диалог сохраняет позицию чтения при переходе в Мою карту', async () => {

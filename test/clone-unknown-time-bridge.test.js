@@ -12,10 +12,14 @@ test('защитный слой использует существующий п
 });
 
 test('обновлённый защитный слой не остаётся в immutable-кэше', async () => {
-  const pages = await Promise.all([
+  const [cloneHtml, cloneIndexHtml, liveHtml] = await Promise.all([
     read('public/clone.html'),
     read('public/clone/index.html'),
     read('public/clone/live/index.html'),
   ]);
-  assert.ok(pages.every((html) => html.includes('/clone-ui-gears.js?v=20260729-routes1')));
+
+  assert.match(cloneHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
+  assert.match(cloneIndexHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
+  assert.match(liveHtml, /\/clone-ui-gears\.js\?v=20260826-support1/);
+  assert.doesNotMatch(liveHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
 });

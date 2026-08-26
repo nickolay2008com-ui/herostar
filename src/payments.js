@@ -129,6 +129,12 @@ function offerCopy(offer) {
       itemDescription: '30 дней глубокого режима клона и Telegram-сопровождения',
     };
   }
+  if (offer.support) {
+    return {
+      description: 'HeroStar — поддержка развития Звёздного клона',
+      itemDescription: 'Доступ к карте и Паспорту клона с 24-часовым бонусом глубокого режима',
+    };
+  }
   return {
     description: 'HeroStar — полная интерактивная карта',
     itemDescription: 'Доступ к полной интерактивной карте HeroStar',

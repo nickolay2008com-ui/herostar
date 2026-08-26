@@ -1,6 +1,12 @@
 import { commerceState } from './state.js';
 import { active } from './helpers.js';
-import { OFFER_CODES, DAY_MS, offerCatalog } from './catalog.js';
+import {
+  OFFER_CODES,
+  DAY_MS,
+  offerCatalog,
+  cloneSupportConfig,
+  parseCloneSupportOfferCode,
+} from './catalog.js';
 import { decorateUserAccess, hasCloneAccessForChart } from './access.js';
 
 async function activeAlignmentForUser(userId, now = new Date()) {
@@ -59,10 +65,12 @@ export async function getCommerceState(user, now = new Date(), chartId = null) {
   ));
   const access = await decorateUserAccess(user, now, { chartId, cloneContext });
   const catalog = offerCatalog();
+  const support = cloneSupportConfig();
   if (!access) {
     return {
       access: null,
       offers: {
+        support,
         day: { ...catalog[OFFER_CODES.CLONE_DAY], available: true },
         alignment: {
           ...catalog[OFFER_CODES.CLONE_ALIGNMENT],
@@ -77,6 +85,7 @@ export async function getCommerceState(user, now = new Date(), chartId = null) {
   return {
     access,
     offers: {
+      support,
       day: { ...catalog[OFFER_CODES.CLONE_DAY], available: !hasCloneAccessForChart(access, chartId, now) },
       alignment: {
         ...alignment,
@@ -101,10 +110,15 @@ export async function resolveOffer({ user, offerCode, product, chartId = null })
   const catalog = offerCatalog();
   const code = String(offerCode || '').trim().toLowerCase()
     || (product === 'clone' ? OFFER_CODES.CLONE_DAY : OFFER_CODES.FULL_MAP);
-  const offer = catalog[code];
+  const dynamicSupport = parseCloneSupportOfferCode(code);
+  const offer = dynamicSupport || catalog[code];
   if (!offer) throw offerError('Неизвестное предложение оплаты.', 'UNKNOWN_OFFER');
   if (offer.product !== product) throw offerError('Предложение не относится к выбранному продукту.', 'OFFER_PRODUCT_MISMATCH');
   if (offer.product === 'clone' && !chartId) throw offerError('Сначала выберите Звёздного клона для покупки.', 'CLONE_CHART_REQUIRED');
+
+  if (dynamicSupport) {
+    return { ...dynamicSupport, creditSourcePaymentId: null, credited: false };
+  }
 
   const scopedUser = offer.product === 'clone'
     ? { ...user, accessProduct: 'clone', cloneEntitlementChartId: String(chartId) }

@@ -1,16 +1,64 @@
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const ALIGNMENT_MS = 30 * DAY_MS;
+export const CLONE_SUPPORT_PREFIX = 'clone_support_';
+export const CLONE_SUPPORT_MIN_AMOUNT = 100;
+export const CLONE_SUPPORT_MAX_AMOUNT = 10000;
+export const CLONE_SUPPORT_SUGGESTED_AMOUNTS = Object.freeze([199, 499, 999]);
 
 export const OFFER_CODES = Object.freeze({
   FULL_MAP: 'herostar_full_map',
   CLONE_DAY: 'clone_day',
   CLONE_ALIGNMENT: 'clone_alignment',
+  CLONE_SUPPORT: 'clone_support',
 });
 
 function money(value, fallback) {
   const number = Number(value ?? fallback);
   if (!Number.isFinite(number) || number <= 0) return fallback;
   return Math.round(number);
+}
+
+export function normalizeCloneSupportAmount(value) {
+  const amount = Number(value);
+  if (!Number.isInteger(amount)
+    || amount < CLONE_SUPPORT_MIN_AMOUNT
+    || amount > CLONE_SUPPORT_MAX_AMOUNT) return null;
+  return amount;
+}
+
+export function cloneSupportOfferCode(amount) {
+  const normalized = normalizeCloneSupportAmount(amount);
+  return normalized ? `${CLONE_SUPPORT_PREFIX}${normalized}` : null;
+}
+
+export function parseCloneSupportOfferCode(value) {
+  const code = String(value || '').trim().toLowerCase();
+  const match = code.match(/^clone_support_(\d{1,5})$/);
+  if (!match) return null;
+  const amount = normalizeCloneSupportAmount(Number(match[1]));
+  if (!amount) return null;
+  return {
+    code: `${CLONE_SUPPORT_PREFIX}${amount}`,
+    product: 'clone',
+    title: 'Поддержка HeroStar',
+    amount,
+    durationHours: null,
+    support: true,
+  };
+}
+
+export function isCloneSupportOffer(value) {
+  return Boolean(parseCloneSupportOfferCode(value));
+}
+
+export function cloneSupportConfig() {
+  return Object.freeze({
+    codePrefix: CLONE_SUPPORT_PREFIX,
+    title: 'Поддержать HeroStar',
+    minAmount: CLONE_SUPPORT_MIN_AMOUNT,
+    maxAmount: CLONE_SUPPORT_MAX_AMOUNT,
+    suggestedAmounts: [...CLONE_SUPPORT_SUGGESTED_AMOUNTS],
+  });
 }
 
 export function offerCatalog(env = process.env) {
