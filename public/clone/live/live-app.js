@@ -546,16 +546,17 @@
     });
 
     document.addEventListener('click', (event) => {
-      const target = event.target instanceof Element ? event.target : null;
+      const target = event.target instanceof Element ? event.target : event.target?.parentElement;
       if (!target) return;
+      const currentMessages = document.querySelector('#messages');
       const openButton = target.closest('.live-support-open');
-      if (openButton && messages.contains(openButton)) {
+      if (openButton && currentMessages?.contains(openButton)) {
         openSupportModal(openButton);
         return;
       }
       const dismissButton = target.closest('.live-support-dismiss');
-      if (dismissButton && messages.contains(dismissButton)) dismissSupport(dismissButton);
-    });
+      if (dismissButton && currentMessages?.contains(dismissButton)) dismissSupport(dismissButton);
+    }, true);
 
     new MutationObserver(syncDialogState).observe(dialogView, {
       attributes: true,
