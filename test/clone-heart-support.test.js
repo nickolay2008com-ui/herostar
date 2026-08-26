@@ -128,14 +128,17 @@ test('Live показывает поддержку только после по�
   assert.match(styles, /\.live-support-open,[\s\S]*?min-height:\s*44px/);
 });
 
-test('Live действия поддержки переживают пересборку DOM истории', async () => {
+test('Live действия поддержки переживают пересборку DOM истории и touch-перехват', async () => {
   const app = await read('public/clone/live/live-app.js');
   assert.match(app, /const existingCard = messages\.querySelector\('\.live-support-card'\)/);
   assert.match(app, /document\.addEventListener\('click'/);
-  assert.match(app, /openButton && messages\.contains\(openButton\)/);
+  assert.match(app, /const currentMessages = document\.querySelector\('#messages'\)/);
+  assert.match(app, /currentMessages\?\.contains\(openButton\)/);
+  assert.match(app, /currentMessages\?\.contains\(dismissButton\)/);
   assert.match(app, /target\.closest\('\.live-support-open'\)/);
   assert.match(app, /target\.closest\('\.live-support-dismiss'\)/);
   assert.match(app, /dismissSupport\(dismissButton\)/);
+  assert.match(app, /\}, true\);/);
 });
 
 test('Live открывает modal синхронно из уже проверенного config, а checkout перепроверяет config перед оплатой', async () => {
