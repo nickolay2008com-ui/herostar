@@ -13,8 +13,8 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260826-app1/);
-  assert.match(gears, /live-app\.js\?v=20260826-app1/);
+  assert.match(gears, /live-app\.css\?v=20260826-app2/);
+  assert.match(gears, /live-app\.js\?v=20260826-app2/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
   assert.match(app, /conversation\.classList\.toggle\('hidden', profileMode\)/);
