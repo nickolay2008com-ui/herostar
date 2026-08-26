@@ -37,14 +37,14 @@ function applyMemoryChartEntitlement({ userId, chartId, offerCode }) {
   const access = rowForChartAccess(userId, chartId) || emptyChartAccess(userId, chartId);
   access.full_map_unlocked = true;
   access.passport_unlocked = true;
-  if (offerCode === OFFER_CODES.CLONE_DAY) {
+  if (offerCode === OFFER_CODES.CLONE_DAY || isCloneSupportOffer(offerCode)) {
     access.access_until = addDuration(access.access_until, DAY_MS).toISOString();
   } else if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
     const base = latestDate(access.alignment_until, new Date());
     const until = new Date(base.getTime() + ALIGNMENT_MS).toISOString();
     access.access_until = until;
     access.alignment_until = until;
-  } else if (!isCloneSupportOffer(offerCode)) {
+  } else {
     throw new Error(`Unsupported clone entitlement: ${offerCode}`);
   }
   commerceState.memoryChartAccess.set(key, access);
@@ -116,11 +116,12 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
         if (!chartId) throw new Error('Clone support entitlement requires a chart.');
         await client.query(
           `INSERT INTO clone_chart_entitlements (
-             user_id, chart_id, full_map_unlocked, passport_unlocked
-           ) VALUES ($1, $2, TRUE, TRUE)
+             user_id, chart_id, full_map_unlocked, passport_unlocked, access_until
+           ) VALUES ($1, $2, TRUE, TRUE, NOW() + INTERVAL '24 hours')
            ON CONFLICT (user_id, chart_id) DO UPDATE SET
              full_map_unlocked = TRUE,
              passport_unlocked = TRUE,
+             access_until = GREATEST(COALESCE(clone_chart_entitlements.access_until, NOW()), NOW()) + INTERVAL '24 hours',
              updated_at = NOW()`,
           [String(userId), chartId],
         );
