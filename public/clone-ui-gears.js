@@ -66,6 +66,23 @@
     localStorage.removeItem(PENDING_KEY);
   }
 
+  function installLiveConversationOnboarding() {
+    if (currentPagePath !== '/clone/live/chat') return;
+    const messages = document.querySelector('#messages');
+    if (!messages) return;
+
+    const sync = () => {
+      const started = Boolean(messages.querySelector(':scope > .message.user'));
+      messages.querySelectorAll(':scope > [data-conversation-onboarding]').forEach((item) => {
+        item.classList.toggle('hidden', started);
+        item.setAttribute('aria-hidden', String(started));
+      });
+    };
+
+    new MutationObserver(sync).observe(messages, { childList: true });
+    sync();
+  }
+
   function installUnknownTimeControl() {
     const form = document.querySelector('#birthForm');
     const timeInput = form?.querySelector('input[name="time"]');
@@ -98,6 +115,7 @@
     return checkbox;
   }
 
+  installLiveConversationOnboarding();
   const unknownTime = installUnknownTimeControl();
 
   document.addEventListener('submit', (event) => {
