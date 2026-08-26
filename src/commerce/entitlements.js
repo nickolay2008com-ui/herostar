@@ -1,5 +1,5 @@
 import { commerceState } from './state.js';
-import { ALIGNMENT_MS, DAY_MS, OFFER_CODES } from './catalog.js';
+import { ALIGNMENT_MS, DAY_MS, OFFER_CODES, isCloneSupportOffer } from './catalog.js';
 import { addDuration, chartAccessKey, latestDate } from './helpers.js';
 import { decorateUserAccess, emptyChartAccess, rowForChartAccess, rowForUser } from './access.js';
 
@@ -37,13 +37,15 @@ function applyMemoryChartEntitlement({ userId, chartId, offerCode }) {
   const access = rowForChartAccess(userId, chartId) || emptyChartAccess(userId, chartId);
   access.full_map_unlocked = true;
   access.passport_unlocked = true;
-  if (offerCode === OFFER_CODES.CLONE_DAY) {
+  if (offerCode === OFFER_CODES.CLONE_DAY || isCloneSupportOffer(offerCode)) {
     access.access_until = addDuration(access.access_until, DAY_MS).toISOString();
-  } else {
+  } else if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
     const base = latestDate(access.alignment_until, new Date());
     const until = new Date(base.getTime() + ALIGNMENT_MS).toISOString();
     access.access_until = until;
     access.alignment_until = until;
+  } else {
+    throw new Error(`Unsupported clone entitlement: ${offerCode}`);
   }
   commerceState.memoryChartAccess.set(key, access);
   return access;
@@ -64,7 +66,7 @@ async function applyMemory({ paymentId, userId, chartId, offerCode, creditSource
     if (offerCode === OFFER_CODES.FULL_MAP) {
       globalAccess.full_map_unlocked = true;
       commerceState.memoryAccess.set(String(userId), globalAccess);
-    } else if ([OFFER_CODES.CLONE_DAY, OFFER_CODES.CLONE_ALIGNMENT].includes(offerCode)) {
+    } else if ([OFFER_CODES.CLONE_DAY, OFFER_CODES.CLONE_ALIGNMENT].includes(offerCode) || isCloneSupportOffer(offerCode)) {
       const chartAccess = applyMemoryChartEntitlement({ userId, chartId, offerCode });
       if (offerCode === OFFER_CODES.CLONE_ALIGNMENT) {
         globalAccess.clone_alignment_until = chartAccess.alignment_until;
@@ -110,6 +112,19 @@ export async function applyPaymentEntitlement({ paymentId, userId, chartId = nul
     if (!payment.entitlement_applied_at) {
       if (effectiveOffer === OFFER_CODES.FULL_MAP) {
         await client.query(`UPDATE users SET full_map_unlocked = TRUE WHERE telegram_id = $1`, [String(userId)]);
+      } else if (isCloneSupportOffer(effectiveOffer)) {
+        if (!chartId) throw new Error('Clone support entitlement requires a chart.');
+        await client.query(
+          `INSERT INTO clone_chart_entitlements (
+             user_id, chart_id, full_map_unlocked, passport_unlocked, access_until
+           ) VALUES ($1, $2, TRUE, TRUE, NOW() + INTERVAL '24 hours')
+           ON CONFLICT (user_id, chart_id) DO UPDATE SET
+             full_map_unlocked = TRUE,
+             passport_unlocked = TRUE,
+             access_until = GREATEST(COALESCE(clone_chart_entitlements.access_until, NOW()), NOW()) + INTERVAL '24 hours',
+             updated_at = NOW()`,
+          [String(userId), chartId],
+        );
       } else if (effectiveOffer === OFFER_CODES.CLONE_DAY) {
         if (!chartId) throw new Error('Clone day entitlement requires a chart.');
         await client.query(
