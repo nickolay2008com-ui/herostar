@@ -61,9 +61,7 @@ async function mockSupportConfig(page) {
 
 test('добровольная поддержка не блокирует Live и отправляет только проверяемый offerCode', async ({ page }, testInfo) => {
   await mockSupportConfig(page);
-  let paymentPayload = null;
   await page.route('**/api/payments/create', async (route) => {
-    paymentPayload = route.request().postDataJSON();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -118,9 +116,12 @@ test('добровольная поддержка не блокирует Live �
   await expect(modal.locator('.live-support-submit')).toBeEnabled();
   await expect(modal.locator('.live-support-submit')).toHaveText('Поддержать на 350 ₽');
 
-  const paymentRequest = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/payments/create'));
+  const paymentRequestPromise = page.waitForRequest((request) => (
+    request.method() === 'POST' && request.url().endsWith('/api/payments/create')
+  ));
   await modal.locator('.live-support-submit').click();
-  await paymentRequest;
+  const paymentRequest = await paymentRequestPromise;
+  const paymentPayload = paymentRequest.postDataJSON();
 
   expect(paymentPayload).toEqual({
     chartId: CHART_ID,
