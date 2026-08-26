@@ -138,6 +138,13 @@ test('Live действия поддержки переживают пересб
   assert.match(app, /dismissSupport\(dismissButton\)/);
 });
 
+test('Live открывает modal синхронно из уже проверенного config, а checkout перепроверяет config перед оплатой', async () => {
+  const app = await read('public/clone/live/live-app.js');
+  assert.match(app, /function openSupportModal\(trigger\) \{\s*const config = supportConfigCache\?\.value;/);
+  assert.doesNotMatch(app, /async function openSupportModal/);
+  assert.match(app, /async function startSupportCheckout\(\) \{\s*const config = await loadSupportConfig\(\{ force: true \}\);/);
+});
+
 test('Live checkout передаёт только offerCode, а итоговую сумму заново определяет сервер', async () => {
   const app = await read('public/clone/live/live-app.js');
   const start = app.indexOf("fetch('/api/payments/create'");
