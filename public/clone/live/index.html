@@ -186,7 +186,7 @@
         <div id="dialogView" class="hidden dialog-layout">
           <div class="conversation">
             <div class="conversation-head"><div class="conversation-intro" id="conversationIntro"><p class="eyebrow">Живая модель активна</p><h2>Что нужно решить?</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div><button class="ghost" id="newSituation" type="button" aria-label="Начать новую ситуацию" title="Новый диалог">＋ Новая</button></div>
-            <div class="messages" id="messages"><article class="message clone"><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Опишите ситуацию чуть подробнее: что происходит, между чем вы выбираете и что для вас важно. Клон покажет, как поступил бы он — по вашей карте.</p></div></article></div>
+            <div class="messages" id="messages"><article class="message clone" data-conversation-onboarding><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Опишите ситуацию чуть подробнее: что происходит, между чем вы выбираете и что для вас важно. Клон покажет, как поступил бы он — по вашей карте.</p></div></article></div>
             <button class="jump-to-latest hidden" id="jumpToLatest" type="button">К новому ответу <span aria-hidden="true">↓</span></button>
             <div class="chips" id="conversationSuggestions" aria-label="С чего можно начать"><button data-prompt="Хочу разобраться в отношениях. ">Отношения</button><button data-prompt="Хочу разобраться в работе и деньгах. ">Работа и деньги</button><button data-prompt="Хочу понять, что со мной происходит. ">Что со мной происходит</button></div>
             <form id="questionForm" class="composer" aria-busy="false"><textarea id="question" rows="3" placeholder="Что происходит? Между чем выбираете? Что для вас важно?" required></textarea><button class="primary" type="submit" aria-label="Отправить вопрос" disabled>Спросить клона</button></form>
@@ -233,7 +233,7 @@
   </div>
 
   <div class="toast" id="cloneToast"></div>
-  <script src="/clone-ui-gears.js?v=20260826-support1"></script>
+  <script src="/clone-ui-gears.js?v=20260826-polish1"></script>
   <script src="/clone-living.js?v=20260726-auth2" defer></script>
   <script src="/clone.js?v=20260729-routes1" defer></script>
   <script src="/clone/live/live-stats.js?v=20260728-factors1" defer></script>
