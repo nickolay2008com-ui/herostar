@@ -131,7 +131,8 @@ test('Live показывает поддержку только после по�
 test('Live действия поддержки переживают пересборку DOM истории', async () => {
   const app = await read('public/clone/live/live-app.js');
   assert.match(app, /const existingCard = messages\.querySelector\('\.live-support-card'\)/);
-  assert.match(app, /messages\.addEventListener\('click'/);
+  assert.match(app, /document\.addEventListener\('click'/);
+  assert.match(app, /openButton && messages\.contains\(openButton\)/);
   assert.match(app, /target\.closest\('\.live-support-open'\)/);
   assert.match(app, /target\.closest\('\.live-support-dismiss'\)/);
   assert.match(app, /dismissSupport\(dismissButton\)/);
