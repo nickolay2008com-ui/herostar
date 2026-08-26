@@ -22,6 +22,7 @@ test('Live route загружает отдельный App-shell без втор
   assert.equal((html.match(/id="questionForm"/g) || []).length, 1);
   assert.equal((html.match(/id="messages"/g) || []).length, 1);
   assert.doesNotMatch(app, /createElement\('form'\)|createElement\("form"\)/);
+  assert.ok(styles.length > 0);
 });
 
 test('диалог сохраняет позицию чтения при переходе в Мою карту', async () => {
@@ -48,11 +49,14 @@ test('факторы конкретного ответа доступны по �
 });
 
 test('mobile App-shell оставляет нижнюю навигацию только для Диалога и Моей карты', async () => {
-  const styles = await read('public/clone/live/live-app.css');
+  const [app, styles] = await Promise.all([
+    read('public/clone/live/live-app.js'),
+    read('public/clone/live/live-app.css'),
+  ]);
 
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?\.workspace \.side-head,[\s\S]*?\.workspace \.side-note\s*\{\s*display:\s*none !important;/);
   assert.match(styles, /\.conversation-started \.app-chat-title/);
-  assert.match(styles, /по вашей натальной карте/);
+  assert.match(app, /по вашей натальной карте/);
 });
 
 test('desktop показывает карту отдельным view, а не постоянной колонкой рядом с разговором', async () => {
