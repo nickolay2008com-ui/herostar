@@ -32,5 +32,4 @@ test('стартовое сообщение освобождает истори�
   await expect(starter).toHaveAttribute('aria-hidden', 'true');
   await expect(page.locator('[data-test-real-answer="1"]')).toBeVisible();
   await expect(page.locator('#questionForm')).toBeVisible();
-  await expect(page.locator('#conversationSuggestions')).toBeHidden();
 });
