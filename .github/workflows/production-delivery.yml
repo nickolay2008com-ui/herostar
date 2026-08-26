@@ -1,0 +1,79 @@
+name: HeroStar Production Delivery
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: herostar-production-delivery
+  cancel-in-progress: true
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact main commit
+        uses: actions/checkout@v4
+
+      - name: Wait for Railway and verify Live bytes
+        shell: bash
+        env:
+          PROD_BASE: https://herostar.up.railway.app
+        run: |
+          set -euo pipefail
+
+          expected_file="public/clone/live/index.html"
+          expected_hash="$(sha256sum "$expected_file" | awk '{print $1}')"
+          echo "Expected Live SHA-256: $expected_hash"
+          echo "Git commit: $GITHUB_SHA"
+
+          for attempt in $(seq 1 40); do
+            stamp="${GITHUB_SHA}-${attempt}-$(date +%s)"
+            health_ok=0
+            live_ok=0
+            actual_hash="unavailable"
+
+            if curl --fail --silent --show-error --location --max-time 12 \
+              -H 'Cache-Control: no-cache' \
+              -H 'Pragma: no-cache' \
+              "${PROD_BASE}/health?delivery=${stamp}" \
+              --output /tmp/herostar-health.json; then
+              if grep -q '"ok":true' /tmp/herostar-health.json; then
+                health_ok=1
+              fi
+            fi
+
+            if curl --fail --silent --show-error --location --max-time 15 \
+              -H 'Cache-Control: no-cache' \
+              -H 'Pragma: no-cache' \
+              "${PROD_BASE}/clone/live/?delivery=${stamp}" \
+              --output /tmp/herostar-live.html; then
+              actual_hash="$(sha256sum /tmp/herostar-live.html | awk '{print $1}')"
+              if [[ "$actual_hash" == "$expected_hash" ]]; then
+                live_ok=1
+              fi
+            fi
+
+            echo "attempt=${attempt} health=${health_ok} live=${live_ok} actual=${actual_hash}"
+
+            if [[ "$health_ok" == "1" && "$live_ok" == "1" ]]; then
+              echo "Production verified: Railway is healthy and /clone/live/ exactly matches this main commit."
+              exit 0
+            fi
+
+            sleep 15
+          done
+
+          echo "Production did not converge to the current main commit within the verification window." >&2
+          echo "Expected hash: $expected_hash" >&2
+          if [[ -f /tmp/herostar-live.html ]]; then
+            echo "Last actual hash: $(sha256sum /tmp/herostar-live.html | awk '{print $1}')" >&2
+            diff -u "$expected_file" /tmp/herostar-live.html | head -n 120 || true
+          fi
+          exit 1
