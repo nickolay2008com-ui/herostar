@@ -195,13 +195,15 @@
       }
     }
 
-    function dismissSupport() {
+    function dismissSupport(trigger = null) {
       try {
         sessionStorage.setItem(SUPPORT_DISMISS_KEY, '1');
       } catch {
         // Закрытие всё равно действует до перезагрузки текущего DOM.
       }
-      supportCard?.remove();
+      const visibleCard = trigger?.closest?.('.live-support-card') || supportCard;
+      visibleCard?.remove();
+      if (supportCard && supportCard !== visibleCard) supportCard.remove();
       supportCard = null;
       closeSupportModal();
       question?.focus?.({ preventScroll: true });
@@ -256,6 +258,11 @@
 
     function ensureSupportCard() {
       if (supportCard?.isConnected) return supportCard;
+      const existingCard = messages.querySelector('.live-support-card');
+      if (existingCard) {
+        supportCard = existingCard;
+        return existingCard;
+      }
       const card = document.createElement('aside');
       card.className = 'live-support-card';
       card.setAttribute('aria-label', 'Добровольная поддержка HeroStar');
@@ -269,8 +276,6 @@
             <button class="live-support-dismiss" type="button">Не сейчас</button>
           </div>
         </div>`;
-      card.querySelector('.live-support-open').addEventListener('click', (event) => openSupportModal(event.currentTarget));
-      card.querySelector('.live-support-dismiss').addEventListener('click', dismissSupport);
       supportCard = card;
       return card;
     }
@@ -509,7 +514,7 @@
     }
 
     async function openSupportModal(trigger) {
-      const config = await loadSupportConfig({ force: true });
+      const config = await loadSupportConfig();
       if (!validSupportConfig(config) || !config.user || !config.paymentsConfigured) {
         scheduleSupportSync({ force: true });
         return;
@@ -538,6 +543,18 @@
       button.addEventListener('click', () => {
         setAppView(button.dataset.tab || 'dialog', { restoreFocus: true });
       });
+    });
+
+    messages.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const openButton = target.closest('.live-support-open');
+      if (openButton && messages.contains(openButton)) {
+        openSupportModal(openButton);
+        return;
+      }
+      const dismissButton = target.closest('.live-support-dismiss');
+      if (dismissButton && messages.contains(dismissButton)) dismissSupport(dismissButton);
     });
 
     new MutationObserver(syncDialogState).observe(dialogView, {
