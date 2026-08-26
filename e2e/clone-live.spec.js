@@ -100,11 +100,23 @@ test('ответ и его факторный след восстанавлив�
   await expect(page.locator('#logicFactors')).toContainText(factors.split('\n').find(Boolean));
 });
 
-test('мобильный основной путь сохраняет доступ к полю и факторной панели', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile-chromium', 'Проверка предназначена для мобильного проекта');
+test('мобильный основной путь сохраняет компактный чат, поле ввода и доступ к карте', async ({ page }, testInfo) => {
+  test.skip(!['android-chromium', 'iphone-webkit'].includes(testInfo.project.name), 'Проверка предназначена для мобильных движков');
   await startFromQuestion(page, 'Стоит ли рискнуть и начать новый проект сейчас?');
   await createClone(page);
+
   await expect(page.locator('#question')).toBeVisible();
+  const headerBox = await page.locator('#dialogView .conversation-head').boundingBox();
+  const composerBox = await page.locator('#questionForm').boundingBox();
+  const sendBox = await page.locator('#questionForm button[type="submit"]').boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(composerBox).not.toBeNull();
+  expect(sendBox).not.toBeNull();
+  expect(headerBox.height).toBeLessThanOrEqual(60);
+  expect(sendBox.width).toBeGreaterThanOrEqual(44);
+  expect(sendBox.height).toBeGreaterThanOrEqual(44);
+  expect(composerBox.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+
   await page.locator('#question').fill('Какой шаг проверить первым?');
   await expect(page.locator('#questionForm button[type="submit"]')).toBeEnabled();
   await page.locator('#question').blur();
