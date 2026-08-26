@@ -112,3 +112,32 @@ test('ЮKassa получает честное описание поддержк�
   assert.match(payments, /amount: \{ value: amount, currency: 'RUB' \}/);
   assert.match(payments, /offer_code: offer\.code/);
 });
+
+test('Live показывает поддержку только после пользы и никогда не блокирует бесплатный диалог', async () => {
+  const [app, styles] = await Promise.all([
+    read('public/clone/live/live-app.js'),
+    read('public/clone/live/live-app.css'),
+  ]);
+  assert.match(app, /answers\.length < 3/);
+  assert.match(app, /!config\.user \|\| !config\.paymentsConfigured/);
+  assert.match(app, /config\.user\.cloneAccessActive/);
+  assert.match(app, /Это добровольно — бесплатный диалог продолжит работать независимо от оплаты/);
+  assert.match(app, /selectedSupportAmount = null/);
+  assert.match(app, /suggestedAmounts\.forEach/);
+  assert.match(styles, /#fullModeOffer,[\s\S]*?#alignmentOffer,[\s\S]*?#clonePaywall,[\s\S]*?display:\s*none !important;/);
+  assert.match(styles, /\.live-support-open,[\s\S]*?min-height:\s*44px/);
+});
+
+test('Live checkout передаёт только offerCode, а итоговую сумму заново определяет сервер', async () => {
+  const app = await read('public/clone/live/live-app.js');
+  const start = app.indexOf("fetch('/api/payments/create'");
+  const end = app.indexOf('const result =', start);
+  assert.ok(start > 0 && end > start);
+  const checkoutCall = app.slice(start, end);
+  assert.match(checkoutCall, /product:\s*'clone'/);
+  assert.match(checkoutCall, /offerCode/);
+  assert.doesNotMatch(checkoutCall, /\bamount\s*[:,]/);
+  assert.match(app, /const offerCode = `\$\{support\.codePrefix\}\$\{amount\}`/);
+  assert.match(app, /amount < min \|\| amount > max/);
+  assert.match(app, /starClonePendingPayment/);
+});
