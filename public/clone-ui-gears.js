@@ -16,6 +16,18 @@
     ? '/clone/live/chat'
     : storedReturnPath;
 
+  if (liveInterface) {
+    const appStyle = document.createElement('link');
+    appStyle.rel = 'stylesheet';
+    appStyle.href = '/clone/live/live-app.css?v=20260826-app1';
+    document.head.append(appStyle);
+
+    const appScript = document.createElement('script');
+    appScript.src = '/clone/live/live-app.js?v=20260826-app1';
+    appScript.async = false;
+    document.head.append(appScript);
+  }
+
   if ((authReturned || paymentReturned) && requestedReturnPath && requestedReturnPath !== currentPagePath) {
     const target = new URL(requestedReturnPath, location.origin);
     params.forEach((value, key) => target.searchParams.set(key, value));
@@ -121,22 +133,6 @@
     }
     return response;
   };
-
-  function activateTab(name) {
-    document.querySelectorAll('[data-tab]').forEach((button) => {
-      button.classList.toggle('active', button.dataset.tab === name);
-    });
-    const target = name === 'profile' ? document.querySelector('.logic') : document.querySelector('.conversation');
-    if (name === 'profile') {
-      const details = target?.querySelector('details');
-      if (details) details.open = true;
-    }
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  document.querySelectorAll('[data-tab]').forEach((button) => {
-    button.addEventListener('click', () => activateTab(button.dataset.tab));
-  });
 
   const savedQuestion = pendingQuestion();
   if (savedQuestion) {

@@ -87,14 +87,27 @@ test('главная и чат имеют отдельные адреса с я�
   await expect(page.locator('#intro')).toBeVisible();
 });
 
-test('вопрос проходит через создание Клона и показывает реальные факторы ответа', async ({ page }, testInfo) => {
+test('вопрос проходит через создание Клона и показывает факторы у конкретного ответа', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект, если роли и деньги пока не определены?');
   await createClone(page);
+
+  const latestAnswer = page.locator('#messages .message.clone').last();
+  const factorDetails = latestAnswer.locator('.answer-factor-details');
+  await expect(factorDetails.getByText('Почему Клон решил так?')).toBeVisible();
+  await factorDetails.locator('summary').click();
+  await expect(factorDetails).toContainText(/дом|Марс|Венера|Сатурн|Солнце/i);
+  await expect(factorDetails).toContainText(/текущ|действ|решен|связ/i);
+
+  await page.locator('button[data-tab="profile"]').click();
+  await expect(page.locator('#logicPanel')).toBeVisible();
   await expect(page.locator('#logicFactors')).toBeVisible();
   expect(await page.locator('#logicFactors .factor').count()).toBeGreaterThanOrEqual(2);
-  await expect(page.locator('#logicFactors')).toContainText(/дом|Марс|Венера|Сатурн|Солнце/i);
-  await expect(page.locator('#logicFactors')).toContainText(/текущ|действ|решен|связ/i);
+  await expect(page.locator('#dialogView .conversation')).toBeHidden();
+
+  await page.locator('button[data-tab="dialog"]').click();
+  await expect(page.locator('#dialogView .conversation')).toBeVisible();
+  await expect(page.locator('#logicPanel')).toBeHidden();
 });
 
 test('режим неизвестного времени честно исключает дома, углы и Луну', async ({ page }, testInfo) => {
@@ -102,9 +115,15 @@ test('режим неизвестного времени честно исклю
   await startFromQuestion(page, 'Как ответить партнёру и сохранить ясные договорённости?');
   await createClone(page, { unknownTime: true });
   await expect(page.locator('#cloneStatus')).toContainText('без домов');
-  await expect(page.locator('#logicFactors')).toContainText('Время рождения неизвестно');
-  const unknownTimeFactors = (await page.locator('#logicFactors .factor').allTextContents()).join(' ');
+
+  const factorDetails = page.locator('#messages .message.clone').last().locator('.answer-factor-details');
+  await expect(factorDetails.locator('summary')).toBeVisible();
+  await factorDetails.locator('summary').click();
+  await expect(factorDetails).toContainText('Время рождения неизвестно');
+  const unknownTimeFactors = (await factorDetails.locator('.answer-factor-item').allTextContents()).join(' ');
   expect(unknownTimeFactors).not.toMatch(/дом|Асцендент|ASC|MC|Луна/i);
+
+  await page.locator('button[data-tab="profile"]').click();
   await expect(page.locator('#technicalBasis')).toContainText('Карта без домов');
 });
 
@@ -114,19 +133,28 @@ test('ответ и его факторный след восстанавлив�
   await createClone(page);
   const answerParagraph = page.locator('#messages .message.clone').last().locator('p').first();
   const answer = await answerParagraph.innerText();
-  const factors = await page.locator('#logicFactors').innerText();
+  const factorDetails = page.locator('#messages .message.clone').last().locator('.answer-factor-details');
+  await expect(factorDetails.locator('summary')).toBeVisible();
+  await factorDetails.locator('summary').click();
+  const factorText = String(await factorDetails.locator('.answer-factor-item').first().innerText()).trim();
+
   await page.reload();
   await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('#messages .message.clone').last().locator('p').first()).toContainText(answer.slice(0, 35));
-  await expect(page.locator('#logicFactors')).toContainText(factors.split('\n').find(Boolean));
+  const restoredDetails = page.locator('#messages .message.clone').last().locator('.answer-factor-details');
+  await expect(restoredDetails.locator('summary')).toBeVisible();
+  await restoredDetails.locator('summary').click();
+  await expect(restoredDetails).toContainText(factorText.split('\n').find(Boolean));
 });
 
-test('мобильный основной путь сохраняет компактный чат, поле ввода и доступ к карте', async ({ page }, testInfo) => {
+test('мобильный основной путь сохраняет компактный чат, поле ввода и отдельный доступ к карте', async ({ page }, testInfo) => {
   test.skip(!['android-chromium', 'iphone-webkit'].includes(testInfo.project.name), 'Проверка предназначена для мобильных движков');
   await startFromQuestion(page, 'Стоит ли рискнуть и начать новый проект сейчас?');
   await createClone(page);
 
   await expect(page.locator('#question')).toBeVisible();
+  await expect(page.locator('.app-chat-title')).toContainText('Звёздный клон');
+  await expect(page.locator('.app-chat-title')).toContainText('по вашей натальной карте');
   const headerBox = await page.locator('#dialogView .conversation-head').boundingBox();
   const composerBox = await page.locator('#questionForm').boundingBox();
   const sendBox = await page.locator('#questionForm button[type="submit"]').boundingBox();
@@ -138,9 +166,14 @@ test('мобильный основной путь сохраняет компа
   expect(sendBox.height).toBeGreaterThanOrEqual(44);
   expect(composerBox.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
 
+  await expect(page.locator('#messages .message.clone').last().locator('.answer-factor-details summary')).toBeVisible();
   await page.locator('#question').fill('Какой шаг проверить первым?');
   await expect(page.locator('#questionForm button[type="submit"]')).toBeEnabled();
   await page.locator('#question').blur();
   await page.locator('button[data-tab="profile"]').click();
+  await expect(page.locator('#logicPanel')).toBeVisible();
   await expect(page.locator('#logicFactors')).toBeVisible();
+  await expect(page.locator('#questionForm')).toBeHidden();
+  await page.locator('button[data-tab="dialog"]').click();
+  await expect(page.locator('#questionForm')).toBeVisible();
 });
