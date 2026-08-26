@@ -1,11 +1,31 @@
 /* Mobile composition for the canonical /clone/live hero.
-   The image stays identical to desktop: --live-female-image from live-assets.css. */
+   The image stays identical to desktop: --live-female-image from live-assets.css.
+
+   Sprint 1 product cleanup:
+   - keep one primary entry point (the question form);
+   - reduce marketing noise before the first meaningful action;
+   - make the mobile opening feel like one coherent flow rather than two CTAs.
+*/
+
+/* The question form is the canonical primary entry point on Live.
+   Keep restore access available, but remove the duplicated "scroll to question" CTA. */
+.live-product .live-actions > [data-go-intent] {
+  display: none;
+}
+
+.live-product .live-actions {
+  margin-top: 14px;
+}
+
+.live-product .restore-access {
+  margin-left: 0;
+}
 
 @media (max-width: 640px) {
   .live-product .live-hero {
-    min-height: clamp(340px, 94vw, 390px);
-    margin-bottom: 12px;
-    border-radius: 24px;
+    min-height: clamp(300px, 82vw, 348px);
+    margin-bottom: 10px;
+    border-radius: 22px;
   }
 
   .live-product .live-hero-image {
@@ -13,15 +33,15 @@
     min-height: 0;
     background-image: var(--live-female-image);
     background-size: cover;
-    background-position: 52% 45%;
+    background-position: 52% 43%;
     transform: none;
     will-change: auto;
   }
 
   .live-product .live-hero-shade {
     background:
-      linear-gradient(0deg, rgba(2, 5, 13, .97) 0%, rgba(3, 7, 17, .76) 39%, rgba(3, 7, 17, .1) 75%),
-      linear-gradient(90deg, rgba(3, 7, 17, .5) 0%, rgba(3, 7, 17, .12) 55%, transparent 78%);
+      linear-gradient(0deg, rgba(2, 5, 13, .98) 0%, rgba(3, 7, 17, .76) 43%, rgba(3, 7, 17, .08) 78%),
+      linear-gradient(90deg, rgba(3, 7, 17, .46) 0%, rgba(3, 7, 17, .1) 56%, transparent 80%);
   }
 
   .live-product .live-hero-copy {
@@ -31,21 +51,21 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 18px 16px 20px;
+    padding: 16px 15px 17px;
   }
 
   .live-product .live-badge {
     align-self: flex-start;
-    margin: 0 0 9px;
-    padding: 6px 9px;
+    margin: 0 0 7px;
+    padding: 5px 8px;
     border-color: rgba(255, 255, 255, .14);
     background: rgba(7, 10, 20, .48);
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .live-product .live-home h1 {
     max-width: 270px;
-    font-size: clamp(31px, 9.2vw, 38px);
+    font-size: clamp(29px, 8.7vw, 36px);
     line-height: 1;
     letter-spacing: -.055em;
     text-shadow: 0 3px 20px rgba(0, 0, 0, .78);
@@ -53,29 +73,107 @@
 
   .live-product .live-hero .live-accent {
     display: block;
-    max-width: 292px;
-    margin: 9px 0 0;
-    font-size: clamp(15px, 4.35vw, 18px);
+    max-width: 300px;
+    margin: 8px 0 0;
+    font-size: clamp(14px, 4.1vw, 17px);
     font-weight: 740;
     line-height: 1.18;
-    letter-spacing: -.028em;
+    letter-spacing: -.025em;
     text-wrap: balance;
     filter: drop-shadow(0 3px 12px rgba(0, 0, 0, .72));
+  }
+
+  /* The first screen should explain the promise, not exhaust it.
+     Detailed mechanics remain below in the landing flow. */
+  .live-product .live-hero .live-lead,
+  .live-product .live-hero .live-trust-line,
+  .live-product .live-hero .live-benefits {
+    display: none;
+  }
+
+  .live-product .live-hero .live-actions {
+    margin-top: 8px;
+  }
+
+  .live-product .live-hero .restore-access {
+    opacity: .86;
+  }
+
+  /* Pull the meaningful action closer to the hero and make it feel like
+     the continuation of one flow rather than a second marketing section. */
+  .live-product .live-intent {
+    margin-top: 0;
+    padding-top: 16px;
+  }
+
+  .live-product .live-intent .eyebrow {
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  .live-product .live-intent h2 {
+    margin-bottom: 6px;
+    font-size: clamp(22px, 6.4vw, 28px);
+    line-height: 1.06;
+  }
+
+  .live-product .live-intent > div > p:not(.eyebrow) {
+    margin-top: 0;
+    max-width: 34rem;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .live-product .live-intent-form {
+    margin-top: 12px;
+  }
+
+  .live-product #heroQuestion {
+    min-height: 94px;
+    padding: 14px 14px;
+    font-size: 16px; /* prevents iOS input zoom */
+    line-height: 1.35;
+    border-radius: 16px;
+  }
+
+  .live-product .live-intent-form > .primary {
+    width: 100%;
+    min-height: 50px;
+    margin-top: 9px;
+    border-radius: 15px;
+    font-size: 15px;
+    font-weight: 760;
+  }
+
+  .live-product .live-intent-meta {
+    gap: 8px;
+    margin-top: 7px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  /* Examples are secondary. Give the first-question path visual priority. */
+  .live-product .clone-insight-slider {
+    margin-top: 24px;
   }
 }
 
 @media (max-width: 360px) {
   .live-product .live-hero {
-    min-height: clamp(326px, 102vw, 360px);
+    min-height: clamp(290px, 88vw, 320px);
   }
 
   .live-product .live-home h1 {
     max-width: 238px;
-    font-size: clamp(29px, 9vw, 34px);
+    font-size: clamp(28px, 8.7vw, 33px);
   }
 
   .live-product .live-hero .live-accent {
-    max-width: 254px;
-    font-size: clamp(14px, 4.3vw, 16px);
+    max-width: 260px;
+    font-size: clamp(13px, 4vw, 15px);
+  }
+
+  .live-product #heroQuestion {
+    min-height: 90px;
   }
 }
