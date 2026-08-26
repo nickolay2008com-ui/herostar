@@ -25,6 +25,16 @@ test('Live route загружает отдельный App-shell без втор
   assert.ok(styles.length > 0);
 });
 
+test('Live HTML меняет immutable cache-key загрузчика App при новой поставке', async () => {
+  const [html, bootstrap] = await Promise.all([
+    read('public/clone/live/index.html'),
+    read('bootstrap.js'),
+  ]);
+  assert.match(bootstrap, /max-age=31536000, immutable/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260826-support1/);
+  assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
+});
+
 test('диалог сохраняет позицию чтения при переходе в Мою карту', async () => {
   const app = await read('public/clone/live/live-app.js');
 
