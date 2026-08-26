@@ -520,6 +520,26 @@
   .live-primary { display: none; }
   .live-benefits { display: none; }
 
+  /* Keep the first action inside a 720px desktop viewport. The secondary restore action
+     is floated over the image so copy length can no longer stretch the hero. */
+  .live-home .live-hero { height: 520px; min-height: 0; }
+  .live-home .live-hero-copy { padding: 62px 0 28px 54px; }
+  .live-home .live-actions {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    margin: 0;
+  }
+  .live-home .live-actions .restore-access,
+  .live-home .live-actions .ghost { width: auto; }
+  .live-home .live-actions .ghost {
+    min-height: 44px;
+    padding: 8px 12px;
+    border-color: rgba(255,255,255,.13);
+    background: rgba(7,10,20,.42);
+    backdrop-filter: blur(14px);
+  }
+
   .live-intent {
     z-index: 3;
     grid-template-columns: minmax(260px,.62fr) minmax(460px,1.38fr);
