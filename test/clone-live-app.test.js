@@ -31,7 +31,7 @@ test('Live HTML меняет immutable cache-key загрузчика App при
     read('bootstrap.js'),
   ]);
   assert.match(bootstrap, /max-age=31536000, immutable/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260826-support1/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260826-polish1/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
 });
 
