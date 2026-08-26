@@ -50,6 +50,27 @@ async function createClone(page, { unknownTime = false } = {}) {
   await expect(page.locator('#messages .message.clone').last()).not.toContainText('Клон готовит ответ', { timeout: 30_000 });
 }
 
+test('desktop landing показывает вопрос в первом экране без дублирующего CTA', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
+  await page.goto('/clone/live/');
+
+  await expect(page.locator('#heroQuestion')).toBeVisible();
+  await expect(page.locator('.live-primary')).toBeHidden();
+  await expect(page.locator('#restoreCloneAccess')).toBeVisible();
+  await expect(page.locator('.clone-insight-slide')).toHaveCount(3);
+  await expect(page.locator('.clone-insight-slide h4')).toHaveText([
+    'Отношения',
+    'Работа и деньги',
+    'Что со мной происходит',
+  ]);
+
+  const questionBox = await page.locator('#heroQuestion').boundingBox();
+  const viewportHeight = await page.evaluate(() => window.innerHeight);
+  expect(questionBox).not.toBeNull();
+  expect(questionBox.y).toBeGreaterThanOrEqual(0);
+  expect(questionBox.y + questionBox.height).toBeLessThanOrEqual(viewportHeight + 1);
+});
+
 test('главная и чат имеют отдельные адреса с явным возвратом', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await page.goto('/clone/live/');
