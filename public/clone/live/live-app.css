@@ -425,6 +425,21 @@
 }
 
 @media (max-width: 900px) {
+  body.live-product.live-chat-page.live-app-ready:has(.workspace:not(.hidden)) .live-topbar {
+    height: 44px;
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+
+  body.live-product.live-chat-page.live-app-ready:has(.workspace:not(.hidden)) .live-topbar .brand,
+  body.live-product.live-chat-page.live-app-ready:has(.workspace:not(.hidden)) .live-home-link {
+    min-height: 44px;
+  }
+
+  .live-product.live-chat-page.live-app-ready .workspace:not(.hidden) {
+    padding-top: 44px;
+  }
+
   .live-product.live-chat-page.live-app-ready .workspace .side-head,
   .live-product.live-chat-page.live-app-ready .workspace .side-note {
     display: none !important;
