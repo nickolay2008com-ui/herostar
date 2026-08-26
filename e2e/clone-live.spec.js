@@ -51,7 +51,7 @@ async function createClone(page, { unknownTime = false } = {}) {
 }
 
 test('главная и чат имеют отдельные адреса с явным возвратом', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await page.goto('/clone/live/');
   await expect(page).toHaveURL(/\/clone\/live\/$/);
   await expect(page.locator('#intro')).toBeVisible();
@@ -67,7 +67,7 @@ test('главная и чат имеют отдельные адреса с я�
 });
 
 test('вопрос проходит через создание Клона и показывает реальные факторы ответа', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект, если роли и деньги пока не определены?');
   await createClone(page);
   await expect(page.locator('#logicFactors')).toBeVisible();
@@ -77,7 +77,7 @@ test('вопрос проходит через создание Клона и п
 });
 
 test('режим неизвестного времени честно исключает дома, углы и Луну', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Как ответить партнёру и сохранить ясные договорённости?');
   await createClone(page, { unknownTime: true });
   await expect(page.locator('#cloneStatus')).toContainText('без домов');
@@ -88,7 +88,7 @@ test('режим неизвестного времени честно исклю
 });
 
 test('ответ и его факторный след восстанавливаются после перезагрузки', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'Десктопный контракт');
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт');
   await startFromQuestion(page, 'Стоит ли входить в новый проект или пока сохранить стабильность?');
   await createClone(page);
   const answerParagraph = page.locator('#messages .message.clone').last().locator('p').first();
@@ -100,11 +100,23 @@ test('ответ и его факторный след восстанавлив�
   await expect(page.locator('#logicFactors')).toContainText(factors.split('\n').find(Boolean));
 });
 
-test('мобильный основной путь сохраняет доступ к полю и факторной панели', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile-chromium', 'Проверка предназначена для мобильного проекта');
+test('мобильный основной путь сохраняет компактный чат, поле ввода и доступ к карте', async ({ page }, testInfo) => {
+  test.skip(!['android-chromium', 'iphone-webkit'].includes(testInfo.project.name), 'Проверка предназначена для мобильных движков');
   await startFromQuestion(page, 'Стоит ли рискнуть и начать новый проект сейчас?');
   await createClone(page);
+
   await expect(page.locator('#question')).toBeVisible();
+  const headerBox = await page.locator('#dialogView .conversation-head').boundingBox();
+  const composerBox = await page.locator('#questionForm').boundingBox();
+  const sendBox = await page.locator('#questionForm button[type="submit"]').boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(composerBox).not.toBeNull();
+  expect(sendBox).not.toBeNull();
+  expect(headerBox.height).toBeLessThanOrEqual(60);
+  expect(sendBox.width).toBeGreaterThanOrEqual(44);
+  expect(sendBox.height).toBeGreaterThanOrEqual(44);
+  expect(composerBox.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+
   await page.locator('#question').fill('Какой шаг проверить первым?');
   await expect(page.locator('#questionForm button[type="submit"]')).toBeEnabled();
   await page.locator('#question').blur();
