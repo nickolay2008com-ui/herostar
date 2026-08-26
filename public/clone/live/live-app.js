@@ -513,8 +513,8 @@
       return modal;
     }
 
-    async function openSupportModal(trigger) {
-      const config = await loadSupportConfig();
+    function openSupportModal(trigger) {
+      const config = supportConfigCache?.value;
       if (!validSupportConfig(config) || !config.user || !config.paymentsConfigured) {
         scheduleSupportSync({ force: true });
         return;
