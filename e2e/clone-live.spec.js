@@ -198,7 +198,9 @@ test('два восстановленных ответа получают соб
   await expect(answers.nth(0).locator('.answer-evidence-popover')).toContainText('Венера в Тельце 12°');
   await secondTrigger.click();
   await expect(firstTrigger).toHaveAttribute('aria-expanded', 'false');
-  await expect(answers.nth(1).locator('.answer-evidence-popover')).toContainText(/Куспид 5°15′.*орбис 2.1°/s);
+  const legacyPopover = answers.nth(1).locator('.answer-evidence-popover');
+  await expect(legacyPopover).toContainText('Куспид 5°15′');
+  await expect(legacyPopover).toContainText('орбисом 2.1°');
 });
 
 test('мобильный основной путь сохраняет компактный чат, поле ввода и отдельный доступ к карте', async ({ page }, testInfo) => {
