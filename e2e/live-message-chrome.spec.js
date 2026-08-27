@@ -49,14 +49,21 @@ test('mobile Live скрывает повторный chrome Клона, сох�
     const messages = document.querySelector('#messages');
     const bubble = document.querySelector('#messages .message.clone > div');
     const paragraph = bubble?.querySelector('p');
+    const messagesStyle = messages ? getComputedStyle(messages) : null;
+    const messagesContentWidth = messages
+      ? messages.clientWidth
+        - parseFloat(messagesStyle?.paddingLeft || '0')
+        - parseFloat(messagesStyle?.paddingRight || '0')
+      : 0;
     return {
       bubbleWidth: bubble?.getBoundingClientRect().width || 0,
-      messagesWidth: messages?.getBoundingClientRect().width || 0,
+      messagesContentWidth,
       paragraphMarginTop: paragraph ? parseFloat(getComputedStyle(paragraph).marginTop) : -1,
     };
   });
 
   expect(geometry.bubbleWidth).toBeGreaterThan(0);
-  expect(geometry.bubbleWidth).toBeGreaterThanOrEqual(geometry.messagesWidth - 2);
+  expect(geometry.bubbleWidth).toBeGreaterThanOrEqual(geometry.messagesContentWidth - 2);
+  expect(geometry.bubbleWidth).toBeLessThanOrEqual(geometry.messagesContentWidth + 2);
   expect(geometry.paragraphMarginTop).toBe(0);
 });
