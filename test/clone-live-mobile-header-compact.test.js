@@ -15,8 +15,8 @@ test('Live mobile App-shell доставляет компактную внешн
   assert.match(styles, /\.live-topbar \.brand,[\s\S]*?\.live-home-link\s*\{\s*min-height:\s*44px;/);
   assert.match(styles, /\.live-product\.live-chat-page\.live-app-ready \.workspace:not\(\.hidden\)\s*\{\s*padding-top:\s*44px;/);
 
-  assert.match(loader, /live-app\.css\?v=20260826-app3/);
+  assert.match(loader, /live-app\.css\?v=20260827-app4/);
   assert.match(loader, /live-app\.js\?v=20260826-app2/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish2/);
-  assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260826-polish1/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish3/);
+  assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260827-polish2/);
 });
