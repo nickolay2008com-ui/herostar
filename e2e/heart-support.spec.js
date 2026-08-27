@@ -19,6 +19,8 @@ async function mountThreeCompletedAnswers(page) {
     document.querySelector('#createView')?.classList.add('hidden');
     document.querySelector('#buildingView')?.classList.add('hidden');
     document.querySelector('#dialogView')?.classList.remove('hidden');
+    document.querySelector('#dialogView .conversation')?.classList.add('conversation-started');
+    document.querySelector('#conversationSuggestions')?.classList.add('hidden');
     const messages = document.querySelector('#messages');
     messages.innerHTML = '';
     for (let index = 1; index <= 3; index += 1) {
