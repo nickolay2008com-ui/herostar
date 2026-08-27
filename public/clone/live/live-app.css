@@ -457,6 +457,40 @@
     padding-right: 58px;
   }
 
+  /* Once the conversation is established, the App header already identifies
+     the Clone. Keep generated answers as clean reading blocks instead of
+     repeating avatar/name chrome on every turn. */
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .messages {
+    gap: 14px;
+  }
+
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone {
+    gap: 0;
+  }
+
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone > .mini-avatar,
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone > div > b {
+    display: none;
+  }
+
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone > div {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 0 10px;
+  }
+
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone > div > p:first-of-type {
+    margin-top: 0;
+  }
+
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone::before,
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone::after,
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone > div::before,
+  .live-product.live-chat-page.live-app-ready #dialogView .conversation-started .message.clone > div::after {
+    display: none !important;
+    content: none !important;
+  }
+
   .live-product.live-chat-page.live-app-ready #dialogView .logic.profile-mode:not(.hidden) {
     height: 100%;
     min-height: 0;
