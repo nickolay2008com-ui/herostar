@@ -32,7 +32,8 @@
 
     let savedMessageScrollTop = 0;
     let currentView = 'dialog';
-    let factorSyncFrame = 0;
+    let evidenceSyncFrame = 0;
+    let evidenceSequence = 0;
     let supportSyncTimer = 0;
     let supportConfigCache = null;
     let supportConfigPromise = null;
@@ -46,7 +47,19 @@
       const title = document.createElement('div');
       title.className = 'app-chat-title';
       title.innerHTML = '<strong>Звёздный клон</strong><small>по вашей натальной карте</small>';
-      conversationHead.prepend(title);
+      const homeLink = conversationHead.querySelector('.app-home-link');
+      if (homeLink) homeLink.after(title);
+      else conversationHead.prepend(title);
+    }
+
+    function syncAppTitle(view) {
+      const title = conversationHead?.querySelector('.app-chat-title');
+      if (!title) return;
+      const profileMode = view === 'profile';
+      const strong = title.querySelector('strong');
+      const small = title.querySelector('small');
+      if (strong) strong.textContent = profileMode ? 'Моя карта' : 'Звёздный клон';
+      if (small) small.textContent = profileMode ? 'факторы и паспорт клона' : 'по вашей натальной карте';
     }
 
     function syncNav(view) {
@@ -75,6 +88,7 @@
       logicPanel.classList.toggle('profile-mode', profileMode);
       logicPanel.setAttribute('aria-hidden', String(!profileMode));
       syncNav(next);
+      syncAppTitle(next);
 
       if (profileMode) {
         window.requestAnimationFrame(() => {
@@ -115,23 +129,59 @@
       };
     }
 
-    function renderAnswerFactorDetails(answer, snapshot) {
+    function renderAnswerEvidence(answer, snapshot) {
       const content = answer?.querySelector(':scope > div') || answer;
-      if (!content || !snapshot?.factors?.length) return;
+      const paragraph = content?.querySelector(':scope > p');
+      if (!content || !paragraph || !snapshot?.factors?.length) return;
 
-      let details = content.querySelector(':scope > .answer-factor-details');
-      if (!details) {
-        details = document.createElement('details');
-        details.className = 'answer-factor-details';
-        const summary = document.createElement('summary');
-        summary.textContent = 'Почему Клон решил так?';
+      let trigger = paragraph.querySelector(':scope > .answer-evidence-trigger');
+      let popover = content.querySelector(':scope > .answer-evidence-popover');
+      if (!trigger || !popover) {
+        const suffix = `${Date.now().toString(36)}-${++evidenceSequence}`;
+        const triggerId = `answer-evidence-trigger-${suffix}`;
+        const popoverId = `answer-evidence-popover-${suffix}`;
+        const titleId = `answer-evidence-title-${suffix}`;
+
+        trigger = document.createElement('button');
+        trigger.className = 'answer-evidence-trigger';
+        trigger.type = 'button';
+        trigger.id = triggerId;
+        trigger.setAttribute('aria-label', 'Почему Клон решил именно так');
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-controls', popoverId);
+        trigger.title = 'Почему именно так';
+        paragraph.append(document.createTextNode(' '), trigger);
+
+        popover = document.createElement('aside');
+        popover.className = 'answer-evidence-popover hidden';
+        popover.id = popoverId;
+        popover.dataset.triggerId = triggerId;
+        popover.setAttribute('role', 'note');
+        popover.setAttribute('aria-hidden', 'true');
+        popover.setAttribute('aria-labelledby', titleId);
+
+        const head = document.createElement('div');
+        head.className = 'answer-evidence-head';
+        const title = document.createElement('strong');
+        title.id = titleId;
+        title.textContent = 'Почему именно так';
+        const close = document.createElement('button');
+        close.className = 'answer-evidence-close';
+        close.type = 'button';
+        close.setAttribute('aria-label', 'Закрыть техническое объяснение');
+        head.append(title, close);
+
         const bodyElement = document.createElement('div');
         bodyElement.className = 'answer-factor-body';
-        details.append(summary, bodyElement);
-        content.append(details);
+        popover.append(head, bodyElement);
+        content.append(popover);
       }
 
-      const bodyElement = details.querySelector('.answer-factor-body');
+      const signature = JSON.stringify(snapshot);
+      if (popover.dataset.evidenceSignature === signature) return;
+      popover.dataset.evidenceSignature = signature;
+
+      const bodyElement = popover.querySelector('.answer-factor-body');
       bodyElement.replaceChildren();
       if (snapshot.note) {
         const note = document.createElement('p');
@@ -158,12 +208,28 @@
       });
     }
 
-    function syncLatestAnswerFactors() {
-      window.cancelAnimationFrame(factorSyncFrame);
-      factorSyncFrame = window.requestAnimationFrame(() => {
+    function setAnswerEvidenceOpen(trigger, open, { restoreFocus = false } = {}) {
+      const popoverId = String(trigger?.getAttribute('aria-controls') || '');
+      const popover = popoverId ? document.getElementById(popoverId) : null;
+      if (!trigger || !popover) return;
+      trigger.setAttribute('aria-expanded', String(open));
+      popover.classList.toggle('hidden', !open);
+      popover.setAttribute('aria-hidden', String(!open));
+      if (!open && restoreFocus) trigger.focus({ preventScroll: true });
+    }
+
+    function closeAnswerEvidence({ except = null, restoreFocus = false } = {}) {
+      messages.querySelectorAll('.answer-evidence-trigger[aria-expanded="true"]').forEach((trigger) => {
+        if (trigger !== except) setAnswerEvidenceOpen(trigger, false, { restoreFocus });
+      });
+    }
+
+    function syncLatestAnswerEvidence() {
+      window.cancelAnimationFrame(evidenceSyncFrame);
+      evidenceSyncFrame = window.requestAnimationFrame(() => {
         const snapshot = readFactorSnapshot();
         const answer = meaningfulCloneAnswers().at(-1);
-        if (snapshot && answer) renderAnswerFactorDetails(answer, snapshot);
+        if (snapshot && answer) renderAnswerEvidence(answer, snapshot);
       });
     }
 
@@ -539,7 +605,7 @@
     function syncDialogState() {
       if (dialogView.classList.contains('hidden')) return;
       if (currentView !== 'profile') setAppView('dialog');
-      syncLatestAnswerFactors();
+      syncLatestAnswerEvidence();
       scheduleSupportSync();
     }
 
@@ -556,6 +622,21 @@
       const target = event.target instanceof Element ? event.target : event.target?.parentElement;
       if (!target) return;
       const currentMessages = document.querySelector('#messages');
+      const evidenceTrigger = target.closest('.answer-evidence-trigger');
+      if (evidenceTrigger && currentMessages?.contains(evidenceTrigger)) {
+        const shouldOpen = evidenceTrigger.getAttribute('aria-expanded') !== 'true';
+        closeAnswerEvidence({ except: evidenceTrigger });
+        setAnswerEvidenceOpen(evidenceTrigger, shouldOpen);
+        return;
+      }
+      const evidenceClose = target.closest('.answer-evidence-close');
+      if (evidenceClose && currentMessages?.contains(evidenceClose)) {
+        const popover = evidenceClose.closest('.answer-evidence-popover');
+        const trigger = popover?.dataset.triggerId ? document.getElementById(popover.dataset.triggerId) : null;
+        if (trigger) setAnswerEvidenceOpen(trigger, false, { restoreFocus: true });
+        return;
+      }
+      if (!target.closest('.answer-evidence-popover')) closeAnswerEvidence();
       const openButton = target.closest('.live-support-open');
       if (openButton && currentMessages?.contains(openButton)) {
         openSupportModal(openButton);
@@ -571,7 +652,7 @@
     });
 
     new MutationObserver(() => {
-      syncLatestAnswerFactors();
+      syncLatestAnswerEvidence();
       scheduleSupportSync();
     }).observe(messages, {
       childList: true,
@@ -580,7 +661,7 @@
     });
 
     if (logicFactors) {
-      new MutationObserver(syncLatestAnswerFactors).observe(logicFactors, {
+      new MutationObserver(syncLatestAnswerEvidence).observe(logicFactors, {
         childList: true,
         subtree: true,
         characterData: true,
@@ -598,6 +679,11 @@
     }
 
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && messages.querySelector('.answer-evidence-trigger[aria-expanded="true"]')) {
+        event.preventDefault();
+        closeAnswerEvidence({ restoreFocus: true });
+        return;
+      }
       if (event.key === 'Escape' && supportModal && !supportModal.classList.contains('hidden')) {
         event.preventDefault();
         closeSupportModal();

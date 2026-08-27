@@ -184,12 +184,16 @@
         <div id="buildingView" class="hidden building"><div class="pulse">✦</div><h2>Клон собирает характер решений</h2><p id="buildStep">Рассчитываем натальную карту…</p></div>
 
         <div id="dialogView" class="hidden dialog-layout">
+          <div class="conversation-head">
+            <a class="app-home-link" href="/clone/live/" aria-label="На главную" title="На главную"><span aria-hidden="true">←</span></a>
+            <div class="conversation-intro" id="conversationIntro"><p class="eyebrow">Живая модель активна</p><h2>Что нужно решить?</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div>
+            <button class="ghost" id="newSituation" type="button" aria-label="Начать новую ситуацию" title="Новый диалог">＋ Новая</button>
+          </div>
           <div class="conversation">
-            <div class="conversation-head"><div class="conversation-intro" id="conversationIntro"><p class="eyebrow">Живая модель активна</p><h2>Что нужно решить?</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div><button class="ghost" id="newSituation" type="button" aria-label="Начать новую ситуацию" title="Новый диалог">＋ Новая</button></div>
-            <div class="messages" id="messages"><article class="message clone" data-conversation-onboarding><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Опишите ситуацию чуть подробнее: что происходит, между чем вы выбираете и что для вас важно. Клон покажет, как поступил бы он — по вашей карте.</p></div></article></div>
+            <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text"><article class="message clone" data-conversation-onboarding><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Расскажите, что происходит и что для вас важно. Клон поможет увидеть возможный ход и объяснит его через вашу карту.</p></div></article></div>
             <button class="jump-to-latest hidden" id="jumpToLatest" type="button">К новому ответу <span aria-hidden="true">↓</span></button>
             <div class="chips" id="conversationSuggestions" aria-label="С чего можно начать"><button data-prompt="Хочу разобраться в отношениях. ">Отношения</button><button data-prompt="Хочу разобраться в работе и деньгах. ">Работа и деньги</button><button data-prompt="Хочу понять, что со мной происходит. ">Что со мной происходит</button></div>
-            <form id="questionForm" class="composer" aria-busy="false"><textarea id="question" rows="3" placeholder="Что происходит? Между чем выбираете? Что для вас важно?" required></textarea><button class="primary" type="submit" aria-label="Отправить вопрос" disabled>Спросить клона</button></form>
+            <form id="questionForm" class="composer" aria-busy="false"><textarea id="question" rows="3" placeholder="Опишите, что происходит…" required></textarea><button class="primary" type="submit" aria-label="Отправить вопрос" disabled>Спросить клона</button></form>
             <p class="composer-note">Первые три ответа доступны сразу. Затем Telegram сохранит клона и откроет бесплатный базовый диалог без лимита сообщений.</p>
             <p class="error" id="dialogError"></p>
             <section class="alignment-offer inline-service-card hidden" id="fullModeOffer" data-offer-code="clone_day"><p class="eyebrow">ПОЛНАЯ ГЛУБИНА КАРТЫ</p><h3>Увидеть картину целиком</h3><p>Бесплатный Клон показывает главный ход и его факторы. Полный режим связывает 3–6 значимых факторов, показывает главное противоречие, альтернативный ход и условие изменения решения.</p><div class="inline-offer-actions"><button class="primary" id="openFullModeOffer" type="button">Что откроется в полном режиме</button><button class="ghost" data-dismiss-offer="clone_day" type="button">Продолжить бесплатно</button></div><small>Диалог останется без лимита</small></section>
@@ -233,7 +237,7 @@
   </div>
 
   <div class="toast" id="cloneToast"></div>
-  <script src="/clone-ui-gears.js?v=20260827-polish3"></script>
+  <script src="/clone-ui-gears.js?v=20260827-polish4"></script>
   <script src="/clone-living.js?v=20260726-auth2" defer></script>
   <script src="/clone.js?v=20260729-routes1" defer></script>
   <script src="/clone/live/live-stats.js?v=20260728-factors1" defer></script>

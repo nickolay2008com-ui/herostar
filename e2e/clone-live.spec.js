@@ -93,11 +93,16 @@ test('вопрос проходит через создание Клона и п
   await createClone(page);
 
   const latestAnswer = page.locator('#messages .message.clone').last();
-  const factorDetails = latestAnswer.locator('.answer-factor-details');
-  await expect(factorDetails.getByText('Почему Клон решил так?')).toBeVisible();
-  await factorDetails.locator('summary').click();
-  await expect(factorDetails).toContainText(/дом|Марс|Венера|Сатурн|Солнце/i);
-  await expect(factorDetails).toContainText(/текущ|действ|решен|связ/i);
+  const evidenceTrigger = latestAnswer.locator('.answer-evidence-trigger');
+  const evidencePopover = latestAnswer.locator('.answer-evidence-popover');
+  await expect(evidenceTrigger).toBeVisible();
+  await expect(evidenceTrigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(evidencePopover).toBeHidden();
+  await evidenceTrigger.click();
+  await expect(evidenceTrigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(evidencePopover).toBeVisible();
+  await expect(evidencePopover).toContainText(/дом|Марс|Венера|Сатурн|Солнце/i);
+  await expect(evidencePopover).toContainText(/текущ|действ|решен|связ/i);
 
   await page.locator('button[data-tab="profile"]').click();
   await expect(page.locator('#logicPanel')).toBeVisible();
@@ -116,11 +121,13 @@ test('режим неизвестного времени честно исклю
   await createClone(page, { unknownTime: true });
   await expect(page.locator('#cloneStatus')).toContainText('без домов');
 
-  const factorDetails = page.locator('#messages .message.clone').last().locator('.answer-factor-details');
-  await expect(factorDetails.locator('summary')).toBeVisible();
-  await factorDetails.locator('summary').click();
-  await expect(factorDetails).toContainText('Время рождения неизвестно');
-  const unknownTimeFactors = (await factorDetails.locator('.answer-factor-item').allTextContents()).join(' ');
+  const latestAnswer = page.locator('#messages .message.clone').last();
+  const evidenceTrigger = latestAnswer.locator('.answer-evidence-trigger');
+  const evidencePopover = latestAnswer.locator('.answer-evidence-popover');
+  await expect(evidenceTrigger).toBeVisible();
+  await evidenceTrigger.click();
+  await expect(evidencePopover).toContainText('Время рождения неизвестно');
+  const unknownTimeFactors = (await evidencePopover.locator('.answer-factor-item').allTextContents()).join(' ');
   expect(unknownTimeFactors).not.toMatch(/дом|Асцендент|ASC|MC|Луна/i);
 
   await page.locator('button[data-tab="profile"]').click();
@@ -133,18 +140,22 @@ test('ответ и его факторный след восстанавлив�
   await createClone(page);
   const answerParagraph = page.locator('#messages .message.clone').last().locator('p').first();
   const answer = await answerParagraph.innerText();
-  const factorDetails = page.locator('#messages .message.clone').last().locator('.answer-factor-details');
-  await expect(factorDetails.locator('summary')).toBeVisible();
-  await factorDetails.locator('summary').click();
-  const factorText = String(await factorDetails.locator('.answer-factor-item').first().innerText()).trim();
+  const latestAnswer = page.locator('#messages .message.clone').last();
+  const evidenceTrigger = latestAnswer.locator('.answer-evidence-trigger');
+  const evidencePopover = latestAnswer.locator('.answer-evidence-popover');
+  await expect(evidenceTrigger).toBeVisible();
+  await evidenceTrigger.click();
+  const factorText = String(await evidencePopover.locator('.answer-factor-item').first().innerText()).trim();
 
   await page.reload();
   await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('#messages .message.clone').last().locator('p').first()).toContainText(answer.slice(0, 35));
-  const restoredDetails = page.locator('#messages .message.clone').last().locator('.answer-factor-details');
-  await expect(restoredDetails.locator('summary')).toBeVisible();
-  await restoredDetails.locator('summary').click();
-  await expect(restoredDetails).toContainText(factorText.split('\n').find(Boolean));
+  const restoredAnswer = page.locator('#messages .message.clone').last();
+  const restoredTrigger = restoredAnswer.locator('.answer-evidence-trigger');
+  const restoredPopover = restoredAnswer.locator('.answer-evidence-popover');
+  await expect(restoredTrigger).toBeVisible();
+  await restoredTrigger.click();
+  await expect(restoredPopover).toContainText(factorText.split('\n').find(Boolean));
 });
 
 test('мобильный основной путь сохраняет компактный чат, поле ввода и отдельный доступ к карте', async ({ page }, testInfo) => {
@@ -166,7 +177,12 @@ test('мобильный основной путь сохраняет компа
   expect(sendBox.height).toBeGreaterThanOrEqual(44);
   expect(composerBox.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
 
-  await expect(page.locator('#messages .message.clone').last().locator('.answer-factor-details summary')).toBeVisible();
+  const evidenceTrigger = page.locator('#messages .message.clone').last().locator('.answer-evidence-trigger');
+  await expect(evidenceTrigger).toBeVisible();
+  const evidenceBox = await evidenceTrigger.boundingBox();
+  expect(evidenceBox).not.toBeNull();
+  expect(evidenceBox.width).toBeGreaterThanOrEqual(44);
+  expect(evidenceBox.height).toBeGreaterThanOrEqual(44);
   await page.locator('#question').fill('Какой шаг проверить первым?');
   await expect(page.locator('#questionForm button[type="submit"]')).toBeEnabled();
   await page.locator('#question').blur();

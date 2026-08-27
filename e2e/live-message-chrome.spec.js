@@ -48,6 +48,7 @@ test('mobile Live скрывает повторный chrome Клона, сох�
   const geometry = await page.evaluate(() => {
     const messages = document.querySelector('#messages');
     const bubble = document.querySelector('#messages .message.clone > div');
+    const userBubble = document.querySelector('#messages .message.user > div');
     const paragraph = bubble?.querySelector('p');
     const messagesStyle = messages ? getComputedStyle(messages) : null;
     const messagesContentWidth = messages
@@ -55,15 +56,30 @@ test('mobile Live скрывает повторный chrome Клона, сох�
         - parseFloat(messagesStyle?.paddingLeft || '0')
         - parseFloat(messagesStyle?.paddingRight || '0')
       : 0;
+    const messagesRect = messages?.getBoundingClientRect();
+    const bubbleRect = bubble?.getBoundingClientRect();
+    const userRect = userBubble?.getBoundingClientRect();
+    const contentLeft = (messagesRect?.left || 0) + parseFloat(messagesStyle?.paddingLeft || '0');
+    const contentRight = (messagesRect?.right || 0) - parseFloat(messagesStyle?.paddingRight || '0');
     return {
-      bubbleWidth: bubble?.getBoundingClientRect().width || 0,
+      bubbleWidth: bubbleRect?.width || 0,
+      bubbleLeft: bubbleRect?.left || 0,
+      userWidth: userRect?.width || 0,
+      userRight: userRect?.right || 0,
+      contentLeft,
+      contentRight,
       messagesContentWidth,
       paragraphMarginTop: paragraph ? parseFloat(getComputedStyle(paragraph).marginTop) : -1,
     };
   });
 
   expect(geometry.bubbleWidth).toBeGreaterThan(0);
-  expect(geometry.bubbleWidth).toBeGreaterThanOrEqual(geometry.messagesContentWidth - 2);
-  expect(geometry.bubbleWidth).toBeLessThanOrEqual(geometry.messagesContentWidth + 2);
+  expect(geometry.bubbleWidth).toBeLessThanOrEqual((geometry.messagesContentWidth * .92) + 3);
+  expect(geometry.bubbleLeft).toBeGreaterThanOrEqual(geometry.contentLeft - 2);
+  expect(geometry.bubbleLeft).toBeLessThanOrEqual(geometry.contentLeft + 2);
+  expect(geometry.userWidth).toBeGreaterThan(0);
+  expect(geometry.userWidth).toBeLessThanOrEqual((geometry.messagesContentWidth * .84) + 3);
+  expect(geometry.userRight).toBeGreaterThanOrEqual(geometry.contentRight - 2);
+  expect(geometry.userRight).toBeLessThanOrEqual(geometry.contentRight + 2);
   expect(geometry.paragraphMarginTop).toBe(0);
 });

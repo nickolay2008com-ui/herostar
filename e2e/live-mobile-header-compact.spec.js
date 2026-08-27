@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const MOBILE_PROJECTS = new Set(['android-chromium', 'iphone-webkit', 'tablet-webkit']);
 
-test('mobile Live App-shell освобождает 12px сверху и сохраняет 44px touch-target', async ({ page }, testInfo) => {
+test('mobile Live App-shell показывает одну шапку и сохраняет 44px touch-target', async ({ page }, testInfo) => {
   test.skip(!MOBILE_PROJECTS.has(testInfo.project.name), 'Мобильный контракт App-shell');
 
   await page.goto('/clone/live/chat');
@@ -17,31 +17,38 @@ test('mobile Live App-shell освобождает 12px сверху и сохр
   });
 
   const topbar = page.locator('.live-topbar');
-  const brand = page.locator('.live-topbar .brand');
-  const home = page.locator('#liveHomeLink');
+  const appHeader = page.locator('#dialogView > .conversation-head');
+  const home = appHeader.locator('.app-home-link');
+  const newSituation = appHeader.locator('#newSituation');
   const conversation = page.locator('#dialogView .conversation');
 
-  await expect(topbar).toBeVisible();
-  await expect(brand).toBeVisible();
+  await expect(topbar).toBeHidden();
+  await expect(appHeader).toBeVisible();
   await expect(home).toBeVisible();
+  await expect(newSituation).toBeVisible();
   await expect(conversation).toBeVisible();
 
   await expect.poll(async () => page.evaluate(() => ({
-    topbarHeight: parseFloat(getComputedStyle(document.querySelector('.live-topbar')).height),
+    appHeaderHeight: parseFloat(getComputedStyle(document.querySelector('#dialogView > .conversation-head')).height),
     workspacePaddingTop: parseFloat(getComputedStyle(document.querySelector('#workspace')).paddingTop),
-  }))).toEqual({ topbarHeight: 44, workspacePaddingTop: 44 });
+  }))).toEqual({ appHeaderHeight: 56, workspacePaddingTop: 0 });
 
-  const [brandBox, homeBox, conversationBox] = await Promise.all([
-    brand.boundingBox(),
+  const [appHeaderBox, homeBox, newSituationBox, conversationBox] = await Promise.all([
+    appHeader.boundingBox(),
     home.boundingBox(),
+    newSituation.boundingBox(),
     conversation.boundingBox(),
   ]);
 
-  expect(brandBox).not.toBeNull();
+  expect(appHeaderBox).not.toBeNull();
   expect(homeBox).not.toBeNull();
+  expect(newSituationBox).not.toBeNull();
   expect(conversationBox).not.toBeNull();
-  expect(brandBox.height).toBeGreaterThanOrEqual(44);
   expect(homeBox.height).toBeGreaterThanOrEqual(44);
-  expect(conversationBox.y).toBeGreaterThanOrEqual(43);
-  expect(conversationBox.y).toBeLessThanOrEqual(45);
+  expect(homeBox.width).toBeGreaterThanOrEqual(44);
+  expect(newSituationBox.height).toBeGreaterThanOrEqual(44);
+  expect(newSituationBox.width).toBeGreaterThanOrEqual(44);
+  expect(appHeaderBox.y).toBe(0);
+  expect(conversationBox.y).toBeGreaterThanOrEqual(55);
+  expect(conversationBox.y).toBeLessThanOrEqual(57);
 });

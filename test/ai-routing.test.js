@@ -97,3 +97,16 @@ test('диалог не рекламирует возможности в каж�
   assert.match(prompt, /естественной точке перехода/i);
   assert.match(prompt, /не больше двух направлений/i);
 });
+
+test('каждый консультационный промпт заканчивается одной короткой инструкцией о живом языке', () => {
+  const footer = 'Отвечай максимально естественно, живо и понятно — простыми человеческими словами, без канцелярита и шаблонных фраз.';
+  for (const prompt of [
+    consultationSystemPrompt('deep', 'clone', false),
+    consultationSystemPrompt('dialog', 'clone', true),
+    consultationSystemPrompt('deep', 'herostar', false),
+    consultationSystemPrompt('dialog', 'herostar', false),
+  ]) {
+    assert.equal(prompt.trim().split('\n').at(-1), footer);
+    assert.equal(prompt.split(footer).length - 1, 1);
+  }
+});
