@@ -31,6 +31,7 @@ test('Live chat закрепляет Telegram-подобную геометри�
   assert.match(styles, /\.message\.user > div\s*\{[^}]*max-width:\s*min\(82%,\s*35rem\);/s);
   assert.match(styles, /\.message\.clone > div\s*\{[^}]*width:\s*fit-content;/s);
   assert.match(styles, /\.composer\s*\{[^}]*min-height:\s*52px;/s);
+  assert.match(styles, /\.live-product\.live-product\.live-chat-page\.live-app-ready #dialogView\.dialog-layout \.conversation \.composer\s*\{[^}]*background:\s*var\(--chat-surface\);/s);
   assert.match(styles, /overflow-wrap:\s*anywhere;/);
   assert.match(html, /id="messages"[^>]*role="log"[^>]*aria-live="polite"/);
   assert.doesNotMatch(app, /answer\.length|textContent\.length|dataset\.messageLength/);

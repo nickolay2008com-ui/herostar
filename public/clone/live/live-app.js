@@ -129,6 +129,30 @@
       };
     }
 
+    function parseEvidenceDataset(value, fallback) {
+      try {
+        return JSON.parse(String(value || ''));
+      } catch {
+        return fallback;
+      }
+    }
+
+    function readAnswerSnapshot(answer) {
+      const factors = parseEvidenceDataset(answer?.dataset.answerFactors, []);
+      if (!Array.isArray(factors) || !factors.length) return null;
+      const scope = parseEvidenceDataset(answer?.dataset.answerFactorScope, null);
+      return {
+        note: String(scope?.note || '').trim(),
+        factors: factors
+          .map((factor) => ({
+            title: String(factor?.title || '').trim(),
+            position: String(factor?.position || '').trim(),
+            role: String(factor?.role || '').trim(),
+          }))
+          .filter((factor) => factor.title && factor.role),
+      };
+    }
+
     function renderAnswerEvidence(answer, snapshot) {
       const content = answer?.querySelector(':scope > div') || answer;
       const paragraph = content?.querySelector(':scope > p');
@@ -224,12 +248,16 @@
       });
     }
 
-    function syncLatestAnswerEvidence() {
+    function syncAnswerEvidence() {
       window.cancelAnimationFrame(evidenceSyncFrame);
       evidenceSyncFrame = window.requestAnimationFrame(() => {
-        const snapshot = readFactorSnapshot();
-        const answer = meaningfulCloneAnswers().at(-1);
-        if (snapshot && answer) renderAnswerEvidence(answer, snapshot);
+        const answers = meaningfulCloneAnswers();
+        const latestSnapshot = readFactorSnapshot();
+        answers.forEach((answer, index) => {
+          const snapshot = readAnswerSnapshot(answer)
+            || (index === answers.length - 1 ? latestSnapshot : null);
+          if (snapshot?.factors?.length) renderAnswerEvidence(answer, snapshot);
+        });
       });
     }
 
@@ -605,7 +633,7 @@
     function syncDialogState() {
       if (dialogView.classList.contains('hidden')) return;
       if (currentView !== 'profile') setAppView('dialog');
-      syncLatestAnswerEvidence();
+      syncAnswerEvidence();
       scheduleSupportSync();
     }
 
@@ -652,7 +680,7 @@
     });
 
     new MutationObserver(() => {
-      syncLatestAnswerEvidence();
+      syncAnswerEvidence();
       scheduleSupportSync();
     }).observe(messages, {
       childList: true,
@@ -661,7 +689,7 @@
     });
 
     if (logicFactors) {
-      new MutationObserver(syncLatestAnswerEvidence).observe(logicFactors, {
+      new MutationObserver(syncAnswerEvidence).observe(logicFactors, {
         childList: true,
         subtree: true,
         characterData: true,

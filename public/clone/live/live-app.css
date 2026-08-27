@@ -464,7 +464,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
   background: var(--chat-accent-soft);
 }
 
-.live-product.live-chat-page.live-app-ready #dialogView .composer {
+.live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer {
   position: static;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -479,12 +479,12 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
   box-shadow: 0 8px 26px rgba(63, 48, 71, .08);
 }
 
-.live-product.live-chat-page.live-app-ready #dialogView .composer:focus-within {
+.live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer:focus-within {
   border-color: var(--chat-focus);
   box-shadow: 0 0 0 3px rgba(141, 108, 188, .13), 0 8px 26px rgba(63, 48, 71, .08);
 }
 
-.live-product.live-chat-page.live-app-ready #dialogView .composer textarea {
+.live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer textarea {
   min-height: 44px;
   max-height: 132px;
   padding: 11px 10px 9px;
@@ -501,12 +501,12 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
   box-shadow: none;
 }
 
-.live-product.live-chat-page.live-app-ready #dialogView .composer textarea::placeholder {
+.live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer textarea::placeholder {
   color: #8a808b;
   opacity: 1;
 }
 
-.live-product.live-chat-page.live-app-ready #dialogView .composer .primary {
+.live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer .primary {
   min-width: 112px;
   min-height: 44px;
   align-self: end;
@@ -515,7 +515,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
   font-size: 12px;
 }
 
-.live-product.live-chat-page.live-app-ready #dialogView .composer-note {
+.live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer-note {
   margin: -1px 16px 10px;
   color: var(--chat-muted);
   font-size: 10.5px;
@@ -1203,7 +1203,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
     white-space: nowrap;
   }
 
-  .live-product.live-chat-page.live-app-ready #dialogView .composer {
+  .live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer {
     grid-template-columns: minmax(0, 1fr) 46px;
     min-height: 58px;
     margin: 0 8px 8px;
@@ -1213,13 +1213,13 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
     background: var(--chat-surface);
   }
 
-  .live-product.live-chat-page.live-app-ready #dialogView .composer textarea {
+  .live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer textarea {
     min-height: 46px;
     max-height: 120px;
     padding: 12px 9px 10px;
   }
 
-  .live-product.live-chat-page.live-app-ready #dialogView .composer .primary {
+  .live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer .primary {
     width: 46px;
     min-width: 46px;
     height: 46px;
@@ -1229,7 +1229,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
     font-size: 0;
   }
 
-  .live-product.live-chat-page.live-app-ready #dialogView .composer .primary::before {
+  .live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer .primary::before {
     content: "↑";
     display: grid;
     height: 100%;
@@ -1240,7 +1240,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
     line-height: 1;
   }
 
-  .live-product.live-chat-page.live-app-ready #dialogView .composer-note,
+  .live-product.live-product.live-chat-page.live-app-ready #dialogView.dialog-layout .conversation .composer-note,
   .live-product.live-chat-page.live-app-ready #dialogView #dialogError:empty {
     display: none;
   }
