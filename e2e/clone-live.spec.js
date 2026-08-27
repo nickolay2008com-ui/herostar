@@ -186,7 +186,7 @@ test('два восстановленных ответа получают соб
 
   await page.reload();
   await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
-  const answers = page.locator('#messages .message.clone');
+  const answers = page.locator('#messages > .message.user + .message.clone');
   await expect(answers).toHaveCount(2);
   await expect(answers.locator('.answer-evidence-trigger')).toHaveCount(2);
   const visibleTexts = (await answers.locator(':scope > div > p').allTextContents()).join(' ');
