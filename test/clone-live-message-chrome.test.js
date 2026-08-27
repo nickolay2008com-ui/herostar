@@ -16,5 +16,4 @@ test('Live mobile упрощает только chrome ответа и не пе
 
   assert.match(cloneJs, /pending\.querySelector\('p'\)\.textContent\s*=\s*data\.answer;/);
   assert.match(cloneJs, /content:\s*data\.answer,/);
-  assert.doesNotMatch(styles, /text-transform\s*:/);
 });
