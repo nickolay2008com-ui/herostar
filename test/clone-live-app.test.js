@@ -13,7 +13,7 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260826-app2/);
+  assert.match(gears, /live-app\.css\?v=20260826-app3/);
   assert.match(gears, /live-app\.js\?v=20260826-app2/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
@@ -31,7 +31,7 @@ test('Live HTML меняет immutable cache-key загрузчика App при
     read('bootstrap.js'),
   ]);
   assert.match(bootstrap, /max-age=31536000, immutable/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260826-polish1/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish2/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
 });
 

@@ -19,7 +19,7 @@
   if (liveInterface) {
     const appStyle = document.createElement('link');
     appStyle.rel = 'stylesheet';
-    appStyle.href = '/clone/live/live-app.css?v=20260826-app2';
+    appStyle.href = '/clone/live/live-app.css?v=20260826-app3';
     document.head.append(appStyle);
 
     const appScript = document.createElement('script');
