@@ -13,14 +13,15 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260827-app5/);
-  assert.match(gears, /live-app\.js\?v=20260827-app3/);
+  assert.match(gears, /live-app\.css\?v=20260827-app6/);
+  assert.match(gears, /live-app\.js\?v=20260827-app4/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
   assert.match(app, /conversation\.classList\.toggle\('hidden', profileMode\)/);
   assert.match(app, /logicPanel\.classList\.toggle\('hidden', !profileMode\)/);
   assert.equal((html.match(/id="questionForm"/g) || []).length, 1);
   assert.equal((html.match(/id="messages"/g) || []).length, 1);
+  assert.ok(html.indexOf('/clone-answer-presentation.js?v=20260827-evidence1') < html.indexOf('/clone.js?v=20260827-evidence1'));
   assert.doesNotMatch(app, /createElement\('form'\)|createElement\("form"\)/);
   assert.ok(styles.length > 0);
 });
@@ -31,7 +32,7 @@ test('Live HTML меняет immutable cache-key загрузчика App при
     read('bootstrap.js'),
   ]);
   assert.match(bootstrap, /max-age=31536000, immutable/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish4/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260827-evidence1/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
 });
 
@@ -54,7 +55,9 @@ test('технические факторы открываются пузырё�
   assert.match(app, /paragraph\.append\(document\.createTextNode\(' '\), trigger\)/);
   assert.match(app, /popover\.className = 'answer-evidence-popover hidden'/);
   assert.match(app, /logicFactors\.querySelectorAll\('\.factor'\)/);
-  assert.match(app, /meaningfulCloneAnswers\(\)\.at\(-1\)/);
+  assert.match(app, /function readAnswerSnapshot\(answer\)/);
+  assert.match(app, /answer\?\.dataset\.answerFactors/);
+  assert.match(app, /answers\.forEach\(\(answer, index\)/);
   assert.match(app, /renderAnswerEvidence\(answer, snapshot\)/);
   assert.match(styles, /\.answer-evidence-trigger\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
   assert.match(styles, /\.answer-evidence-popover\s*\{/);

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const MOBILE_PROJECTS = new Set(['android-chromium', 'iphone-webkit', 'tablet-webkit']);
 
-test('mobile Live скрывает повторный chrome Клона, сохраняя текст ответа без изменений', async ({ page }, testInfo) => {
+test('mobile Live скрывает повторный chrome Клона, сохраняя формат безопасного текста', async ({ page }, testInfo) => {
   test.skip(!MOBILE_PROJECTS.has(testInfo.project.name), 'Мобильный контракт message chrome');
 
   await page.goto('/clone/live/chat');

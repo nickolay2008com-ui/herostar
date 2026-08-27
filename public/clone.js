@@ -367,13 +367,37 @@ function renderWebSearch(container, webSearch, { trackImpression = true } = {}) 
   container.append(section);
 }
 
+function displayCloneAnswer(text) {
+  const present = globalThis.HeroStarAnswerPresentation?.displayCloneAnswer;
+  return typeof present === 'function' ? present(text) : String(text || '');
+}
+
+function attachCloneEvidence(element, factors = [], factorScope = null, answer = '') {
+  if (!element?.classList.contains('clone')) return;
+  let items = Array.isArray(factors) ? factors.filter((item) => item?.title && item?.role).slice(0, 6) : [];
+  if (!items.length) {
+    const extract = globalThis.HeroStarAnswerPresentation?.technicalCloneDetails;
+    const legacyDetail = typeof extract === 'function' ? extract(answer) : '';
+    if (legacyDetail) items = [{ title: 'Техническое объяснение', position: '', role: legacyDetail }];
+  }
+  if (!items.length) {
+    delete element.dataset.answerFactors;
+    delete element.dataset.answerFactorScope;
+    return;
+  }
+  element.dataset.answerFactors = JSON.stringify(items);
+  if (factorScope) element.dataset.answerFactorScope = JSON.stringify(factorScope);
+  else delete element.dataset.answerFactorScope;
+}
+
 function message(role, text, { persist = true, webSearch = null, factors = [], factorScope = null, trackSearchImpression = true } = {}) {
   const element = document.createElement('article');
   element.className = `message ${role}`;
   element.innerHTML = role === 'clone'
     ? '<span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p></p></div>'
     : '<div><b>Вы</b><p></p></div>';
-  element.querySelector('p').textContent = text;
+  element.querySelector('p').textContent = role === 'clone' ? displayCloneAnswer(text) : text;
+  if (role === 'clone') attachCloneEvidence(element, factors, factorScope, text);
   if (role === 'clone' && webSearch) {
     renderWebSearch(element.querySelector('div'), webSearch, {
       trackImpression: trackSearchImpression,
@@ -909,7 +933,8 @@ async function askClone(question, pending, userElement) {
       startAuthPoll(pending);
       return;
     }
-    pending.querySelector('p').textContent = data.answer;
+    attachCloneEvidence(pending, data.factors || [], data.factorScope || null, data.answer);
+    pending.querySelector('p').textContent = displayCloneAnswer(data.answer);
     renderWebSearch(pending.querySelector('div'), data.webSearch);
     state.localMessages.push(
       { role: 'user', content: question, createdAt: new Date().toISOString() },

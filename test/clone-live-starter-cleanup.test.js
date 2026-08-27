@@ -9,7 +9,7 @@ test('Live помечает стартовое сообщение и доста�
   ]);
 
   assert.match(html, /class="message clone" data-conversation-onboarding/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish4/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260827-evidence1/);
   assert.match(gears, /function installLiveConversationOnboarding\(\)/);
   assert.match(gears, /messages\.querySelector\(':scope > \.message\.user'\)/);
   assert.match(gears, /querySelectorAll\(':scope > \[data-conversation-onboarding\]'\)/);

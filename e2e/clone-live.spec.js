@@ -93,8 +93,10 @@ test('вопрос проходит через создание Клона и п
   await createClone(page);
 
   const latestAnswer = page.locator('#messages .message.clone').last();
+  const visibleAnswer = latestAnswer.locator(':scope > div > p').first();
   const evidenceTrigger = latestAnswer.locator('.answer-evidence-trigger');
   const evidencePopover = latestAnswer.locator('.answer-evidence-popover');
+  await expect(visibleAnswer).not.toContainText(/Куспид|орбис|тригон|секстил|ретроград|\d+(?:[.,]\d+)?°/i);
   await expect(evidenceTrigger).toBeVisible();
   await expect(evidenceTrigger).toHaveAttribute('aria-expanded', 'false');
   await expect(evidencePopover).toBeHidden();
@@ -158,6 +160,49 @@ test('ответ и его факторный след восстанавлив�
   await expect(restoredPopover).toContainText(factorText.split('\n').find(Boolean));
 });
 
+test('два восстановленных ответа получают собственные popover, включая старую историю', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'Десктопный контракт истории');
+  await startFromQuestion(page, 'Стоит ли входить в новый проект или пока сохранить стабильность?');
+  await createClone(page);
+
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('starClone') || 'null');
+    saved.questionCount = 2;
+    saved.messages = [
+      { role: 'user', content: 'Первый вопрос' },
+      {
+        role: 'clone',
+        content: 'Клон сначала проверил бы договорённости.\n\nПочему: Венера в Тельце 12° и 7-й дом поддерживают этот ход.',
+        factors: [{ title: 'Венера', position: 'Венера в Тельце 12°', role: 'помогает проверить устойчивость договорённостей' }],
+      },
+      { role: 'user', content: 'Второй вопрос' },
+      {
+        role: 'clone',
+        content: 'Клон выбрал бы обратимый шаг.\n\nПочему: Куспид 5°15′ и тригон с орбисом 2.1° поддерживают проверку.',
+      },
+    ];
+    localStorage.setItem('starClone', JSON.stringify(saved));
+  });
+
+  await page.reload();
+  await expect(page.locator('#dialogView')).toBeVisible({ timeout: 20_000 });
+  const answers = page.locator('#messages > .message.user + .message.clone');
+  await expect(answers).toHaveCount(2);
+  await expect(answers.locator('.answer-evidence-trigger')).toHaveCount(2);
+  const visibleTexts = (await answers.locator(':scope > div > p').allTextContents()).join(' ');
+  expect(visibleTexts).not.toMatch(/Куспид|тригон|орбис|12°|7-й дом/i);
+
+  const firstTrigger = answers.nth(0).locator('.answer-evidence-trigger');
+  const secondTrigger = answers.nth(1).locator('.answer-evidence-trigger');
+  await firstTrigger.click();
+  await expect(answers.nth(0).locator('.answer-evidence-popover')).toContainText('Венера в Тельце 12°');
+  await secondTrigger.click();
+  await expect(firstTrigger).toHaveAttribute('aria-expanded', 'false');
+  const legacyPopover = answers.nth(1).locator('.answer-evidence-popover');
+  await expect(legacyPopover).toContainText('Куспид 5°15′');
+  await expect(legacyPopover).toContainText('орбисом 2.1°');
+});
+
 test('мобильный основной путь сохраняет компактный чат, поле ввода и отдельный доступ к карте', async ({ page }, testInfo) => {
   test.skip(!['android-chromium', 'iphone-webkit'].includes(testInfo.project.name), 'Проверка предназначена для мобильных движков');
   await startFromQuestion(page, 'Стоит ли рискнуть и начать новый проект сейчас?');
@@ -176,6 +221,7 @@ test('мобильный основной путь сохраняет компа
   expect(sendBox.width).toBeGreaterThanOrEqual(44);
   expect(sendBox.height).toBeGreaterThanOrEqual(44);
   expect(composerBox.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+  expect(await page.locator('#questionForm').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 252, 248)');
 
   const evidenceTrigger = page.locator('#messages .message.clone').last().locator('.answer-evidence-trigger');
   await expect(evidenceTrigger).toBeVisible();
