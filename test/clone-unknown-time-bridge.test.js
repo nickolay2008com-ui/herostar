@@ -20,6 +20,6 @@ test('обновлённый защитный слой не остаётся в 
 
   assert.match(cloneHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
   assert.match(cloneIndexHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
-  assert.match(liveHtml, /\/clone-ui-gears\.js\?v=20260827-polish2/);
+  assert.match(liveHtml, /\/clone-ui-gears\.js\?v=20260827-polish3/);
   assert.doesNotMatch(liveHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
 });
