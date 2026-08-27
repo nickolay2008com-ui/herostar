@@ -19,11 +19,11 @@
   if (liveInterface) {
     const appStyle = document.createElement('link');
     appStyle.rel = 'stylesheet';
-    appStyle.href = '/clone/live/live-app.css?v=20260827-app4';
+    appStyle.href = '/clone/live/live-app.css?v=20260827-app5';
     document.head.append(appStyle);
 
     const appScript = document.createElement('script');
-    appScript.src = '/clone/live/live-app.js?v=20260826-app2';
+    appScript.src = '/clone/live/live-app.js?v=20260827-app3';
     appScript.async = false;
     document.head.append(appScript);
   }

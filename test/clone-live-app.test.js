@@ -13,8 +13,8 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260827-app4/);
-  assert.match(gears, /live-app\.js\?v=20260826-app2/);
+  assert.match(gears, /live-app\.css\?v=20260827-app5/);
+  assert.match(gears, /live-app\.js\?v=20260827-app3/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
   assert.match(app, /conversation\.classList\.toggle\('hidden', profileMode\)/);
@@ -31,7 +31,7 @@ test('Live HTML меняет immutable cache-key загрузчика App при
     read('bootstrap.js'),
   ]);
   assert.match(bootstrap, /max-age=31536000, immutable/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish3/);
+  assert.match(html, /clone-ui-gears\.js\?v=20260827-polish4/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
 });
 
@@ -44,18 +44,22 @@ test('диалог сохраняет позицию чтения при пер�
   assert.match(app, /button\.setAttribute\('aria-current', 'page'\)/);
 });
 
-test('факторы конкретного ответа доступны по раскрытию рядом с ответом', async () => {
+test('технические факторы открываются пузырём по значку в конце ответа', async () => {
   const [app, styles] = await Promise.all([
     read('public/clone/live/live-app.js'),
     read('public/clone/live/live-app.css'),
   ]);
 
-  assert.match(app, /summary\.textContent = 'Почему Клон решил так\?'/);
+  assert.match(app, /trigger\.className = 'answer-evidence-trigger'/);
+  assert.match(app, /paragraph\.append\(document\.createTextNode\(' '\), trigger\)/);
+  assert.match(app, /popover\.className = 'answer-evidence-popover hidden'/);
   assert.match(app, /logicFactors\.querySelectorAll\('\.factor'\)/);
   assert.match(app, /meaningfulCloneAnswers\(\)\.at\(-1\)/);
-  assert.match(app, /renderAnswerFactorDetails\(answer, snapshot\)/);
-  assert.match(styles, /\.answer-factor-details > summary\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(app, /renderAnswerEvidence\(answer, snapshot\)/);
+  assert.match(styles, /\.answer-evidence-trigger\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s);
+  assert.match(styles, /\.answer-evidence-popover\s*\{/);
   assert.match(styles, /\.answer-factor-item/);
+  assert.doesNotMatch(app, /createElement\('details'\)/);
 });
 
 test('mobile App-shell оставляет нижнюю навигацию только для Диалога и Моей карты', async () => {
@@ -65,7 +69,7 @@ test('mobile App-shell оставляет нижнюю навигацию тол
   ]);
 
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?\.workspace \.side-head,[\s\S]*?\.workspace \.side-note\s*\{\s*display:\s*none !important;/);
-  assert.match(styles, /\.conversation-started \.app-chat-title/);
+  assert.match(styles, /#dialogView:has\(\.conversation-started\) > \.conversation-head \.app-chat-title/);
   assert.match(app, /по вашей натальной карте/);
 });
 
