@@ -781,6 +781,13 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
           premium,
           externalContext,
         });
+    if (product === 'clone' && consultation.status === 'unavailable') {
+      throw publicError(
+        'Сейчас Клон не смог ответить по сути. Попробуйте ещё раз.',
+        503,
+        'CLONE_AI_UNAVAILABLE',
+      );
+    }
     const answer = consultation.answer;
     const factors = product === 'clone' && Array.isArray(consultation.factors) ? consultation.factors : [];
     const factorScope = product === 'clone' ? consultation.factorScope || null : null;
