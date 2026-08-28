@@ -1,10 +1,13 @@
 import express from 'express';
 import { scopeCloneAccess } from './src/clone-access-middleware.js';
 import { publicCloneFunnelHandler } from './src/public-clone-funnel.js';
+import { installGeminiForLiveClone } from './src/gemini-openai-bridge.js';
 import {
   startTelegramUpdateRuntime,
   telegramLinkAuthMiddleware,
 } from './src/telegram-link-auth.js';
+
+installGeminiForLiveClone();
 
 const originalUse = express.application.use;
 const originalStatic = express.static;
