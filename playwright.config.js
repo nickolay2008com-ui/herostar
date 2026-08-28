@@ -42,6 +42,7 @@ export default defineConfig({
       PORT: '3100',
       NODE_ENV: 'test',
       DEMO_MODE: 'true',
+      CLONE_LOCAL_TEST_ANSWER: 'true',
       SESSION_SECRET: 'browser-tests-session-secret-32-chars-minimum',
       APP_URL: 'http://127.0.0.1:3100',
     },

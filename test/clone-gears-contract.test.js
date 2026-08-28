@@ -35,13 +35,17 @@ test('вопрос и ответ сохраняются одной транза�
 });
 
 test('режим клона закреплён на сервере и имеет безопасный fallback', async () => {
-  const [ai, profiles] = await Promise.all([
+  const [ai, profiles, server] = await Promise.all([
     read('src/ai.js'),
     read('src/consultation-profiles.js'),
+    read('server.js'),
   ]);
   assert.match(ai, /resolveConsultationProfile/);
   assert.match(ai, /product === 'clone'/);
-  assert.match(ai, /Ваш звёздный клон, вероятнее всего/);
+  assert.doesNotMatch(ai, /Ваш звёздный клон, вероятнее всего/);
+  assert.match(ai, /status: 'unavailable'/);
+  assert.match(server, /CLONE_AI_UNAVAILABLE/);
+  assert.ok(server.indexOf("consultation.status === 'unavailable'") < server.indexOf('saveConsultationExchange({'));
   assert.match(profiles, /Рассмотри описанную ситуацию не как прогноз поступка человека/);
   assert.match(profiles, /полную картину одного решения/);
   assert.match(profiles, /factorBudget: Object\.freeze\(\{ min: 3, max: 6 \}\)/);

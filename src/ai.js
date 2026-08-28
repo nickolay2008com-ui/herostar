@@ -100,10 +100,8 @@ function localConsultation(portrait, question) {
   return `По этой теме я бы начал с раздела «${related.title}». ${related.key} ${related.action} Дальше можно посмотреть, где этот ресурс раскрывается сильнее, или связать его с конкретной ситуацией.`;
 }
 
-function localCloneConsultation(factors = []) {
-  const evidence = publicConsultationFactors(factors);
-  const explanation = evidence.map((factor) => `${factor.position || factor.title} — ${factor.role}`).join('; ');
-  return `Ваш звёздный клон, вероятнее всего, выбрал бы ход, который прямо отвечает на ситуацию и опирается на наиболее значимые факторы карты.\n\nПочему: ${explanation || 'для текущего вопроса не удалось выделить достаточно надёжных факторов карты'}.\n\nИтог модели: выбрать наиболее обоснованное действие и ясно понимать, какие факторы карты поддерживают этот ход.`;
+function localCloneTestAnswer() {
+  return 'Клон начал бы с сути вопроса и выбрал конкретный проверяемый шаг.';
 }
 
 function cloneProfilePolicy(profile, premium) {
@@ -156,7 +154,7 @@ export function consultationSystemPrompt(mode, product = 'herostar', premium = f
   if (isClone && mode === 'deep') {
     return withNaturalLanguageFooter(`${shared}
 
-Это первый содержательный ответ Звёздного клона. Точно улови ситуацию. Если данных недостаточно и разные уточнения меняют ход клона, задай один различающий вопрос без преждевременного большого разбора. Если запрос ясен, сразу следуй механике активного профиля: ход клона → объяснение через установленный диапазон факторов → уточняющий вопрос только при необходимости. Не заменяй эту механику общим форматом HeroStar.`);
+В первом ответе сразу затронь суть вопроса.`);
   }
 
   if (isClone) {
@@ -251,11 +249,20 @@ async function runConsultation({
     ? selectConsultationFactors({ chart, question, factorBudget: profile?.factorBudget })
     : { factors: [], scope: factorScopeForChart(chart) };
   const publicFactors = product === 'clone' ? publicConsultationFactors(selected.factors) : [];
-  const localAnswer = () => product === 'clone'
-    ? localCloneConsultation(selected.factors)
-    : localConsultation(portrait, question);
+  const unavailableCloneAnswer = () => ({
+    status: 'unavailable',
+    answer: null,
+    factors: [],
+    factorScope: selected.scope,
+  });
+  const localAnswer = () => localConsultation(portrait, question);
 
   if (!process.env.OPENAI_API_KEY) {
+    if (product === 'clone') {
+      return process.env.CLONE_LOCAL_TEST_ANSWER === 'true'
+        ? { answer: localCloneTestAnswer(), factors: publicFactors, factorScope: selected.scope }
+        : unavailableCloneAnswer();
+    }
     return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
 
@@ -306,7 +313,9 @@ async function runConsultation({
       console.error('OpenAI consultation failed:', primaryError?.message || primaryError);
     }
 
-    return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
+    return product === 'clone'
+      ? unavailableCloneAnswer()
+      : { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
 }
 

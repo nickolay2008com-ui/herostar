@@ -65,4 +65,22 @@ test('публичная цепочка клона открывается на �
     headers: { 'x-chart-token': chart.accessToken },
   });
   assert.equal(restored.status, 200);
+
+  const unavailable = await fetch(`${base}/api/consult`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-chart-token': chart.accessToken,
+    },
+    body: JSON.stringify({
+      chartId: chart.id,
+      product: 'clone',
+      question: 'Какую страну выбрать для переезда?',
+    }),
+  });
+  assert.equal(unavailable.status, 503);
+  assert.deepEqual(await unavailable.json(), {
+    error: 'Сейчас Клон не смог ответить по сути. Попробуйте ещё раз.',
+    code: 'CLONE_AI_UNAVAILABLE',
+  });
 });
