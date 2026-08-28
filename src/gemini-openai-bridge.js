@@ -1,5 +1,8 @@
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+export const GEMINI_PRIMARY_MODEL = 'gemini-3.1-pro-preview';
+export const GEMINI_FALLBACK_MODEL = 'gemini-3.7-flash';
+
 function clean(value = '') {
   return String(value || '').trim();
 }
@@ -8,22 +11,8 @@ function geminiApiKey() {
   return clean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
 }
 
-function geminiModel(payload = {}) {
-  const mode = (() => {
-    try {
-      const input = Array.isArray(payload.input) ? payload.input : [];
-      const user = input.findLast?.((item) => item?.role === 'user') || [...input].reverse().find((item) => item?.role === 'user');
-      const raw = typeof user?.content === 'string' ? user.content : '';
-      return JSON.parse(raw || '{}')?.mode || 'dialog';
-    } catch {
-      return 'dialog';
-    }
-  })();
-  return clean(
-    mode === 'deep'
-      ? process.env.GEMINI_MODEL_DEEP || process.env.GEMINI_MODEL
-      : process.env.GEMINI_MODEL_LIVE || process.env.GEMINI_MODEL,
-  ) || 'gemini-2.5-flash';
+export function resolveGeminiModel(env = process.env) {
+  return clean(env?.GEMINI_MODEL_FORCE) || GEMINI_PRIMARY_MODEL;
 }
 
 function openAiResponseUrl(input) {
@@ -90,10 +79,17 @@ function asOpenAiResponse(text, model) {
   };
 }
 
-async function callGemini(originalFetch, consultation, payload) {
+function generationConfig(model, maxOutputTokens) {
+  const config = { maxOutputTokens };
+  if (/^gemini-3(?:\.|-)/.test(model)) {
+    config.thinkingConfig = { thinkingLevel: 'high' };
+  }
+  return config;
+}
+
+async function callGemini(originalFetch, consultation, payload, model) {
   const key = geminiApiKey();
   if (!key) throw new Error('GEMINI_API_KEY is not configured.');
-  const model = geminiModel(payload);
   const maxOutputTokens = Math.max(256, Math.min(4096, Number(payload.max_output_tokens) || (consultation.mode === 'deep' ? 1800 : 1000)));
   const url = `${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`;
   const response = await originalFetch(url, {
@@ -110,12 +106,9 @@ async function callGemini(originalFetch, consultation, payload) {
         role: 'user',
         parts: [{ text: consultation.user }],
       }],
-      generationConfig: {
-        maxOutputTokens,
-        temperature: consultation.mode === 'deep' ? 0.7 : 0.6,
-      },
+      generationConfig: generationConfig(model, maxOutputTokens),
     }),
-    signal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 45000)),
+    signal: AbortSignal.timeout(Number(process.env.GEMINI_TIMEOUT_MS || 90000)),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -124,7 +117,7 @@ async function callGemini(originalFetch, consultation, payload) {
   }
   const text = outputTextFromGemini(data);
   if (!text) throw new Error(`Gemini ${model} returned an empty answer.`);
-  console.info(`[HeroStar AI] provider=gemini product=clone mode=${consultation.mode} model=${model}`);
+  console.info(`[HeroStar AI] provider=gemini product=clone mode=${consultation.mode} model=${model} thinking=high`);
   return new Response(JSON.stringify(asOpenAiResponse(text, model)), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
@@ -161,17 +154,28 @@ export function installGeminiForLiveClone() {
     const consultation = payload ? extractCloneConsultation(payload) : null;
     if (!consultation) return originalFetch(input, init);
 
+    const primaryModel = resolveGeminiModel();
     try {
-      return await callGemini(originalFetch, consultation, payload);
-    } catch (error) {
-      console.error('[HeroStar AI] Gemini Live clone failed:', error?.message || error);
+      return await callGemini(originalFetch, consultation, payload, primaryModel);
+    } catch (primaryError) {
+      console.error('[HeroStar AI] Gemini primary Live clone failed:', primaryError?.message || primaryError);
+
+      if (primaryModel !== GEMINI_FALLBACK_MODEL) {
+        console.warn(`[HeroStar AI] retrying Live clone with Gemini fallback model=${GEMINI_FALLBACK_MODEL}`);
+        try {
+          return await callGemini(originalFetch, consultation, payload, GEMINI_FALLBACK_MODEL);
+        } catch (fallbackError) {
+          console.error('[HeroStar AI] Gemini fallback Live clone failed:', fallbackError?.message || fallbackError);
+        }
+      }
+
       if (hadOpenAiKey) {
         console.warn('[HeroStar AI] falling back to OpenAI for Live clone.');
         return originalFetch(input, init);
       }
       return new Response(JSON.stringify({
         error: {
-          message: error?.message || 'Gemini Live clone failed.',
+          message: primaryError?.message || 'Gemini Live clone failed.',
           type: 'gemini_bridge_error',
         },
       }), {
@@ -181,5 +185,5 @@ export function installGeminiForLiveClone() {
     }
   };
 
-  console.info('[HeroStar AI] Gemini is enabled as the primary provider for Live clone consultations.');
+  console.info(`[HeroStar AI] Gemini is enabled as the primary provider for Live clone consultations. model=${resolveGeminiModel()} fallback=${GEMINI_FALLBACK_MODEL}`);
 }
