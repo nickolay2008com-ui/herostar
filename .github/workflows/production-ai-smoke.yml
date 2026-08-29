@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/production-ai-smoke.yml'
+      - 'src/gemini-openai-bridge.js'
 
 jobs:
   verify-ai:
