@@ -1,7 +1,7 @@
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-pro';
-export const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash';
+export const GEMINI_PRIMARY_MODEL = 'gemini-3.7-flash';
+export const GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash';
 
 function clean(value = '') {
   return String(value || '').trim();
@@ -121,7 +121,7 @@ async function callGemini(originalFetch, consultation, payload, model) {
   }
   const text = outputTextFromGemini(data);
   if (!text) throw new Error(`Gemini ${model} returned an empty answer.`);
-  console.info(`[HeroStar AI] provider=gemini product=clone mode=${consultation.mode} model=${model}`);
+  console.info(`[HeroStar AI] provider=gemini product=clone mode=${consultation.mode} model=${model} thinking=high`);
   return new Response(JSON.stringify(asOpenAiResponse(text, model)), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
