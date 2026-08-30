@@ -7,12 +7,15 @@ on:
       - '.github/workflows/production-ai-smoke.yml'
       - 'src/gemini-openai-bridge.js'
 
+permissions:
+  contents: read
+
 jobs:
   verify-ai:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify production clone answers through AI
+      - name: Verify production clone answers through real AI
         shell: bash
         run: |
           node <<'NODE'
@@ -36,16 +39,17 @@ jobs:
           }
 
           const health = await request('/health');
-          if (!health.response.ok) throw new Error(`health failed: ${health.response.status}`);
+          if (!health.response.ok || health.data?.ok !== true) {
+            throw new Error(`health failed: ${health.response.status} ${JSON.stringify(health.data)}`);
+          }
           console.log(`health: ${health.response.status}`);
 
           const created = await request('/api/charts', {
             method: 'POST',
             body: JSON.stringify({ demo: true, product: 'clone' }),
           });
-          if (created.response.status !== 201 || !created.data.id || !created.data.accessToken) {
-            console.error('chart creation response:', JSON.stringify(created.data));
-            throw new Error(`chart creation failed: HTTP ${created.response.status}`);
+          if (created.response.status !== 201 || !created.data?.id || !created.data?.accessToken) {
+            throw new Error(`chart creation failed: ${created.response.status} ${JSON.stringify(created.data)}`);
           }
           console.log(`chart created: ${created.data.id}`);
 
@@ -55,19 +59,22 @@ jobs:
             body: JSON.stringify({
               chartId: created.data.id,
               product: 'clone',
-              question: 'Что мне сегодня лучше сделать в первую очередь?',
+              question: 'Назови один конкретный практический шаг на сегодня. Ответь кратко.',
             }),
           });
 
-          if (!consulted.response.ok) {
-            console.error('consult response:', JSON.stringify(consulted.data));
-            throw new Error(`AI consultation failed: HTTP ${consulted.response.status}`);
-          }
-          const answer = typeof consulted.data.answer === 'string' ? consulted.data.answer.trim() : '';
-          if (!answer) {
-            console.error('consult response:', JSON.stringify(consulted.data));
-            throw new Error('AI consultation returned an empty answer');
-          }
+          const answer = typeof consulted.data?.answer === 'string' ? consulted.data.answer.trim() : '';
           console.log(`AI consultation: HTTP ${consulted.response.status}, answer chars=${answer.length}`);
-          console.log(`AI answer preview: ${answer.slice(0, 180).replace(/\s+/g, ' ')}`);
+          console.log(`AI answer preview: ${answer.slice(0, 240).replace(/\s+/g, ' ')}`);
+
+          if (!consulted.response.ok) {
+            throw new Error(`AI consultation failed: ${consulted.response.status} ${JSON.stringify(consulted.data)}`);
+          }
+          if (answer.length < 20) {
+            throw new Error(`AI consultation returned missing/too-short answer: ${JSON.stringify(consulted.data)}`);
+          }
+          if (/Клон не смог ответить|CLONE_AI_UNAVAILABLE/i.test(answer)) {
+            throw new Error(`AI error/fallback text returned: ${answer}`);
+          }
+          console.log('AI_SMOKE_OK=true');
           NODE
