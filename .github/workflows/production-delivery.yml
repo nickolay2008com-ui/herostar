@@ -77,3 +77,60 @@ jobs:
             diff -u "$expected_file" /tmp/herostar-live.html | head -n 120 || true
           fi
           exit 1
+
+      - name: One-time production AI smoke test
+        shell: bash
+        env:
+          PROD_BASE: https://herostar.up.railway.app
+        run: |
+          set -euo pipefail
+          visitor="ci-ai-smoke-${GITHUB_SHA:0:12}"
+
+          curl --fail --silent --show-error --location --max-time 45 \
+            -X POST "${PROD_BASE}/api/charts" \
+            -H 'Content-Type: application/json' \
+            -H "x-visitor-id: ${visitor}" \
+            --data '{"demo":true,"product":"clone"}' \
+            --output /tmp/herostar-ai-chart.json
+
+          read -r chart_id chart_token < <(python - <<'PY'
+          import json
+          with open('/tmp/herostar-ai-chart.json', encoding='utf-8') as f:
+              data = json.load(f)
+          chart_id = str(data.get('id') or '')
+          token = str(data.get('accessToken') or '')
+          if not chart_id or not token:
+              raise SystemExit('Production chart creation did not return id/accessToken')
+          print(chart_id, token)
+          PY
+          )
+
+          http_code="$(curl --silent --show-error --location --max-time 110 \
+            -X POST "${PROD_BASE}/api/consult" \
+            -H 'Content-Type: application/json' \
+            -H "x-chart-token: ${chart_token}" \
+            -H "x-visitor-id: ${visitor}" \
+            --data "$(python - "$chart_id" <<'PY'
+          import json, sys
+          print(json.dumps({
+              'chartId': sys.argv[1],
+              'product': 'clone',
+              'question': 'Назови один практичный критерий выбора между двумя вариантами и объясни его одним предложением.'
+          }, ensure_ascii=False))
+          PY
+          )" \
+            --output /tmp/herostar-ai-consult.json \
+            --write-out '%{http_code}')"
+
+          python - "$http_code" <<'PY'
+          import json, sys
+          code = int(sys.argv[1])
+          with open('/tmp/herostar-ai-consult.json', encoding='utf-8') as f:
+              data = json.load(f)
+          answer = str(data.get('answer') or '').strip()
+          if code != 200:
+              raise SystemExit(f'Production /api/consult returned HTTP {code}: {data.get("code") or data.get("error") or "unknown error"}')
+          if len(answer) < 20:
+              raise SystemExit('Production /api/consult returned no meaningful AI answer')
+          print(f'AI_SMOKE_OK status={code} answer_chars={len(answer)} factors={len(data.get("factors") or [])}')
+          PY
