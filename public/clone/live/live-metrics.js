@@ -4,6 +4,9 @@
   const ATTRIBUTION_KEY = 'starCloneAttribution';
   const sent = new Set();
 
+  // Keep dialog controls explicit for screen readers and visual-contract checks.
+  document.getElementById('closePremiumDiscovery')?.setAttribute('aria-label', 'Закрыть разбор');
+
   function goal(name, params = {}) {
     try {
       if (typeof window.ym === 'function') window.ym(METRIKA_ID, 'reachGoal', name, params);
@@ -202,14 +205,54 @@
     return 'other';
   }
 
+  function syncAnswerRetry() {
+    const error = document.getElementById('dialogError');
+    const form = document.getElementById('questionForm');
+    const input = document.getElementById('question');
+    if (!error || !form || !input) return;
+
+    const text = String(error.textContent || '').trim();
+    const retryable = /клон не смог ответить по сути|попробуйте ещё раз/i.test(text)
+      && Boolean(input.value.trim());
+    let button = document.getElementById('retryCloneAnswer');
+
+    if (!retryable) {
+      button?.remove();
+      return;
+    }
+
+    if (!button) {
+      button = document.createElement('button');
+      button.id = 'retryCloneAnswer';
+      button.type = 'button';
+      button.className = 'ghost live-retry-answer';
+      button.textContent = 'Повторить ответ';
+      button.addEventListener('click', () => {
+        if (!input.value.trim() || input.disabled) return;
+        track('consultant_opened', 'clone_answer_retry_clicked', {
+          questionLength: input.value.trim().length,
+        });
+        goal('clone_answer_retry');
+        error.textContent = '';
+        button.remove();
+        form.requestSubmit();
+      });
+      error.insertAdjacentElement('afterend', button);
+    }
+  }
+
   ['formError', 'dialogError'].forEach((id) => {
     const element = document.getElementById(id);
     if (!element) return;
     new MutationObserver(() => {
       const category = errorCategory(element.textContent);
-      if (!category) return;
-      const key = `error:${id}:${category}`;
-      once(key, () => track('filter_changed', 'clone_error_shown', { surface: id, category }));
+      if (category) {
+        const key = `error:${id}:${category}`;
+        once(key, () => track('filter_changed', 'clone_error_shown', { surface: id, category }));
+      }
+      if (id === 'dialogError') syncAnswerRetry();
     }).observe(element, { childList: true, subtree: true, characterData: true });
   });
+
+  syncAnswerRetry();
 })();
