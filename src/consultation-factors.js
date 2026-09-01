@@ -1,6 +1,7 @@
 const HOUSE_RULES = [
-  { house: 7, words: ['отношен', 'партн', 'любов', 'муж', 'жен', 'договор', 'контакт', 'расстав'], planets: ['venus', 'moon'] },
+  { house: 7, words: ['отношен', 'партн', 'любов', 'муж', 'жен', 'девуш', 'парен', 'супруг', 'свидан', 'роман', 'близост', 'договор', 'контакт', 'расстав'], planets: ['venus', 'moon'] },
   { house: 2, words: ['деньг', 'доход', 'зарплат', 'оплат', 'цена', 'бюджет', 'заработ', 'ресурс'], planets: ['venus', 'saturn'] },
+  { house: 2, words: ['кухн', 'еда', 'питан', 'блюд', 'вкус', 'ресторан', 'готовк', 'напит'], planets: ['venus', 'moon'] },
   { house: 8, words: ['долг', 'кредит', 'инвест', 'доля', 'общие деньги', 'риск', 'зависим', 'наслед'], planets: ['pluto', 'saturn'] },
   { house: 10, words: ['карьер', 'статус', 'должност', 'руковод', 'повышен', 'репутац', 'призван'], planets: ['sun', 'saturn'] },
   { house: 6, words: ['работ', 'задач', 'режим', 'навык', 'сотрудник', 'устал', 'эффектив'], planets: ['mercury', 'saturn'] },
@@ -9,6 +10,7 @@ const HOUSE_RULES = [
   { house: 3, words: ['сказать', 'ответить', 'написать', 'разговор', 'переговор', 'сообщен', 'обуч', 'документ'], planets: ['mercury', 'mars'] },
   { house: 9, words: ['учёб', 'образован', 'путешеств', 'смысл', 'мировоззрен', 'за границ'], planets: ['jupiter', 'mercury'] },
   { house: 11, words: ['сообще', 'аудитор', 'будущ', 'масштаб', 'друз', 'команд', 'сеть'], planets: ['jupiter', 'uranus'] },
+  { house: 1, words: ['внешн', 'образ', 'стиль', 'одежд', 'тело', 'самочувств', 'имидж', 'впечатлен'], planets: ['venus', 'mars'] },
 ];
 
 const SIGN_RULERS = Object.freeze({
@@ -18,17 +20,17 @@ const SIGN_RULERS = Object.freeze({
 });
 
 const PLANET_PURPOSES = Object.freeze({
-  sun: 'центр решения и способ сохранить авторство',
-  moon: 'автоматическая эмоциональная реакция модели',
-  mercury: 'способ собирать факты, формулировать и сравнивать варианты',
-  venus: 'критерий ценности, отношений и приемлемого обмена',
-  mars: 'способ переходить от оценки ситуации к действию',
-  jupiter: 'критерий роста, смысла и расширения возможностей',
-  saturn: 'границы, цена обязательств и проверка устойчивости',
-  uranus: 'потребность в свободе конструкции и нестандартном ходе',
-  neptune: 'чувствительность к атмосфере, смыслу и неясным допущениям',
-  pluto: 'контроль критического риска, зависимости и необратимых ставок',
-  northNode: 'направление развития, когда оно действительно меняет выбор',
+  sun: 'что помогает клону сохранять внутренний центр и ощущение собственного выбора',
+  moon: 'что даёт клону эмоциональный комфорт и чувство естественности',
+  mercury: 'как клону естественнее воспринимать, сравнивать и формулировать происходящее',
+  venus: 'что клону нравится, притягивает и ощущается ценным или приятным',
+  mars: 'какой темп и способ действия для клона наиболее естественны',
+  jupiter: 'что даёт клону ощущение роста, смысла и расширения возможностей',
+  saturn: 'где клону важны границы, надёжность и проверка устойчивости',
+  uranus: 'где клону необходимо пространство для свободы и нестандартного хода',
+  neptune: 'как клон чувствует атмосферу, тонкие впечатления и неоднозначность',
+  pluto: 'где для клона особенно важны глубина, контроль риска и сила внутренних изменений',
+  northNode: 'какое направление развития становится значимым, если оно действительно меняет выбор',
 });
 
 function cleanQuestion(value) {
@@ -71,7 +73,7 @@ function planetFactor(chart, key, role, unknownTime) {
     key,
     title: item.name,
     position: planetPosition(item, unknownTime),
-    role: role || PLANET_PURPOSES[key] || 'релевантная функция карты',
+    role: role || PLANET_PURPOSES[key] || 'функция карты, которая заметно меняет смысл ответа',
     sourceKeys: [key],
   };
 }
@@ -85,7 +87,7 @@ function houseFactor(chart, house) {
     key: `house_${house}`,
     title: `${house} дом · ${item.sign}`,
     position: item.degreeLabel ? `Куспид ${item.degreeLabel}` : 'Куспид дома',
-    role: `сфера текущей ситуации: ${item.area || 'жизненная область вопроса'}`,
+    role: `область жизни, в которой раскрывается вопрос: ${item.area || 'тема текущей ситуации'}`,
     sourceKeys: [`house:${house}`],
   };
 }
@@ -116,8 +118,8 @@ function aspectFactor(chart, aspect) {
     title: `${from.name} ${aspect.symbol || '—'} ${to.name}`,
     position: `${aspect.type}${Number.isFinite(Number(aspect.orb)) ? ` · орбис ${Number(aspect.orb).toFixed(1)}°` : ''}`,
     role: aspect.tone === 'tension'
-      ? 'внутреннее противоречие, которое меняет условия выбора'
-      : 'поддерживающая связь, позволяющая соединить две функции в одном ходе',
+      ? 'место, где две функции карты требуют от клона найти собственный баланс'
+      : 'связь, в которой две функции карты естественно поддерживают и усиливают друг друга',
     sourceKeys: [aspect.from, aspect.to, `aspect:${aspect.from}:${aspect.to}:${aspect.type}`],
   };
 }
@@ -129,7 +131,9 @@ function bestHouseRule(question) {
     const score = rule.words.reduce((sum, word) => sum + (text.includes(word.replace(/ё/g, 'е')) ? 1 : 0), 0);
     if (!best || score > best.score) best = { ...rule, score };
   }
-  return best?.score ? best : { house: 1, planets: ['mars', 'mercury'], score: 0 };
+  // Не подменяем неизвестную тему первым домом. Если словарь не распознал
+  // область вопроса, даём модели нейтральную основу без ложной привязки к дому.
+  return best?.score ? best : { house: null, planets: ['sun', 'moon', 'mercury'], score: 0 };
 }
 
 function strongestAspect(chart, selectedKeys, unknownTime) {
@@ -149,8 +153,8 @@ export function factorScopeForChart(chart) {
     unknownTime,
     system: String(chart?.system || ''),
     note: unknownTime
-      ? 'Время рождения неизвестно: дома, ASC/MC и Луна не используются в объяснении ответа.'
-      : 'Показаны только параметры карты, переданные модели для текущего ответа.',
+      ? 'Время рождения неизвестно: Клон основывает ответ только на надёжных факторах без домов, ASC/MC и Луны.'
+      : 'Ниже — факторы карты, выбранные как основание именно этого ответа.',
   };
 }
 
@@ -162,13 +166,13 @@ export function selectConsultationFactors({ chart, question, factorBudget = {} }
   const factors = [];
   const selectedPlanetKeys = new Set();
 
-  if (!scope.unknownTime) {
+  if (!scope.unknownTime && rule.house) {
     const selectedHouse = houseFactor(chart, rule.house);
     if (selectedHouse) factors.push(selectedHouse);
     const selectedCusp = cusp(chart, rule.house);
     const rulerKey = SIGN_RULERS[selectedCusp?.sign];
     if (rulerKey) {
-      const ruler = planetFactor(chart, rulerKey, `управитель ${rule.house} дома — связывает тему вопроса с конкретным способом решения`, false);
+      const ruler = planetFactor(chart, rulerKey, `показывает, каким способом тема ${rule.house} дома естественнее проживается клоном`, false);
       if (ruler) {
         factors.push(ruler);
         selectedPlanetKeys.add(rulerKey);
@@ -201,9 +205,9 @@ export function selectConsultationFactors({ chart, question, factorBudget = {} }
   const aspect = strongestAspect(chart, selectedPlanetKeys, scope.unknownTime);
   if (aspect && unique(factors).length < max) factors.push(aspectFactor(chart, aspect));
 
-  if (!scope.unknownTime && unique(factors).length < max) {
-    if (rule.house === 10) factors.push(angleFactor(chart, 'mc', 'внешний результат, к которому тяготеет решение'));
-    else if (rule.house === 1) factors.push(angleFactor(chart, 'ascendant', 'то, что модель замечает первым при входе в ситуацию'));
+  if (!scope.unknownTime && rule.house && unique(factors).length < max) {
+    if (rule.house === 10) factors.push(angleFactor(chart, 'mc', 'внешнее направление, к которому естественно тяготеет решение клона'));
+    else if (rule.house === 1) factors.push(angleFactor(chart, 'ascendant', 'как клон естественно входит в ситуацию и какое первое впечатление формирует'));
   }
 
   return { factors: unique(factors).slice(0, max), scope };
