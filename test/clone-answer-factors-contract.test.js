@@ -5,12 +5,21 @@ import { readFileSync } from 'node:fs';
 const client = readFileSync(new URL('../public/clone.js', import.meta.url), 'utf8');
 const liveHtml = readFileSync(new URL('../public/clone/live/index.html', import.meta.url), 'utf8');
 const server = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
+const ai = readFileSync(new URL('../src/ai.js', import.meta.url), 'utf8');
 
 test('API сохраняет и возвращает факторный след ответа', () => {
   assert.match(server, /answerConsultationWithFactors/);
   assert.match(server, /const factors = product === 'clone'/);
   assert.match(server, /assistantMessageMetadata[\s\S]*factors, factorScope/);
   assert.match(server, /res\.json\(\{[\s\S]*factors,[\s\S]*factorScope/);
+});
+
+test('те же выбранные факторы передаются модели как grounding ответа', () => {
+  assert.match(ai, /selectedFactors:\s*product === 'clone' \? factors : \[\]/);
+  assert.match(ai, /selectedFactors — это факторы карты/);
+  assert.match(ai, /доказательная основа именно текущего ответа/);
+  assert.match(ai, /не подменяй selectedFactors случайными другими факторами/);
+  assert.match(ai, /Не копируй служебное поле role дословно/);
 });
 
 test('клиент показывает факторы конкретного ответа, а не статическую четвёрку карты', () => {
