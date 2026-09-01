@@ -4,6 +4,9 @@
   const ATTRIBUTION_KEY = 'starCloneAttribution';
   const sent = new Set();
 
+  // Keep dialog controls explicit for screen readers and visual-contract checks.
+  document.getElementById('closePremiumDiscovery')?.setAttribute('aria-label', 'Закрыть разбор');
+
   function goal(name, params = {}) {
     try {
       if (typeof window.ym === 'function') window.ym(METRIKA_ID, 'reachGoal', name, params);
