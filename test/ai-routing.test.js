@@ -5,6 +5,7 @@ import {
   consultationSystemPrompt,
   normalizeReasoningEffort,
   resolveConsultationConfig,
+  shouldRetryWithDialog,
 } from '../src/ai.js';
 
 test('первый содержательный запрос идёт в глубокий режим', () => {
@@ -40,6 +41,20 @@ test('конфигурация использует две независимы�
 test('неверный reasoning effort безопасно заменяется значением по умолчанию', () => {
   assert.equal(normalizeReasoningEffort('turbo', 'low'), 'low');
   assert.equal(normalizeReasoningEffort(' HIGH ', 'low'), 'high');
+});
+
+test('Clone не запускает второй внешний retry поверх Gemini bridge deadline', () => {
+  const primary = { model: 'gpt-5.6-sol', effort: 'medium' };
+  const dialog = { model: 'gpt-5.6-terra', effort: 'low' };
+  assert.equal(shouldRetryWithDialog({ product: 'clone', mode: 'deep', primary, dialog }), false);
+  assert.equal(shouldRetryWithDialog({ product: 'clone', mode: 'dialog', primary, dialog }), false);
+});
+
+test('обычный HeroStar сохраняет deep-to-dialog fallback', () => {
+  const primary = { model: 'gpt-5.6-sol', effort: 'medium' };
+  const dialog = { model: 'gpt-5.6-terra', effort: 'low' };
+  assert.equal(shouldRetryWithDialog({ product: 'herostar', mode: 'deep', primary, dialog }), true);
+  assert.equal(shouldRetryWithDialog({ product: 'herostar', mode: 'dialog', primary, dialog }), false);
 });
 
 test('ответ проверяется через пять продуктовых ключей', () => {
