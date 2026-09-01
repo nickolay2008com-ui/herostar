@@ -45,6 +45,36 @@ test('отношения выбирают 7 дом, его управителя 
   assert.ok(selected.factors.some((item) => item.kind === 'aspect'));
 });
 
+test('естественный вопрос про девушку распознаётся как тема отношений', () => {
+  const selected = selectConsultationFactors({ chart: chart(), question: 'Какая девушка подходит клону?', factorBudget: { min: 2, max: 4 } });
+  assert.ok(selected.factors.some((item) => item.id === 'house:7'));
+  assert.ok(selected.factors.some((item) => item.id === 'planet:venus'));
+  assert.ok(!selected.factors.some((item) => item.id === 'house:1'));
+});
+
+test('кухня и вкусовые предпочтения не сваливаются в первый дом', () => {
+  const selected = selectConsultationFactors({ chart: chart(), question: 'Какая кухня подходит клону и какие блюда ему ближе?', factorBudget: { min: 2, max: 4 } });
+  assert.ok(selected.factors.some((item) => item.id === 'house:2'));
+  assert.ok(selected.factors.some((item) => item.id === 'planet:venus'));
+  assert.ok(!selected.factors.some((item) => item.id === 'house:1'));
+});
+
+test('нераспознанная тема получает нейтральную основу без ложного дома', () => {
+  const selected = selectConsultationFactors({ chart: chart(), question: 'Какой вариант выбрать из этих двух?', factorBudget: { min: 2, max: 4 } });
+  assert.ok(selected.factors.length >= 2);
+  assert.ok(selected.factors.every((item) => item.kind !== 'house'));
+});
+
+test('публичные роли написаны человеческим языком без внутренних служебных фраз', () => {
+  const selected = selectConsultationFactors({ chart: chart(), question: 'Какая кухня подходит клону?', factorBudget: { min: 2, max: 4 } });
+  const factors = publicConsultationFactors(selected.factors);
+  const text = factors.map((item) => item.role).join(' ');
+  assert.doesNotMatch(text, /автоматическая эмоциональная реакция модели/i);
+  assert.doesNotMatch(text, /связывает тему вопроса с конкретным способом решения/i);
+  assert.doesNotMatch(text, /сфера текущей ситуации/i);
+  assert.match(selected.scope.note, /основание именно этого ответа/i);
+});
+
 test('неизвестное время исключает дома, углы, Луну и лунные аспекты', () => {
   const selected = selectConsultationFactors({ chart: chart({ unknownTime: true }), question: 'Как ответить партнёру?', factorBudget: { min: 2, max: 4 } });
   assert.equal(factorScopeForChart(chart({ unknownTime: true })).unknownTime, true);
@@ -62,7 +92,7 @@ test('платный флаг не назначает отдельный диа�
   assert.ok(premium.factors.length <= 4);
 });
 
-test('модель получает полную надёжную карту и сама выбирает релевантные факторы', () => {
+test('модель получает полную карту, а grounding-факторы передаются отдельным контрактом', () => {
   const evidence = compactCloneEvidence(chart());
   assert.equal(evidence.scope, 'full');
   assert.equal(evidence.planets.length, 10);
