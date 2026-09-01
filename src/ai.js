@@ -86,6 +86,12 @@ export function consultationMode(history = []) {
   return hasEarlierConversation ? 'dialog' : 'deep';
 }
 
+export function shouldRetryWithDialog({ product = 'herostar', mode, primary, dialog }) {
+  if (product === 'clone') return false;
+  return mode === 'deep'
+    && (primary?.model !== dialog?.model || primary?.effort !== dialog?.effort);
+}
+
 // v2.2 core: карта всегда строится детерминированно из проверенных данных.
 // GPT не сочиняет карточки и используется только после карты — в консультационном диалоге.
 export async function generatePortrait(chart) {
@@ -292,8 +298,12 @@ async function runConsultation({
     console.info(`[HeroStar AI] mode=${mode} product=${product} profile=${profile?.id || 'default'} model=${primary.model} effort=${primary.effort}`);
     return { answer, factors: publicFactors, factorScope: selected.scope };
   } catch (primaryError) {
-    const canFallbackToDialog = mode === 'deep'
-      && (primary.model !== config.dialog.model || primary.effort !== config.dialog.effort);
+    const canFallbackToDialog = shouldRetryWithDialog({
+      product,
+      mode,
+      primary,
+      dialog: config.dialog,
+    });
 
     if (canFallbackToDialog) {
       console.warn(`[HeroStar AI] deep model failed; retrying with dialog model: ${primaryError?.message || primaryError}`);
