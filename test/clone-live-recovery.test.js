@@ -14,6 +14,11 @@ test('Clone не запускает второй внешний retry повер
   assert.equal(ai.shouldRetryWithDialog({ product: 'herostar', mode: 'deep', primary, dialog }), true);
 });
 
+test('OpenAI SDK не перезапускает весь Gemini bridge для Clone', async () => {
+  const ai = await read('src/ai.js');
+  assert.match(ai, /maxRetries:\s*product === 'clone' \? 0 : 2/);
+});
+
 test('ошибка Live даёт повторить сохранённый вопрос одним нажатием', async () => {
   const client = await read('public/clone.js');
   const live = await read('public/clone/live/index.html');

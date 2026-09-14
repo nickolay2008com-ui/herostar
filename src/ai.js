@@ -278,7 +278,12 @@ async function runConsultation({
     return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    // Gemini bridge already owns the single bounded retry for Clone.
+    // SDK retries would restart the whole bridge sequence and break the Live deadline.
+    maxRetries: product === 'clone' ? 0 : 2,
+  });
   const config = resolveConsultationConfig();
   const primary = config[mode];
 
