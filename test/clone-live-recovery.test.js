@@ -19,6 +19,13 @@ test('OpenAI SDK не перезапускает весь Gemini bridge для C
   assert.match(ai, /maxRetries:\s*product === 'clone' \? 0 : 2/);
 });
 
+test('после отказа Gemini Clone возвращает локальный ответ по факторам карты', async () => {
+  const ai = await read('src/ai.js');
+  assert.match(ai, /localCloneFallback\(publicFactors\)/);
+  assert.match(ai, /status: 'fallback'/);
+  assert.match(ai, /не стал бы принимать окончательное решение вслепую/);
+});
+
 test('ошибка Live даёт повторить сохранённый вопрос одним нажатием', async () => {
   const client = await read('public/clone.js');
   const live = await read('public/clone/live/index.html');

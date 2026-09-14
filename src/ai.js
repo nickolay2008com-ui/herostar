@@ -110,6 +110,17 @@ function localCloneTestAnswer() {
   return 'Клон начал бы с сути вопроса и выбрал конкретный проверяемый шаг.';
 }
 
+function localCloneFallback(publicFactors = []) {
+  const meanings = publicFactors
+    .slice(0, 2)
+    .map((factor) => String(factor?.role || '').trim().replace(/[.!?]+$/, ''))
+    .filter(Boolean);
+  const grounding = meanings.length
+    ? ` В этой карте важны два ориентира: ${meanings.join('; ')}.`
+    : '';
+  return `Клон не стал бы принимать окончательное решение вслепую. Он выбрал бы самый небольшой обратимый шаг, который даст реальную обратную связь, и только после этого усилил или изменил направление.${grounding} Первый ход — сформулировать один проверяемый результат и проверить его на малом масштабе.`;
+}
+
 function cloneProfilePolicy(profile, premium) {
   return premium ? String(profile?.systemPromptAddon || '').trim() : '';
 }
@@ -335,7 +346,7 @@ async function runConsultation({
     }
 
     return product === 'clone'
-      ? unavailableCloneAnswer()
+      ? { answer: localCloneFallback(publicFactors), factors: publicFactors, factorScope: selected.scope, status: 'fallback' }
       : { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
 }
