@@ -30,16 +30,16 @@ test('явный paid-tier override остаётся доступен, а рез
   assert.equal(GEMINI_FALLBACK_MODEL, 'gemini-3.5-flash');
 });
 
-test('primary сохраняет high thinking, а fallback ускоряется до medium', async () => {
+test('primary сохраняет medium thinking, а fallback ускоряется до low', async () => {
   const source = await read('src/gemini-openai-bridge.js');
-  assert.match(source, /thinkingLevel:\s*fallback \? 'medium' : 'high'/);
+  assert.match(source, /thinkingLevel:\s*fallback \? 'low' : 'medium'/);
   assert.doesNotMatch(source, /temperature\s*:/);
 });
 
 test('Live AI укладывает primary и fallback в Railway-safe deadline', () => {
-  assert.equal(GEMINI_PRIMARY_TIMEOUT_MS, 22000);
-  assert.equal(GEMINI_FALLBACK_TIMEOUT_MS, 9000);
-  assert.equal(LIVE_AI_DEADLINE_MS, 35000);
+  assert.equal(GEMINI_PRIMARY_TIMEOUT_MS, 18000);
+  assert.equal(GEMINI_FALLBACK_TIMEOUT_MS, 8000);
+  assert.equal(LIVE_AI_DEADLINE_MS, 28000);
   assert.ok(GEMINI_PRIMARY_TIMEOUT_MS + GEMINI_FALLBACK_TIMEOUT_MS < LIVE_AI_DEADLINE_MS);
   assert.ok(LIVE_AI_DEADLINE_MS < 39000);
 });

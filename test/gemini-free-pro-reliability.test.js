@@ -9,8 +9,8 @@ test('Live clone defaults to current strongest free-tier Flash with stable fallb
   assert.match(bridge, /GEMINI_FALLBACK_MODEL\s*=\s*'gemini-3\.5-flash'/);
 });
 
-test('primary Gemini 3 keeps high thinking while fallback uses medium for recovery', () => {
-  assert.match(bridge, /thinkingLevel:\s*fallback \? 'medium' : 'high'/);
+test('primary Gemini 3 uses medium thinking while fallback uses low for Live latency', () => {
+  assert.match(bridge, /thinkingLevel:\s*fallback \? 'low' : 'medium'/);
 });
 
 test('paid Gemini 3.1 Pro can still be explicitly enabled later', () => {

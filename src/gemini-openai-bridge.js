@@ -2,9 +2,9 @@ const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models
 
 export const GEMINI_PRIMARY_MODEL = 'gemini-3.7-flash';
 export const GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash';
-export const GEMINI_PRIMARY_TIMEOUT_MS = 22000;
-export const GEMINI_FALLBACK_TIMEOUT_MS = 9000;
-export const LIVE_AI_DEADLINE_MS = 35000;
+export const GEMINI_PRIMARY_TIMEOUT_MS = 18000;
+export const GEMINI_FALLBACK_TIMEOUT_MS = 8000;
+export const LIVE_AI_DEADLINE_MS = 28000;
 
 function clean(value = '') {
   return String(value || '').trim();
@@ -85,7 +85,7 @@ function asOpenAiResponse(text, model) {
 function generationConfig(model, maxOutputTokens, { fallback = false } = {}) {
   const config = { maxOutputTokens };
   if (/^gemini-3(?:\.|-)/.test(model)) {
-    config.thinkingConfig = { thinkingLevel: fallback ? 'medium' : 'high' };
+    config.thinkingConfig = { thinkingLevel: fallback ? 'low' : 'medium' };
   } else if (/^gemini-2\.5-pro(?:$|-)/.test(model)) {
     config.thinkingConfig = { thinkingBudget: fallback ? 8192 : 24576 };
   } else if (/^gemini-2\.5-flash(?:$|-)/.test(model)) {
@@ -124,7 +124,7 @@ async function callGemini(originalFetch, consultation, payload, model, { timeout
   }
   const text = outputTextFromGemini(data);
   if (!text) throw new Error(`Gemini ${model} returned an empty answer.`);
-  const thinking = fallback ? 'medium' : 'high';
+  const thinking = fallback ? 'low' : 'medium';
   console.info(`[HeroStar AI] provider=gemini product=clone mode=${consultation.mode} model=${model} thinking=${thinking}`);
   return new Response(JSON.stringify(asOpenAiResponse(text, model)), {
     status: 200,
