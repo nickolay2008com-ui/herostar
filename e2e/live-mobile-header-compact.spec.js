@@ -31,7 +31,7 @@ test('mobile Live App-shell показывает одну шапку и сохр
   await expect.poll(async () => page.evaluate(() => ({
     appHeaderHeight: parseFloat(getComputedStyle(document.querySelector('#dialogView > .conversation-head')).height),
     workspacePaddingTop: parseFloat(getComputedStyle(document.querySelector('#workspace')).paddingTop),
-  }))).toEqual({ appHeaderHeight: 56, workspacePaddingTop: 0 });
+  }))).toEqual({ appHeaderHeight: 58, workspacePaddingTop: 0 });
 
   const [appHeaderBox, homeBox, newSituationBox, conversationBox] = await Promise.all([
     appHeader.boundingBox(),
@@ -49,6 +49,6 @@ test('mobile Live App-shell показывает одну шапку и сохр
   expect(newSituationBox.height).toBeGreaterThanOrEqual(44);
   expect(newSituationBox.width).toBeGreaterThanOrEqual(44);
   expect(appHeaderBox.y).toBe(0);
-  expect(conversationBox.y).toBeGreaterThanOrEqual(55);
-  expect(conversationBox.y).toBeLessThanOrEqual(57);
+  expect(conversationBox.y).toBeGreaterThanOrEqual(57);
+  expect(conversationBox.y).toBeLessThanOrEqual(59);
 });

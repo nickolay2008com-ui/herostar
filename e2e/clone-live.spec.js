@@ -221,7 +221,7 @@ test('мобильный основной путь сохраняет компа
   expect(sendBox.width).toBeGreaterThanOrEqual(44);
   expect(sendBox.height).toBeGreaterThanOrEqual(44);
   expect(composerBox.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
-  expect(await page.locator('#questionForm').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 252, 248)');
+  expect(await page.locator('#questionForm').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgba(23, 26, 41, 0.96)');
 
   const evidenceTrigger = page.locator('#messages .message.clone').last().locator('.answer-evidence-trigger');
   await expect(evidenceTrigger).toBeVisible();

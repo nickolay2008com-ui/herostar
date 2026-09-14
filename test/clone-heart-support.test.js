@@ -126,6 +126,7 @@ test('Live показывает поддержку только после по�
   assert.match(app, /suggestedAmounts\.forEach/);
   assert.match(styles, /#fullModeOffer,[\s\S]*?#alignmentOffer,[\s\S]*?#clonePaywall,[\s\S]*?display:\s*none\s*!important;/);
   assert.match(styles, /\.live-support-open,[\s\S]*?min-height:\s*44px/);
+  assert.match(styles, /\.live-support-close\s*\{[^}]*width:\s*44px;[^}]*min-width:\s*44px;[^}]*height:\s*44px;/s);
 });
 
 test('Live действия поддержки переживают пересборку DOM истории и touch-перехват', async () => {
