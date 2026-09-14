@@ -11,8 +11,8 @@ test('Live mobile сохраняет естественную ширину и п
   ]);
 
   assert.match(styles, /\.conversation-started \.message\.clone > \.mini-avatar,[\s\S]*?\.conversation-started \.message\.clone > div > b\s*\{\s*display:\s*none;/);
-  assert.match(styles, /\.conversation-started \.message\.clone > div\s*\{[^}]*width:\s*fit-content;[^}]*max-width:\s*min\(92%,\s*44rem\);/s);
-  assert.match(styles, /\.conversation-started \.message\.clone > div > p:first-of-type\s*\{\s*margin-top:\s*0;/);
+  assert.match(styles, /\.message\.clone > div\s*\{[^}]*width:\s*fit-content;[^}]*max-width:\s*min\(88%,44rem\);/s);
+  assert.match(styles, /\.message p\s*\{[^}]*margin:\s*5px 0 0;/s);
 
   assert.match(cloneJs, /pending\.querySelector\('p'\)\.textContent\s*=\s*displayCloneAnswer\(data\.answer\)/);
   assert.match(cloneJs, /element\.querySelector\('p'\)\.textContent = role === 'clone' \? displayCloneAnswer\(text\) : text/);

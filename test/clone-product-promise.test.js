@@ -28,18 +28,18 @@ ${await read('public/clone.js')}`;
 
 test('платный профиль превращает обещание 3–6 факторов в полный разбор решения', async () => {
   const source = await read('src/consultation-profiles.js');
-  assert.match(source, /promptVersion: '2026-07-23\.1145-five'/);
-  assert.match(source, /derivedFromPromptVersion: '2026-07-23\.1145'/);
-  assert.match(source, /promptVersion: '2026-07-27\.full-decision-v1'/);
-  assert.match(source, /derivedFromPromptVersion: '2026-07-23\.1145-five'/);
+  assert.match(source, /promptVersion: '2026-08-31\.energy-interpretation-v2'/);
+  assert.match(source, /derivedFromPromptVersion: '2026-08-31\.energy-interpretation-v1'/);
+  assert.match(source, /promptVersion: '2026-08-31\.energy-interpretation-premium-v2'/);
+  assert.match(source, /derivedFromPromptVersion: '2026-08-31\.energy-interpretation-v2'/);
   assert.match(source, /const clonePremiumQuestionInstruction = `\$\{cloneFreeQuestionInstruction\.replace/);
-  assert.match(source, /3–6 конкретных факторов карты/);
-  assert.match(source, /полную картину одного решения/);
-  assert.match(source, /главное внутреннее противоречие/);
-  assert.match(source, /жизнеспособный альтернативный ход/);
-  assert.match(source, /условие, при котором решение изменится/);
+  assert.match(source, /3–6 наиболее значимых факторов карты/);
+  assert.match(source, /полную картину одного решения или внутренней динамики/);
+  assert.match(source, /главное внутреннее противоречие или баланс энергий/);
+  assert.match(source, /альтернативный ход или альтернативное проявление/);
+  assert.match(source, /конкретное условие, при котором вывод изменится/);
   assert.match(source, /первый проверяемый шаг/);
-  assert.match(source, /действие: есть ли ясный ход/);
+  assert.match(source, /действие: если вопрос требует решения, есть ли ясный ход/);
   assert.match(source, /гармония и красота/);
   assert.match(source, /ответственность и включённость/);
   assert.match(source, /единство/);

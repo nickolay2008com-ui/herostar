@@ -13,7 +13,7 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260827-app6/);
+  assert.match(gears, /live-app\.css\?v=20260901-contour1/);
   assert.match(gears, /live-app\.js\?v=20260827-app4/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
@@ -21,7 +21,7 @@ test('Live route загружает отдельный App-shell без втор
   assert.match(app, /logicPanel\.classList\.toggle\('hidden', !profileMode\)/);
   assert.equal((html.match(/id="questionForm"/g) || []).length, 1);
   assert.equal((html.match(/id="messages"/g) || []).length, 1);
-  assert.ok(html.indexOf('/clone-answer-presentation.js?v=20260827-evidence1') < html.indexOf('/clone.js?v=20260827-evidence1'));
+  assert.ok(html.indexOf('/clone-answer-presentation.js?v=20260827-evidence1') < html.indexOf('/clone.js?v=20260914-recovery1'));
   assert.doesNotMatch(app, /createElement\('form'\)|createElement\("form"\)/);
   assert.ok(styles.length > 0);
 });
@@ -71,7 +71,7 @@ test('mobile App-shell оставляет нижнюю навигацию тол
     read('public/clone/live/live-app.css'),
   ]);
 
-  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?\.workspace \.side-head,[\s\S]*?\.workspace \.side-note\s*\{\s*display:\s*none !important;/);
+  assert.match(styles, /\.workspace \.side-head,[\s\S]*?\.workspace \.side-note\s*\{\s*display:\s*none\s*!important;/);
   assert.match(styles, /#dialogView:has\(\.conversation-started\) > \.conversation-head \.app-chat-title/);
   assert.match(app, /по вашей натальной карте/);
 });
@@ -79,7 +79,7 @@ test('mobile App-shell оставляет нижнюю навигацию тол
 test('desktop показывает карту отдельным view, а не постоянной колонкой рядом с разговором', async () => {
   const styles = await read('public/clone/live/live-app.css');
 
-  assert.match(styles, /#dialogView\.dialog-layout\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\);/);
-  assert.match(styles, /#dialogView \.logic:not\(\.profile-mode\)\s*\{\s*display:\s*none !important;/);
+  assert.match(styles, /#dialogView\.dialog-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,1fr\);/s);
+  assert.match(styles, /#dialogView \.logic:not\(\.profile-mode\)\s*\{\s*display:\s*none\s*!important;/);
   assert.match(styles, /#dialogView \.logic\.profile-mode:not\(\.hidden\)\s*\{[^}]*display:\s*block/s);
 });

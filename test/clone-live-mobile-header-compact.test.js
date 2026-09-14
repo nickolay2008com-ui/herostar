@@ -13,12 +13,12 @@ test('Live mobile App-shell оставляет одну шапку без уме
 
   assert.match(html, /id="dialogView"[\s\S]*?class="conversation-head"[\s\S]*?class="app-home-link"/);
   assert.match(styles, /:has\(#dialogView:not\(\.hidden\)\) \.live-topbar\s*\{\s*display:\s*none;/);
-  assert.match(styles, /#dialogView > \.conversation-head\s*\{[^}]*min-height:\s*60px/s);
+  assert.match(styles, /#dialogView > \.conversation-head\s*\{[^}]*min-height:\s*62px/s);
   assert.match(styles, /\.app-home-link,[\s\S]*?#newSituation\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px;/s);
-  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?#dialogView > \.conversation-head\s*\{[^}]*height:\s*56px/s);
-  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?\.workspace:not\(\.hidden\)\s*\{[^}]*padding-top:\s*0;/s);
+  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?#dialogView > \.conversation-head\s*\{[^}]*height:\s*58px/s);
+  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?\.workspace:not\(\.hidden\)\s*\{[^}]*padding:\s*0 0/s);
 
-  assert.match(loader, /live-app\.css\?v=20260827-app6/);
+  assert.match(loader, /live-app\.css\?v=20260901-contour1/);
   assert.match(loader, /live-app\.js\?v=20260827-app4/);
   assert.match(html, /clone-ui-gears\.js\?v=20260827-evidence1/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260827-polish3/);

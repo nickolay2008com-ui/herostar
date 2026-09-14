@@ -124,7 +124,7 @@ test('Live показывает поддержку только после по�
   assert.match(app, /Это добровольно — бесплатный диалог продолжит работать независимо от оплаты/);
   assert.match(app, /selectedSupportAmount = null/);
   assert.match(app, /suggestedAmounts\.forEach/);
-  assert.match(styles, /#fullModeOffer,[\s\S]*?#alignmentOffer,[\s\S]*?#clonePaywall,[\s\S]*?display:\s*none !important;/);
+  assert.match(styles, /#fullModeOffer,[\s\S]*?#alignmentOffer,[\s\S]*?#clonePaywall,[\s\S]*?display:\s*none\s*!important;/);
   assert.match(styles, /\.live-support-open,[\s\S]*?min-height:\s*44px/);
 });
 

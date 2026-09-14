@@ -23,17 +23,17 @@ test('анонимный пользователь получает три отв
   assert.ok(!clone.includes("openPaywall('clone_day');\n  return false"));
 });
 
-test('бесплатный профиль возвращён к основе 11:45 и формуле пяти элементов', async () => {
+test('бесплатный профиль использует актуальную энергетическую интерпретацию и формулу пяти элементов', async () => {
   const [profiles, ai] = await Promise.all([
     read('src/consultation-profiles.js'),
     read('src/ai.js'),
   ]);
 
-  assert.ok(profiles.includes("promptVersion: '2026-07-23.1145-five'"));
-  assert.ok(profiles.includes("derivedFromPromptVersion: '2026-07-23.1145'"));
+  assert.ok(profiles.includes("promptVersion: '2026-08-31.energy-interpretation-v2'"));
+  assert.ok(profiles.includes("derivedFromPromptVersion: '2026-08-31.energy-interpretation-v1'"));
   assert.ok(profiles.includes("sourceCommit: 'ad915b2bf870b27552eaf185a842702987d80da1'"));
-  assert.ok(profiles.includes('2–4 конкретных фактора карты'));
-  assert.ok(profiles.includes('действие: есть ли ясный ход'));
+  assert.ok(profiles.includes('2–4 наиболее значимых фактора карты'));
+  assert.ok(profiles.includes('действие: если вопрос требует решения, есть ли ясный ход'));
   assert.ok(profiles.includes('гармония и красота'));
   assert.ok(profiles.includes('ответственность и включённость'));
   assert.ok(profiles.includes('единство'));

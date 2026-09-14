@@ -544,6 +544,34 @@ function setComposerBusy(busy) {
   syncComposerSubmitState();
 }
 
+function clearAnswerRetry() {
+  $('#retryCloneAnswer')?.remove();
+}
+
+function showAnswerRetry() {
+  clearAnswerRetry();
+  const form = $('#questionForm');
+  const input = $('#question');
+  const error = $('#dialogError');
+  if (!form || !input || !error || !input.value.trim()) return;
+  const button = document.createElement('button');
+  button.id = 'retryCloneAnswer';
+  button.type = 'button';
+  button.className = 'ghost live-retry-answer';
+  button.textContent = 'Повторить ответ';
+  button.addEventListener('click', () => {
+    if (input.disabled || !input.value.trim()) return;
+    track('consultant_opened', 'clone_answer_retry_clicked', {
+      questionLength: input.value.trim().length,
+    });
+    goal('clone_answer_retry');
+    error.textContent = '';
+    clearAnswerRetry();
+    form.requestSubmit();
+  });
+  error.insertAdjacentElement('afterend', button);
+}
+
 function formatPrice(value) {
   return `${new Intl.NumberFormat('ru-RU').format(Number(value || 0))} ₽`;
 }
@@ -1395,6 +1423,7 @@ $('#questionForm').addEventListener('submit', async (event) => {
   if (state.asking) return;
   const question = $('#question').value.trim();
   if (!question || !canAsk()) return;
+  clearAnswerRetry();
   $('#dialogError').textContent = '';
   setComposerBusy(true);
   dismissVisibleInlineOffers();
@@ -1417,6 +1446,7 @@ $('#questionForm').addEventListener('submit', async (event) => {
     $('#question').value = question;
     $('#dialogError').textContent = error.message;
     setComposerBusy(false);
+    if (/клон не смог ответить по сути|попробуйте ещё раз/i.test(error.message)) showAnswerRetry();
   }
 });
 
