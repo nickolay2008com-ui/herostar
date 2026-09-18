@@ -5,6 +5,10 @@ export const GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash';
 export const GEMINI_PRIMARY_TIMEOUT_MS = 18000;
 export const GEMINI_FALLBACK_TIMEOUT_MS = 8000;
 export const LIVE_AI_DEADLINE_MS = 28000;
+export const PROVIDER_TRANSIENT_COOLDOWN_MS = 30_000;
+export const PROVIDER_HARD_COOLDOWN_MS = 5 * 60_000;
+
+const providerCooldownUntil = new Map();
 
 function clean(value = '') {
   return String(value || '').trim();
@@ -12,6 +16,53 @@ function clean(value = '') {
 
 function geminiApiKey() {
   return clean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+}
+
+export function providerFailureCooldownMs(failure, status = 0) {
+  const code = Number(status || failure?.status || failure?.statusCode || 0);
+  const message = clean(failure?.message || failure).toLowerCase();
+
+  if (
+    [401, 402, 403, 429].includes(code)
+    || /quota|credits remaining|billing|resource_exhausted|rate[ -]?limit/.test(message)
+  ) {
+    return PROVIDER_HARD_COOLDOWN_MS;
+  }
+
+  if (
+    code >= 500
+    || /high demand|timeout|timed out|aborted|temporarily unavailable|fetch failed/.test(message)
+  ) {
+    return PROVIDER_TRANSIENT_COOLDOWN_MS;
+  }
+
+  return 0;
+}
+
+function providerCooldownKey(provider, model = '') {
+  return `${provider}:${model || 'default'}`;
+}
+
+function providerCooldownRemaining(provider, model = '') {
+  const key = providerCooldownKey(provider, model);
+  const until = Number(providerCooldownUntil.get(key) || 0);
+  const remaining = until - Date.now();
+  if (remaining <= 0) {
+    providerCooldownUntil.delete(key);
+    return 0;
+  }
+  return remaining;
+}
+
+function markProviderFailure(provider, model, failure, status = 0) {
+  const cooldownMs = providerFailureCooldownMs(failure, status);
+  if (!cooldownMs) return 0;
+  providerCooldownUntil.set(providerCooldownKey(provider, model), Date.now() + cooldownMs);
+  return cooldownMs;
+}
+
+function clearProviderFailure(provider, model = '') {
+  providerCooldownUntil.delete(providerCooldownKey(provider, model));
 }
 
 export function resolveGeminiModel(env = process.env) {
@@ -168,44 +219,92 @@ export function installGeminiForLiveClone() {
 
     const startedAt = Date.now();
     const primaryModel = resolveGeminiModel();
-    try {
-      return await callGemini(originalFetch, consultation, payload, primaryModel, {
-        timeoutMs: Math.min(GEMINI_PRIMARY_TIMEOUT_MS, remainingDeadlineMs(startedAt)),
-        fallback: false,
-      });
-    } catch (primaryError) {
-      console.error('[HeroStar AI] Gemini primary Live clone failed:', primaryError?.message || primaryError);
+    let primaryError = null;
 
-      if (primaryModel !== GEMINI_FALLBACK_MODEL && remainingDeadlineMs(startedAt) >= 3000) {
+    const primaryCooldown = providerCooldownRemaining('gemini', primaryModel);
+    if (primaryCooldown > 0) {
+      primaryError = new Error(`Gemini ${primaryModel} is cooling down after a recent provider failure.`);
+      console.warn(`[HeroStar AI] skipping Gemini primary model=${primaryModel}; cooldown_ms=${primaryCooldown}`);
+    } else {
+      try {
+        const response = await callGemini(originalFetch, consultation, payload, primaryModel, {
+          timeoutMs: Math.min(GEMINI_PRIMARY_TIMEOUT_MS, remainingDeadlineMs(startedAt)),
+          fallback: false,
+        });
+        clearProviderFailure('gemini', primaryModel);
+        return response;
+      } catch (error) {
+        primaryError = error;
+        const cooldownMs = markProviderFailure('gemini', primaryModel, error);
+        console.error('[HeroStar AI] Gemini primary Live clone failed:', error?.message || error);
+        if (cooldownMs) {
+          console.warn(`[HeroStar AI] Gemini primary cooldown armed model=${primaryModel} cooldown_ms=${cooldownMs}`);
+        }
+      }
+    }
+
+    if (primaryModel !== GEMINI_FALLBACK_MODEL && remainingDeadlineMs(startedAt) >= 3000) {
+      const fallbackCooldown = providerCooldownRemaining('gemini', GEMINI_FALLBACK_MODEL);
+      if (fallbackCooldown > 0) {
+        console.warn(`[HeroStar AI] skipping Gemini fallback model=${GEMINI_FALLBACK_MODEL}; cooldown_ms=${fallbackCooldown}`);
+      } else {
         console.warn(`[HeroStar AI] retrying Live clone with Gemini fallback model=${GEMINI_FALLBACK_MODEL}`);
         try {
-          return await callGemini(originalFetch, consultation, payload, GEMINI_FALLBACK_MODEL, {
+          const response = await callGemini(originalFetch, consultation, payload, GEMINI_FALLBACK_MODEL, {
             timeoutMs: Math.min(GEMINI_FALLBACK_TIMEOUT_MS, remainingDeadlineMs(startedAt)),
             fallback: true,
           });
+          clearProviderFailure('gemini', GEMINI_FALLBACK_MODEL);
+          return response;
         } catch (fallbackError) {
+          const cooldownMs = markProviderFailure('gemini', GEMINI_FALLBACK_MODEL, fallbackError);
           console.error('[HeroStar AI] Gemini fallback Live clone failed:', fallbackError?.message || fallbackError);
+          if (cooldownMs) {
+            console.warn(`[HeroStar AI] Gemini fallback cooldown armed model=${GEMINI_FALLBACK_MODEL} cooldown_ms=${cooldownMs}`);
+          }
         }
       }
+    }
 
-      const openAiBudget = remainingDeadlineMs(startedAt);
-      if (hadOpenAiKey && openAiBudget >= 3000) {
-        console.warn(`[HeroStar AI] falling back to OpenAI for Live clone with ${openAiBudget}ms remaining.`);
-        return originalFetch(input, {
+    const openAiBudget = remainingDeadlineMs(startedAt);
+    const openAiCooldown = providerCooldownRemaining('openai');
+    if (hadOpenAiKey && openAiBudget >= 3000 && openAiCooldown <= 0) {
+      console.warn(`[HeroStar AI] falling back to OpenAI for Live clone with ${openAiBudget}ms remaining.`);
+      try {
+        const response = await originalFetch(input, {
           ...init,
           signal: AbortSignal.timeout(openAiBudget),
         });
+        if (response.ok) {
+          clearProviderFailure('openai');
+        } else {
+          const cooldownMs = markProviderFailure('openai', '', null, response.status);
+          if (cooldownMs) {
+            console.warn(`[HeroStar AI] OpenAI cooldown armed status=${response.status} cooldown_ms=${cooldownMs}`);
+          }
+        }
+        return response;
+      } catch (openAiError) {
+        const cooldownMs = markProviderFailure('openai', '', openAiError);
+        if (cooldownMs) {
+          console.warn(`[HeroStar AI] OpenAI cooldown armed after fetch failure cooldown_ms=${cooldownMs}`);
+        }
+        throw openAiError;
       }
-      return new Response(JSON.stringify({
-        error: {
-          message: primaryError?.message || 'Gemini Live clone failed.',
-          type: 'gemini_bridge_error',
-        },
-      }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' },
-      });
     }
+    if (hadOpenAiKey && openAiCooldown > 0) {
+      console.warn(`[HeroStar AI] skipping OpenAI fallback; cooldown_ms=${openAiCooldown}`);
+    }
+
+    return new Response(JSON.stringify({
+      error: {
+        message: primaryError?.message || 'Gemini Live clone failed.',
+        type: 'gemini_bridge_error',
+      },
+    }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
   };
 
   console.info(`[HeroStar AI] Gemini is enabled as the primary provider for Live clone consultations. model=${resolveGeminiModel()} fallback=${GEMINI_FALLBACK_MODEL} deadline_ms=${LIVE_AI_DEADLINE_MS}`);
