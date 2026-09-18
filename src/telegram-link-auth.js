@@ -4,6 +4,9 @@ import { claimChart, getChart, upsertUser } from './store.js';
 
 const LOGIN_TTL_MS = 10 * 60 * 1000;
 const TELEGRAM_POLL_TIMEOUT_SECONDS = 25;
+const TELEGRAM_POLL_LOCK_NAMESPACE = 7019;
+const TELEGRAM_POLL_LOCK_ID = 20260918;
+const TELEGRAM_POLL_CONFLICT_MAX_BACKOFF_MS = 60_000;
 const COOKIE_NAME = 'herostar_session';
 const memoryLinks = new Map();
 let poolPromise = null;
@@ -67,6 +70,45 @@ async function waitForPromiseOrTimeout(promise, timeoutMs) {
     await Promise.race([promise, timeout]);
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+async function acquireTelegramPollLock() {
+  if (!process.env.DATABASE_URL) return { acquired: true, client: null };
+
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  });
+
+  try {
+    await client.connect();
+    const result = await client.query(
+      'SELECT pg_try_advisory_lock($1, $2) AS acquired',
+      [TELEGRAM_POLL_LOCK_NAMESPACE, TELEGRAM_POLL_LOCK_ID],
+    );
+    if (!result.rows[0]?.acquired) {
+      await client.end();
+      return { acquired: false, client: null };
+    }
+    return { acquired: true, client };
+  } catch (error) {
+    await client.end().catch(() => {});
+    throw error;
+  }
+}
+
+async function releaseTelegramPollLock(client) {
+  if (!client) return;
+  try {
+    await client.query(
+      'SELECT pg_advisory_unlock($1, $2)',
+      [TELEGRAM_POLL_LOCK_NAMESPACE, TELEGRAM_POLL_LOCK_ID],
+    );
+  } catch (error) {
+    console.warn('HeroStar Telegram poll lock release failed:', error.message);
+  } finally {
+    await client.end().catch(() => {});
   }
 }
 
@@ -444,26 +486,71 @@ export function startTelegramUpdateRuntime({ fetchImpl = globalThis.fetch, updat
 
   let stopped = false;
   const done = (async () => {
-    let offset = await readTelegramUpdateOffset();
-    console.log('HeroStar Telegram использует единый канал обновлений для входа и практик.');
-    while (!stopped) {
-      try {
-        const updates = await telegramApiRequest(fetchImpl, botToken, 'getUpdates', {
-          offset,
-          timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
-          allowed_updates: ['message', 'callback_query'],
-        }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
-
-        await dispatchTelegramUpdates(updates || [], { fetchImpl });
-        for (const update of updates || []) {
-          offset = Math.max(offset, Number(update.update_id) + 1);
+    let lockClient = null;
+    if (process.env.DATABASE_URL) {
+      while (!stopped) {
+        try {
+          const lock = await acquireTelegramPollLock();
+          if (lock.acquired) {
+            lockClient = lock.client;
+            console.log('HeroStar Telegram poll lock acquired; this instance is the active getUpdates leader.');
+            break;
+          }
+          console.log('HeroStar Telegram poll lock is held by another instance; waiting for takeover.');
+        } catch (error) {
+          console.warn('HeroStar Telegram poll lock acquisition failed:', error.message);
         }
-        if ((updates || []).length) await writeTelegramUpdateOffset(offset);
-      } catch (error) {
-        if (stopped) break;
-        console.error('HeroStar Telegram polling failed:', error.message);
         await sleep(5000);
       }
+    }
+
+    if (stopped) {
+      await releaseTelegramPollLock(lockClient);
+      return;
+    }
+
+    let offset = await readTelegramUpdateOffset();
+    let pollingConflicts = 0;
+    console.log('HeroStar Telegram использует единый канал обновлений для входа и практик.');
+    try {
+      while (!stopped) {
+        try {
+          const updates = await telegramApiRequest(fetchImpl, botToken, 'getUpdates', {
+            offset,
+            timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
+            allowed_updates: ['message', 'callback_query'],
+          }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
+
+          if (pollingConflicts > 0) {
+            console.log(`HeroStar Telegram polling recovered after ${pollingConflicts} conflict(s).`);
+            pollingConflicts = 0;
+          }
+
+          await dispatchTelegramUpdates(updates || [], { fetchImpl });
+          for (const update of updates || []) {
+            offset = Math.max(offset, Number(update.update_id) + 1);
+          }
+          if ((updates || []).length) await writeTelegramUpdateOffset(offset);
+        } catch (error) {
+          if (stopped) break;
+          const message = String(error?.message || error);
+          const isConflict = /Conflict: terminated by other getUpdates request|only one bot instance/i.test(message);
+          if (isConflict) {
+            pollingConflicts += 1;
+            const backoffMs = Math.min(
+              TELEGRAM_POLL_CONFLICT_MAX_BACKOFF_MS,
+              5000 * (2 ** Math.min(pollingConflicts - 1, 4)),
+            );
+            console.warn(`HeroStar Telegram polling conflict; retrying in ${backoffMs}ms.`);
+            await sleep(backoffMs);
+            continue;
+          }
+          console.error('HeroStar Telegram polling failed:', message);
+          await sleep(5000);
+        }
+      }
+    } finally {
+      await releaseTelegramPollLock(lockClient);
     }
   })();
 
