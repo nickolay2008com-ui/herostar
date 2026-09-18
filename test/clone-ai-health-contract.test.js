@@ -49,3 +49,11 @@ test('Clone consultation response exposes whether real AI or deterministic fallb
   assert.match(server, /aiStatus,/);
   assert.match(server, /assistantMessageMetadata = \{[\s\S]*aiStatus,/);
 });
+
+
+test('production AI smoke requires a real provider instead of accepting local fallback', async () => {
+  const workflow = await read('.github/workflows/production-ai-smoke.yml');
+  assert.match(workflow, /const aiStatus = String\(consulted\.data\?\.aiStatus \|\| 'unknown'\)/);
+  assert.match(workflow, /if \(aiStatus !== 'ok'\)/);
+  assert.match(workflow, /Real AI is degraded/);
+});
