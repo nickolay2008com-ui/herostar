@@ -789,6 +789,9 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
       );
     }
     const answer = consultation.answer;
+    const aiStatus = searchRequested && webSearch.status !== 'completed'
+      ? 'not_used'
+      : consultation.status || 'ok';
     const factors = product === 'clone' && Array.isArray(consultation.factors) ? consultation.factors : [];
     const factorScope = product === 'clone' ? consultation.factorScope || null : null;
 
@@ -797,6 +800,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
       : { product: 'herostar' };
     const assistantMessageMetadata = {
       ...userMessageMetadata,
+      aiStatus,
       ...(searchRequested ? { webSearch: publicWebSearchPayload(webSearch) } : {}),
       ...(factors.length ? { factors, factorScope } : {}),
     };
@@ -821,12 +825,14 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
         premium,
         webSearchRequested: searchRequested,
         webSearchStatus: webSearch.status,
+        aiStatus,
       },
     });
     res.json({
       answer,
       factors,
       factorScope,
+      aiStatus,
       webSearch: publicWebSearchPayload(webSearch),
       cloneUsage: req.cloneQuestionUsage
         ? {
