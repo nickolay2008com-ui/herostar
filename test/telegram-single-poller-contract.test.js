@@ -18,3 +18,12 @@ test('Telegram polling backs off on duplicate getUpdates conflicts and reports r
   assert.match(code, /TELEGRAM_POLL_CONFLICT_MAX_BACKOFF_MS/);
   assert.match(code, /polling recovered after/);
 });
+
+test('Telegram leader loss aborts long polling and shutdown interrupts backoff', async () => {
+  const code = await source();
+  assert.match(code, /lockClient\.on\('error', lockErrorHandler\)/);
+  assert.match(code, /leadershipAbort\.abort\(error\)/);
+  assert.match(code, /AbortSignal\.any\(\[runtimeAbort\.signal, leadershipAbort\.signal\]\)/);
+  assert.match(code, /sleepUntil\(backoffMs, leaderSignal\)/);
+  assert.match(code, /runtimeAbort\.abort\(\)/);
+});
