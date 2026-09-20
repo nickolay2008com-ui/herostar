@@ -60,6 +60,23 @@ function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function sleepUntil(milliseconds, signal) {
+  if (!signal) return sleep(milliseconds).then(() => true);
+  if (signal.aborted) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const finish = (completed) => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      resolve(completed);
+    };
+    const onAbort = () => finish(false);
+    const timer = setTimeout(() => finish(true), milliseconds);
+    timer.unref?.();
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 async function waitForPromiseOrTimeout(promise, timeoutMs) {
   let timeoutId = null;
   const timeout = new Promise((resolve) => {
@@ -112,12 +129,16 @@ async function releaseTelegramPollLock(client) {
   }
 }
 
-async function telegramApiRequest(fetchImpl, token, method, payload = {}, timeoutMs = 10_000) {
+async function telegramApiRequest(fetchImpl, token, method, payload = {}, timeoutMs = 10_000, externalSignal = null) {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signal = externalSignal
+    ? AbortSignal.any([timeoutSignal, externalSignal])
+    : timeoutSignal;
   const response = await fetchImpl(`https://api.telegram.org/bot${token}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal,
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok || !result.ok) {
@@ -485,72 +506,106 @@ export function startTelegramUpdateRuntime({ fetchImpl = globalThis.fetch, updat
   if (!botToken) return null;
 
   let stopped = false;
+  const runtimeAbort = new AbortController();
+
   const done = (async () => {
-    let lockClient = null;
-    if (process.env.DATABASE_URL) {
-      while (!stopped) {
-        try {
-          const lock = await acquireTelegramPollLock();
-          if (lock.acquired) {
-            lockClient = lock.client;
-            console.log('HeroStar Telegram poll lock acquired; this instance is the active getUpdates leader.');
-            break;
-          }
-          console.log('HeroStar Telegram poll lock is held by another instance; waiting for takeover.');
-        } catch (error) {
-          console.warn('HeroStar Telegram poll lock acquisition failed:', error.message);
-        }
-        await sleep(5000);
-      }
-    }
-
-    if (stopped) {
-      await releaseTelegramPollLock(lockClient);
-      return;
-    }
-
-    let offset = await readTelegramUpdateOffset();
     let pollingConflicts = 0;
     console.log('HeroStar Telegram использует единый канал обновлений для входа и практик.');
-    try {
-      while (!stopped) {
-        try {
-          const updates = await telegramApiRequest(fetchImpl, botToken, 'getUpdates', {
-            offset,
-            timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
-            allowed_updates: ['message', 'callback_query'],
-          }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000);
 
-          if (pollingConflicts > 0) {
-            console.log(`HeroStar Telegram polling recovered after ${pollingConflicts} conflict(s).`);
-            pollingConflicts = 0;
+    while (!stopped) {
+      let lockClient = null;
+      let lockErrorHandler = null;
+      let leadershipAbort = null;
+
+      if (process.env.DATABASE_URL) {
+        while (!stopped && !lockClient) {
+          try {
+            const lock = await acquireTelegramPollLock();
+            if (lock.acquired) {
+              lockClient = lock.client;
+              leadershipAbort = new AbortController();
+              lockErrorHandler = (error) => {
+                console.error('HeroStar Telegram poll lock connection lost:', error.message);
+                leadershipAbort.abort(error);
+              };
+              lockClient.on('error', lockErrorHandler);
+              console.log('HeroStar Telegram poll lock acquired; this instance is the active getUpdates leader.');
+              break;
+            }
+            console.log('HeroStar Telegram poll lock is held by another instance; waiting for takeover.');
+          } catch (error) {
+            console.warn('HeroStar Telegram poll lock acquisition failed:', error.message);
           }
 
-          await dispatchTelegramUpdates(updates || [], { fetchImpl });
-          for (const update of updates || []) {
-            offset = Math.max(offset, Number(update.update_id) + 1);
-          }
-          if ((updates || []).length) await writeTelegramUpdateOffset(offset);
-        } catch (error) {
-          if (stopped) break;
-          const message = String(error?.message || error);
-          const isConflict = /Conflict: terminated by other getUpdates request|only one bot instance/i.test(message);
-          if (isConflict) {
-            pollingConflicts += 1;
-            const backoffMs = Math.min(
-              TELEGRAM_POLL_CONFLICT_MAX_BACKOFF_MS,
-              5000 * (2 ** Math.min(pollingConflicts - 1, 4)),
-            );
-            console.warn(`HeroStar Telegram polling conflict; retrying in ${backoffMs}ms.`);
-            await sleep(backoffMs);
-            continue;
-          }
-          console.error('HeroStar Telegram polling failed:', message);
-          await sleep(5000);
+          const shouldContinue = await sleepUntil(5000, runtimeAbort.signal);
+          if (!shouldContinue) break;
         }
       }
-    } finally {
-      await releaseTelegramPollLock(lockClient);
+
+      if (stopped) {
+        if (lockClient && lockErrorHandler) lockClient.removeListener('error', lockErrorHandler);
+        await releaseTelegramPollLock(lockClient);
+        break;
+      }
+
+      const leaderSignal = leadershipAbort
+        ? AbortSignal.any([runtimeAbort.signal, leadershipAbort.signal])
+        : runtimeAbort.signal;
+      let offset = await readTelegramUpdateOffset();
+
+      try {
+        while (!stopped && !leadershipAbort?.signal.aborted) {
+          try {
+            const updates = await telegramApiRequest(fetchImpl, botToken, 'getUpdates', {
+              offset,
+              timeout: TELEGRAM_POLL_TIMEOUT_SECONDS,
+              allowed_updates: ['message', 'callback_query'],
+            }, (TELEGRAM_POLL_TIMEOUT_SECONDS + 10) * 1000, leaderSignal);
+
+            if (pollingConflicts > 0) {
+              console.log(`HeroStar Telegram polling recovered after ${pollingConflicts} conflict(s).`);
+              pollingConflicts = 0;
+            }
+
+            await dispatchTelegramUpdates(updates || [], { fetchImpl });
+            for (const update of updates || []) {
+              offset = Math.max(offset, Number(update.update_id) + 1);
+            }
+            if ((updates || []).length) await writeTelegramUpdateOffset(offset);
+          } catch (error) {
+            if (stopped || runtimeAbort.signal.aborted) break;
+            if (leadershipAbort?.signal.aborted) {
+              console.warn('HeroStar Telegram leadership lost; reacquiring poll lock.');
+              break;
+            }
+
+            const message = String(error?.message || error);
+            const isConflict = /Conflict: terminated by other getUpdates request|only one bot instance/i.test(message);
+            if (isConflict) {
+              pollingConflicts += 1;
+              const backoffMs = Math.min(
+                TELEGRAM_POLL_CONFLICT_MAX_BACKOFF_MS,
+                5000 * (2 ** Math.min(pollingConflicts - 1, 4)),
+              );
+              console.warn(`HeroStar Telegram polling conflict; retrying in ${backoffMs}ms.`);
+              const completed = await sleepUntil(backoffMs, leaderSignal);
+              if (!completed) continue;
+              continue;
+            }
+
+            console.error('HeroStar Telegram polling failed:', message);
+            const completed = await sleepUntil(5000, leaderSignal);
+            if (!completed) continue;
+          }
+        }
+      } finally {
+        if (lockClient && lockErrorHandler) lockClient.removeListener('error', lockErrorHandler);
+        await releaseTelegramPollLock(lockClient);
+      }
+
+      if (!stopped && leadershipAbort?.signal.aborted) {
+        await sleepUntil(1000, runtimeAbort.signal);
+      }
     }
   })();
 
@@ -558,6 +613,7 @@ export function startTelegramUpdateRuntime({ fetchImpl = globalThis.fetch, updat
     registerUpdateHandler: registerTelegramUpdateHandler,
     async stop() {
       stopped = true;
+      runtimeAbort.abort();
       await waitForPromiseOrTimeout(done, 36_000);
       telegramUpdateRuntime = null;
       telegramUpdateHandlers.clear();
