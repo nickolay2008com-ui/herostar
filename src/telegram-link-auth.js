@@ -65,15 +65,20 @@ function sleepUntil(milliseconds, signal) {
   if (signal.aborted) return Promise.resolve(false);
 
   return new Promise((resolve) => {
+    let settled = false;
+    let timer = null;
     const finish = (completed) => {
-      clearTimeout(timer);
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
       signal.removeEventListener('abort', onAbort);
       resolve(completed);
     };
     const onAbort = () => finish(false);
-    const timer = setTimeout(() => finish(true), milliseconds);
+    timer = setTimeout(() => finish(true), milliseconds);
     timer.unref?.();
     signal.addEventListener('abort', onAbort, { once: true });
+    if (signal.aborted) onAbort();
   });
 }
 
@@ -91,12 +96,20 @@ async function waitForPromiseOrTimeout(promise, timeoutMs) {
 }
 
 async function acquireTelegramPollLock() {
-  if (!process.env.DATABASE_URL) return { acquired: true, client: null };
+  if (!process.env.DATABASE_URL) {
+    return { acquired: true, client: null, leadershipAbort: null, lockErrorHandler: null };
+  }
 
   const client = new pg.Client({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   });
+  const leadershipAbort = new AbortController();
+  const lockErrorHandler = (error) => {
+    console.error('HeroStar Telegram poll lock connection lost:', error.message);
+    leadershipAbort.abort(error);
+  };
+  client.on('error', lockErrorHandler);
 
   try {
     await client.connect();
@@ -105,11 +118,13 @@ async function acquireTelegramPollLock() {
       [TELEGRAM_POLL_LOCK_NAMESPACE, TELEGRAM_POLL_LOCK_ID],
     );
     if (!result.rows[0]?.acquired) {
+      client.removeListener('error', lockErrorHandler);
       await client.end();
-      return { acquired: false, client: null };
+      return { acquired: false, client: null, leadershipAbort: null, lockErrorHandler: null };
     }
-    return { acquired: true, client };
+    return { acquired: true, client, leadershipAbort, lockErrorHandler };
   } catch (error) {
+    client.removeListener('error', lockErrorHandler);
     await client.end().catch(() => {});
     throw error;
   }
@@ -523,12 +538,8 @@ export function startTelegramUpdateRuntime({ fetchImpl = globalThis.fetch, updat
             const lock = await acquireTelegramPollLock();
             if (lock.acquired) {
               lockClient = lock.client;
-              leadershipAbort = new AbortController();
-              lockErrorHandler = (error) => {
-                console.error('HeroStar Telegram poll lock connection lost:', error.message);
-                leadershipAbort.abort(error);
-              };
-              lockClient.on('error', lockErrorHandler);
+              leadershipAbort = lock.leadershipAbort;
+              lockErrorHandler = lock.lockErrorHandler;
               console.log('HeroStar Telegram poll lock acquired; this instance is the active getUpdates leader.');
               break;
             }
