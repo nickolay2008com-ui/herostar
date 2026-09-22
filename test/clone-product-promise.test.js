@@ -26,6 +26,17 @@ ${await read('public/clone.js')}`;
   assert.match(source, /услови(?:е|я).*решени/i);
 });
 
+test('live прямо называет Клона персональной подсказкой для жизненных решений', async () => {
+  const source = await read('public/clone/live/index.html');
+  assert.match(source, /Персональная подсказка для жизненных решений по вашей натальной карте/);
+  assert.doesNotMatch(source, /не (?:принимает|заменяет).*решени|не решение за/i);
+});
+
+test('первое сообщение Клона раскрывает подсказку как другой взгляд на решение', async () => {
+  const source = await read('public/clone/live/index.html');
+  assert.match(source, /Это персональная подсказка, которая помогает взглянуть на решение с другой стороны\./);
+});
+
 test('платный профиль превращает обещание 3–6 факторов в полный разбор решения', async () => {
   const source = await read('src/consultation-profiles.js');
   assert.match(source, /promptVersion: '2026-08-31\.energy-interpretation-v2'/);

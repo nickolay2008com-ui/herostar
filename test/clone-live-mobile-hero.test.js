@@ -19,7 +19,7 @@ test('заголовок и подзаголовок полной версии �
     readFile(new URL('../public/clone/live/live-mobile-hero.css', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(html, /<p class="live-accent">Спросите Клона, собранного по вашей натальной карте<\/p>/);
+  assert.match(html, /<p class="live-accent">Персональная подсказка для жизненных решений по вашей натальной карте<\/p>/);
   assert.match(styles, /@media\s*\(max-width:\s*640px\)/);
   assert.match(styles, /\.live-product \.live-hero\s*\{[^}]*min-height:\s*clamp\(340px, 94vw, 390px\)/s);
   assert.match(styles, /\.live-product \.live-hero-copy\s*\{[^}]*position:\s*absolute[^}]*inset:\s*0[^}]*justify-content:\s*flex-end/s);
