@@ -91,3 +91,51 @@ test('Groq request stays bounded and rejects redirects', async () => {
   assert.equal(seen.options.redirect, 'manual');
   assert.equal(seen.options.headers.Authorization, 'Bearer secret-key');
 });
+
+
+test('GPT-OSS uses low reasoning and current completion-token field', async () => {
+  resetFreeLlmRuntimeForTests();
+  let body = null;
+  await generateFreeLlmChat({
+    instructions: 'System',
+    input: [{ role: 'user', content: 'Hello' }],
+    maxOutputTokens: 900,
+    env: configuredEnv(),
+    fetchImpl: async (_url, options) => {
+      body = JSON.parse(options.body);
+      return fakeResponse(200, {
+        choices: [{ message: { content: 'Complete answer' }, finish_reason: 'stop' }],
+        usage: { total_tokens: 90 },
+      });
+    },
+  });
+
+  assert.equal(body.reasoning_effort, 'low');
+  assert.equal(body.max_completion_tokens, 900);
+  assert.equal('max_tokens' in body, false);
+});
+
+test('truncated Groq completion is rejected instead of reaching the user', async () => {
+  resetFreeLlmRuntimeForTests();
+
+  await assert.rejects(
+    () => generateFreeLlmChat({
+      instructions: 'System',
+      input: [{ role: 'user', content: 'Hello' }],
+      env: configuredEnv(),
+      fetchImpl: async () => fakeResponse(200, {
+        choices: [{
+          message: { content: 'Клон бы выбрал страну, где важна стабильная' },
+          finish_reason: 'length',
+        }],
+        usage: {
+          prompt_tokens: 400,
+          completion_tokens: 900,
+          completion_tokens_details: { reasoning_tokens: 760 },
+          total_tokens: 1300,
+        },
+      }),
+    }),
+    (error) => error?.code === 'free_llm_truncated_response',
+  );
+});
