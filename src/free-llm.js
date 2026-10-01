@@ -29,8 +29,9 @@ function envValue(name, env = process.env) {
 }
 
 export function freeLlmMode(env = process.env) {
-  const mode = envValue('CLONE_FREE_LLM_MODE', env).toLowerCase() || 'primary';
-  return ['primary', 'fallback'].includes(mode) ? mode : 'off';
+  const mode = envValue('CLONE_FREE_LLM_MODE', env).toLowerCase();
+  if (!mode) return 'primary';
+  return mode === 'primary' ? 'primary' : 'off';
 }
 
 export function freeLlmProvider(env = process.env) {
