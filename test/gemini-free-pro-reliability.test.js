@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const bridge = fs.readFileSync(new URL('../src/gemini-openai-bridge.js', import.meta.url), 'utf8');
+const bridge = fs.readFileSync(new URL('../src/gemini-clone.js', import.meta.url), 'utf8');
 
 test('Live clone defaults to current strongest free-tier Flash with stable fallback', () => {
   assert.match(bridge, /GEMINI_PRIMARY_MODEL\s*=\s*'gemini-3\.7-flash'/);

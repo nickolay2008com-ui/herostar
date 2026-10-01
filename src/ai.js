@@ -10,6 +10,7 @@ import {
   publicConsultationFactors,
   selectConsultationFactors,
 } from './consultation-factors.js';
+import { generateCloneAi } from './clone-ai-provider.js';
 
 const REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh', 'max']);
 
@@ -110,17 +111,6 @@ function localCloneTestAnswer() {
   return 'Клон начал бы с сути вопроса и выбрал конкретный проверяемый шаг.';
 }
 
-function localCloneFallback(publicFactors = []) {
-  const meanings = publicFactors
-    .slice(0, 2)
-    .map((factor) => String(factor?.role || '').trim().replace(/[.!?]+$/, ''))
-    .filter(Boolean);
-  const grounding = meanings.length
-    ? ` В этой карте важны два ориентира: ${meanings.join('; ')}.`
-    : '';
-  return `Клон не стал бы принимать окончательное решение вслепую. Он выбрал бы самый небольшой обратимый шаг, который даст реальную обратную связь, и только после этого усилил или изменил направление.${grounding} Первый ход — сформулировать один проверяемый результат и проверить его на малом масштабе.`;
-}
-
 function cloneProfilePolicy(profile, premium) {
   return premium ? String(profile?.systemPromptAddon || '').trim() : '';
 }
@@ -202,6 +192,45 @@ export function consultationSystemPrompt(mode, product = 'herostar', premium = f
 Это продолжение уже начатого разговора. Не повторяй прежний разбор и не начинай знакомство заново. Отвечай на текущую реплику, сохраняя найденную линию и язык человека. За один ответ развивай одну главную мысль; обычно используй 1–2 элемента карты. Не заставляй разговор каждый раз проходить полный маршрут от эмпатии до действия. Не показывай возможности в каждом сообщении: делай это только в естественной точке перехода и не больше двух направлений. Обычно достаточно 100–260 слов, а иногда и нескольких точных предложений.`);
 }
 
+function buildConsultationProviderInput({
+  mode,
+  product,
+  premium,
+  chart,
+  portrait,
+  history,
+  question,
+  externalContext = null,
+  factors = [],
+}) {
+  const profile = resolveConsultationProfile({ product, premium });
+  const preparedQuestion = prepareConsultationQuestion(profile, question);
+  return {
+    instructions: consultationSystemPrompt(mode, product, premium, Boolean(externalContext)),
+    input: [{
+      role: 'user',
+      content: JSON.stringify({
+        mode,
+        product,
+        consultationProfile: profile ? {
+          id: profile.id,
+          promptVersion: profile.promptVersion,
+          sourceCommit: profile.sourceCommit,
+          derivedFromPromptVersion: profile.derivedFromPromptVersion || null,
+          factorBudget: profile.factorBudget,
+          chartDepth: profile.chartDepth,
+        } : null,
+        chart: product === 'clone' ? compactCloneEvidence(chart) : compactChart(chart, profile),
+        selectedFactors: product === 'clone' ? factors : [],
+        portrait,
+        history: history.slice(-(profile?.historyLimit || 8)),
+        question: preparedQuestion,
+        externalContext,
+      }),
+    }],
+  };
+}
+
 async function requestConsultation(client, {
   model,
   effort,
@@ -216,39 +245,25 @@ async function requestConsultation(client, {
   externalContext = null,
   factors = [],
 }) {
-  const profile = resolveConsultationProfile({ product, premium });
-  const preparedQuestion = prepareConsultationQuestion(profile, question);
+  const providerInput = buildConsultationProviderInput({
+    mode,
+    product,
+    premium,
+    chart,
+    portrait,
+    history,
+    question,
+    externalContext,
+    factors,
+  });
   const response = await client.responses.create({
     model,
     reasoning: { effort },
     max_output_tokens: maxOutputTokens,
     text: { verbosity: mode === 'deep' ? 'medium' : 'low' },
     input: [
-      {
-        role: 'system',
-        content: consultationSystemPrompt(mode, product, premium, Boolean(externalContext)),
-      },
-      {
-        role: 'user',
-        content: JSON.stringify({
-          mode,
-          product,
-          consultationProfile: profile ? {
-            id: profile.id,
-            promptVersion: profile.promptVersion,
-            sourceCommit: profile.sourceCommit,
-            derivedFromPromptVersion: profile.derivedFromPromptVersion || null,
-            factorBudget: profile.factorBudget,
-            chartDepth: profile.chartDepth,
-          } : null,
-          chart: product === 'clone' ? compactCloneEvidence(chart) : compactChart(chart, profile),
-          selectedFactors: product === 'clone' ? factors : [],
-          portrait,
-          history: history.slice(-(profile?.historyLimit || 8)),
-          question: preparedQuestion,
-          externalContext,
-        }),
-      },
+      { role: 'system', content: providerInput.instructions },
+      ...providerInput.input,
     ],
   });
 
@@ -277,26 +292,60 @@ async function runConsultation({
     answer: null,
     factors: [],
     factorScope: selected.scope,
+    provider: null,
+    model: null,
   });
   const localAnswer = () => localConsultation(portrait, question);
+  const config = resolveConsultationConfig();
+  const primary = config[mode];
+
+  if (product === 'clone') {
+    if (process.env.CLONE_LOCAL_TEST_ANSWER === 'true') {
+      return {
+        answer: localCloneTestAnswer(),
+        factors: publicFactors,
+        factorScope: selected.scope,
+        provider: 'local-test',
+        model: null,
+      };
+    }
+
+    const providerInput = buildConsultationProviderInput({
+      mode,
+      product,
+      premium,
+      chart,
+      portrait,
+      history,
+      question,
+      externalContext,
+      factors: selected.factors,
+    });
+    const cloneAi = await generateCloneAi({
+      ...providerInput,
+      maxOutputTokens: primary.maxOutputTokens,
+      mode,
+    });
+    if (cloneAi.status !== 'ok' || !cloneAi.text) return unavailableCloneAnswer();
+
+    console.info(`[HeroStar AI] mode=${mode} product=clone profile=${profile?.id || 'default'} provider=${cloneAi.provider} model=${cloneAi.model}`);
+    return {
+      answer: cloneAi.text,
+      factors: publicFactors,
+      factorScope: selected.scope,
+      provider: cloneAi.provider,
+      model: cloneAi.model,
+    };
+  }
 
   if (!process.env.OPENAI_API_KEY) {
-    if (product === 'clone') {
-      return process.env.CLONE_LOCAL_TEST_ANSWER === 'true'
-        ? { answer: localCloneTestAnswer(), factors: publicFactors, factorScope: selected.scope }
-        : unavailableCloneAnswer();
-    }
     return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
 
   const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    // Gemini bridge already owns the single bounded retry for Clone.
-    // SDK retries would restart the whole bridge sequence and break the Live deadline.
-    maxRetries: product === 'clone' ? 0 : 2,
+    maxRetries: 2,
   });
-  const config = resolveConsultationConfig();
-  const primary = config[mode];
 
   try {
     const answer = await requestConsultation(client, {
@@ -345,9 +394,7 @@ async function runConsultation({
       console.error('OpenAI consultation failed:', primaryError?.message || primaryError);
     }
 
-    return product === 'clone'
-      ? { answer: localCloneFallback(publicFactors), factors: publicFactors, factorScope: selected.scope, status: 'fallback' }
-      : { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
+    return { answer: localAnswer(), factors: publicFactors, factorScope: selected.scope };
   }
 }
 

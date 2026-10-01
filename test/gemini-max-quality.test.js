@@ -6,18 +6,18 @@ import {
   GEMINI_FALLBACK_TIMEOUT_MS,
   GEMINI_PRIMARY_MODEL,
   GEMINI_PRIMARY_TIMEOUT_MS,
-  LIVE_AI_DEADLINE_MS,
+  GEMINI_PROVIDER_DEADLINE_MS,
   resolveGeminiModel,
-} from '../src/gemini-openai-bridge.js';
+} from '../src/gemini-clone.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Live clone использует Gemini 3.7 Flash как основной актуальный quality-first вариант', () => {
+test('Live clone uses Gemini 3.7 Flash as the primary Gemini fallback provider', () => {
   assert.equal(GEMINI_PRIMARY_MODEL, 'gemini-3.7-flash');
   assert.equal(resolveGeminiModel({}), 'gemini-3.7-flash');
 });
 
-test('старые Gemini model env не могут случайно откатить публичный тест на устаревший Flash', () => {
+test('old Gemini env names cannot silently downgrade the Clone fallback model', () => {
   assert.equal(resolveGeminiModel({
     GEMINI_MODEL: 'gemini-2.5-flash',
     GEMINI_MODEL_LIVE: 'gemini-2.5-flash',
@@ -25,27 +25,25 @@ test('старые Gemini model env не могут случайно откат�
   }), 'gemini-3.7-flash');
 });
 
-test('явный paid-tier override остаётся доступен, а резерв — Gemini 3.5 Flash', () => {
+test('explicit paid-tier override stays available while Gemini 3.5 Flash remains the reserve', () => {
   assert.equal(resolveGeminiModel({ GEMINI_MODEL_FORCE: 'gemini-3.1-pro-preview' }), 'gemini-3.1-pro-preview');
   assert.equal(GEMINI_FALLBACK_MODEL, 'gemini-3.5-flash');
 });
 
-test('primary сохраняет medium thinking, а fallback ускоряется до low', async () => {
-  const source = await read('src/gemini-openai-bridge.js');
+test('primary Gemini keeps medium thinking and its reserve uses low', async () => {
+  const source = await read('src/gemini-clone.js');
   assert.match(source, /thinkingLevel:\s*fallback \? 'low' : 'medium'/);
   assert.doesNotMatch(source, /temperature\s*:/);
 });
 
-test('Live AI укладывает primary и fallback в Railway-safe deadline', () => {
+test('Gemini fallback provider stays inside its bounded deadline', () => {
   assert.equal(GEMINI_PRIMARY_TIMEOUT_MS, 18000);
   assert.equal(GEMINI_FALLBACK_TIMEOUT_MS, 8000);
-  assert.equal(LIVE_AI_DEADLINE_MS, 28000);
-  assert.ok(GEMINI_PRIMARY_TIMEOUT_MS + GEMINI_FALLBACK_TIMEOUT_MS < LIVE_AI_DEADLINE_MS);
-  assert.ok(LIVE_AI_DEADLINE_MS < 39000);
+  assert.equal(GEMINI_PROVIDER_DEADLINE_MS, 24000);
+  assert.ok(GEMINI_PROVIDER_DEADLINE_MS < 39000);
 });
 
-test('OpenAI fallback получает только остаток общего Live deadline', async () => {
-  const source = await read('src/gemini-openai-bridge.js');
-  assert.match(source, /const openAiBudget = remainingDeadlineMs\(startedAt\)/);
-  assert.match(source, /signal: AbortSignal\.timeout\(openAiBudget\)/);
+test('Gemini provider contains no OpenAI fallback path', async () => {
+  const source = await read('src/gemini-clone.js');
+  assert.doesNotMatch(source, /api\.openai\.com|openAiBudget|OPENAI_API_KEY/);
 });

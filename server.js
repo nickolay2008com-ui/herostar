@@ -792,6 +792,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
     const aiStatus = searchRequested && webSearch.status !== 'completed'
       ? 'not_used'
       : consultation.status || 'ok';
+    const aiProvider = product === 'clone' ? consultation.provider || null : null;
     const factors = product === 'clone' && Array.isArray(consultation.factors) ? consultation.factors : [];
     const factorScope = product === 'clone' ? consultation.factorScope || null : null;
 
@@ -801,6 +802,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
     const assistantMessageMetadata = {
       ...userMessageMetadata,
       aiStatus,
+      aiProvider,
       ...(searchRequested ? { webSearch: publicWebSearchPayload(webSearch) } : {}),
       ...(factors.length ? { factors, factorScope } : {}),
     };
@@ -826,6 +828,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
         webSearchRequested: searchRequested,
         webSearchStatus: webSearch.status,
         aiStatus,
+        aiProvider,
       },
     });
     res.json({
@@ -833,6 +836,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
       factors,
       factorScope,
       aiStatus,
+      aiProvider,
       webSearch: publicWebSearchPayload(webSearch),
       cloneUsage: req.cloneQuestionUsage
         ? {
