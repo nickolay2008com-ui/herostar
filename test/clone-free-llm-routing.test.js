@@ -66,3 +66,50 @@ test('Free and Gemini failure returns unavailable and never needs OpenAI', async
     status: 'unavailable',
   });
 });
+
+
+test('Free receives compact Clone context while Gemini keeps the full original payload', async () => {
+  const originalInput = [{
+    role: 'user',
+    content: JSON.stringify({
+      mode: 'deep',
+      product: 'clone',
+      consultationProfile: { id: 'clone-free-v1', promptVersion: 'v1' },
+      chart: { system: 'Плацидус', scope: 'full', planets: Array.from({ length: 10 }, (_, i) => ({ key: `p${i}` })) },
+      selectedFactors: [{ id: 'planet:venus', role: 'релевантный фактор' }],
+      portrait: { cards: Array.from({ length: 11 }, (_, i) => ({ id: i, text: 'large portrait card' })) },
+      history: [{ role: 'user', content: 'Раньше мы говорили о выборе' }],
+      question: 'Инструкция профиля. Ситуация: какой вариант выбрать?',
+      externalContext: null,
+    }),
+  }];
+
+  let freeArgs = null;
+  let geminiArgs = null;
+
+  const result = await generateCloneAi({
+    instructions: 'Полная chart передана как фон для понимания положений и связей. Остальные правила.',
+    input: originalInput,
+    maxOutputTokens: 1800,
+    freeLlm: async (args) => {
+      freeArgs = args;
+      throw Object.assign(new Error('free down'), { code: 'free_down' });
+    },
+    gemini: async (args) => {
+      geminiArgs = args;
+      return { text: 'gemini answer', model: 'gemini-3.7-flash' };
+    },
+  });
+
+  const freePayload = JSON.parse(freeArgs.input[0].content);
+  assert.equal('chart' in freePayload, false);
+  assert.equal('portrait' in freePayload, false);
+  assert.deepEqual(freePayload.selectedFactors, [{ id: 'planet:venus', role: 'релевантный фактор' }]);
+  assert.deepEqual(freePayload.history, [{ role: 'user', content: 'Раньше мы говорили о выборе' }]);
+  assert.equal(freePayload.chartContext.system, 'Плацидус');
+  assert.doesNotMatch(freeArgs.instructions, /Полная chart передана/);
+
+  assert.deepEqual(geminiArgs.input, originalInput);
+  assert.equal(geminiArgs.instructions, 'Полная chart передана как фон для понимания положений и связей. Остальные правила.');
+  assert.equal(result.provider, 'gemini');
+});
