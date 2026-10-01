@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateCloneAi } from '../src/clone-ai-provider.js';
+import { cloneFreeLlmBudgetMs, generateCloneAi } from '../src/clone-ai-provider.js';
 
 test('Free LLM is primary and Gemini is not called when Free succeeds', async () => {
   let geminiCalls = 0;
@@ -151,4 +151,31 @@ test('Free LLM receives the compact two-layer answer style without changing Gemi
     'Полная chart передана как фон для понимания положений и связей. Базовые правила.',
   );
   assert.equal(result.provider, 'gemini');
+});
+
+
+test('NVIDIA gets a longer Free LLM budget while Groq keeps the fast budget', async () => {
+  assert.equal(cloneFreeLlmBudgetMs('groq'), 12000);
+  assert.equal(cloneFreeLlmBudgetMs('nvidia'), 20000);
+
+  let seenTimeout = 0;
+  const result = await generateCloneAi({
+    instructions: 'System',
+    input: [{ role: 'user', content: 'Hello' }],
+    freeProvider: 'nvidia',
+    freeLlm: async ({ timeoutMs }) => {
+      seenTimeout = timeoutMs;
+      return {
+        text: 'nvidia answer',
+        provider: 'nvidia',
+        model: 'openai/gpt-oss-20b',
+      };
+    },
+    gemini: async () => {
+      throw new Error('Gemini must not run when NVIDIA succeeds');
+    },
+  });
+
+  assert.equal(seenTimeout, 20000);
+  assert.equal(result.provider, 'free:nvidia');
 });
