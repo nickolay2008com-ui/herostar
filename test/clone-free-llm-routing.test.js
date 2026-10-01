@@ -113,3 +113,42 @@ test('Free receives compact Clone context while Gemini keeps the full original p
   assert.equal(geminiArgs.instructions, 'Полная chart передана как фон для понимания положений и связей. Остальные правила.');
   assert.equal(result.provider, 'gemini');
 });
+
+
+test('Free LLM receives the compact two-layer answer style without changing Gemini instructions', async () => {
+  let freeInstructions = '';
+  let geminiInstructions = '';
+
+  const result = await generateCloneAi({
+    instructions: 'Полная chart передана как фон для понимания положений и связей. Базовые правила.',
+    input: [{
+      role: 'user',
+      content: JSON.stringify({
+        mode: 'deep',
+        product: 'clone',
+        selectedFactors: [{ id: 'planet:venus', role: 'важный фактор' }],
+        history: [],
+        question: 'Какой формат работы выбрать?',
+      }),
+    }],
+    maxOutputTokens: 1800,
+    freeLlm: async ({ instructions }) => {
+      freeInstructions = instructions;
+      throw Object.assign(new Error('free down'), { code: 'free_down' });
+    },
+    gemini: async ({ instructions }) => {
+      geminiInstructions = instructions;
+      return { text: 'gemini answer', model: 'gemini-3.7-flash' };
+    },
+  });
+
+  assert.match(freeInstructions, /Что проверить первым:/);
+  assert.match(freeInstructions, /без Markdown/i);
+  assert.match(freeInstructions, /2–4 коротких предложения/);
+  assert.match(freeInstructions, /не перечисляй дома, градусы, аспекты/i);
+  assert.equal(
+    geminiInstructions,
+    'Полная chart передана как фон для понимания положений и связей. Базовые правила.',
+  );
+  assert.equal(result.provider, 'gemini');
+});
