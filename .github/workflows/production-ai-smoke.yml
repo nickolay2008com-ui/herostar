@@ -76,7 +76,8 @@ jobs:
 
           const answer = typeof consulted.data?.answer === 'string' ? consulted.data.answer.trim() : '';
           const aiStatus = String(consulted.data?.aiStatus || 'unknown');
-          console.log(`AI consultation: HTTP ${consulted.response.status}, latency_ms=${consulted.latencyMs}, answer_chars=${answer.length}, ai_status=${aiStatus}`);
+          const aiProvider = String(consulted.data?.aiProvider || 'unknown');
+          console.log(`AI consultation: HTTP ${consulted.response.status}, latency_ms=${consulted.latencyMs}, answer_chars=${answer.length}, ai_status=${aiStatus}, ai_provider=${aiProvider}`);
           console.log(`AI answer preview: ${answer.slice(0, 240).replace(/\s+/g, ' ')}`);
 
           if (!consulted.response.ok) {
@@ -89,7 +90,10 @@ jobs:
             throw new Error(`AI error/fallback text returned: ${answer}`);
           }
           if (aiStatus !== 'ok') {
-            throw new Error(`Real AI is degraded: aiStatus=${aiStatus}. User-facing fallback still answered, but this smoke requires an external AI provider.`);
+            throw new Error(`Real AI is degraded: aiStatus=${aiStatus}. This smoke requires an external AI provider.`);
+          }
+          if (aiProvider !== 'free:groq') {
+            throw new Error(`Primary Free LLM is degraded: aiProvider=${aiProvider}. Gemini fallback may still keep Clone usable.`);
           }
           console.log('AI_SMOKE_OK=true');
           NODE
