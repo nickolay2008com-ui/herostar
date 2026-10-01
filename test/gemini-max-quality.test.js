@@ -6,9 +6,9 @@ import {
   GEMINI_FALLBACK_TIMEOUT_MS,
   GEMINI_PRIMARY_MODEL,
   GEMINI_PRIMARY_TIMEOUT_MS,
-  LIVE_AI_DEADLINE_MS,
+  GEMINI_PROVIDER_DEADLINE_MS,
   resolveGeminiModel,
-} from '../src/gemini-openai-bridge.js';
+} from '../src/gemini-clone.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -31,7 +31,7 @@ test('явный paid-tier override остаётся доступен, а рез
 });
 
 test('primary сохраняет medium thinking, а fallback ускоряется до low', async () => {
-  const source = await read('src/gemini-openai-bridge.js');
+  const source = await read('src/gemini-clone.js');
   assert.match(source, /thinkingLevel:\s*fallback \? 'low' : 'medium'/);
   assert.doesNotMatch(source, /temperature\s*:/);
 });
@@ -39,13 +39,13 @@ test('primary сохраняет medium thinking, а fallback ускоряетс
 test('Live AI укладывает primary и fallback в Railway-safe deadline', () => {
   assert.equal(GEMINI_PRIMARY_TIMEOUT_MS, 18000);
   assert.equal(GEMINI_FALLBACK_TIMEOUT_MS, 8000);
-  assert.equal(LIVE_AI_DEADLINE_MS, 28000);
-  assert.ok(GEMINI_PRIMARY_TIMEOUT_MS + GEMINI_FALLBACK_TIMEOUT_MS < LIVE_AI_DEADLINE_MS);
-  assert.ok(LIVE_AI_DEADLINE_MS < 39000);
+  assert.equal(GEMINI_PROVIDER_DEADLINE_MS, 28000);
+  assert.ok(GEMINI_PRIMARY_TIMEOUT_MS + GEMINI_FALLBACK_TIMEOUT_MS < GEMINI_PROVIDER_DEADLINE_MS);
+  assert.ok(GEMINI_PROVIDER_DEADLINE_MS < 39000);
 });
 
 test('OpenAI fallback получает только остаток общего Live deadline', async () => {
-  const source = await read('src/gemini-openai-bridge.js');
+  const source = await read('src/gemini-clone.js');
   assert.match(source, /const openAiBudget = remainingDeadlineMs\(startedAt\)/);
   assert.match(source, /signal: AbortSignal\.timeout\(openAiBudget\)/);
 });
