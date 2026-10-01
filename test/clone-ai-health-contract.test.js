@@ -50,10 +50,10 @@ test('Clone consultation response exposes real provider and availability status'
   assert.match(server, /assistantMessageMetadata = \{[\s\S]*aiStatus,[\s\S]*aiProvider,/);
 });
 
-test('production AI smoke requires Free Groq as the primary real provider', async () => {
+test('production AI smoke requires a Free LLM as the primary real provider', async () => {
   const workflow = await read('.github/workflows/production-ai-smoke.yml');
   assert.match(workflow, /const aiStatus = String\(consulted\.data\?\.aiStatus \|\| 'unknown'\)/);
   assert.match(workflow, /const aiProvider = String\(consulted\.data\?\.aiProvider \|\| 'unknown'\)/);
   assert.match(workflow, /if \(aiStatus !== 'ok'\)/);
-  assert.match(workflow, /if \(aiProvider !== 'free:groq'\)/);
+  assert.match(workflow, /if \(!aiProvider\.startsWith\('free:'\)\)/);
 });
