@@ -143,7 +143,7 @@ test('Free LLM receives the compact two-layer answer style without changing Gemi
   });
 
   assert.match(freeInstructions, /Что проверить первым:/);
-  assert.match(freeInstructions, /без Markdown/i);
+  assert.match(freeInstructions, /Markdown-разметки/i);
   assert.match(freeInstructions, /2–4 коротких предложения/);
   assert.match(freeInstructions, /не перечисляй дома, градусы, аспекты/i);
   assert.equal(
