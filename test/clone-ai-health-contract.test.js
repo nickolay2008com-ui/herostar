@@ -33,27 +33,27 @@ test('temporary provider failures use a short cooldown and unrelated errors do n
   assert.equal(providerFailureCooldownMs(new Error('Malformed local payload')), 0);
 });
 
-test('Live bridge skips providers that are already cooling down before spending another deadline', async () => {
-  const source = await read('src/gemini-clone.js');
-  assert.match(source, /providerCooldownRemaining\('gemini', primaryModel\)/);
-  assert.match(source, /providerCooldownRemaining\('gemini', GEMINI_FALLBACK_MODEL\)/);
-  assert.match(source, /providerCooldownRemaining\('openai'\)/);
-  assert.match(source, /skipping Gemini primary/);
-  assert.match(source, /skipping OpenAI fallback/);
+test('Clone provider route is Free LLM first, Gemini second, with no OpenAI branch', async () => {
+  const source = await read('src/clone-ai-provider.js');
+  const freeIndex = source.indexOf('await freeLlm');
+  const geminiIndex = source.indexOf('await gemini');
+  assert.ok(freeIndex >= 0);
+  assert.ok(geminiIndex > freeIndex);
+  assert.doesNotMatch(source, /OPENAI_API_KEY|api\.openai\.com|openai fallback/i);
 });
 
-test('Clone consultation response exposes whether real AI or deterministic fallback answered', async () => {
+test('Clone consultation response exposes real provider and availability status', async () => {
   const server = await read('server.js');
   assert.match(server, /const aiStatus =/);
+  assert.match(server, /const aiProvider = product === 'clone'/);
   assert.match(server, /consultation\.status \|\| 'ok'/);
-  assert.match(server, /aiStatus,/);
-  assert.match(server, /assistantMessageMetadata = \{[\s\S]*aiStatus,/);
+  assert.match(server, /assistantMessageMetadata = \{[\s\S]*aiStatus,[\s\S]*aiProvider,/);
 });
 
-
-test('production AI smoke requires a real provider instead of accepting local fallback', async () => {
+test('production AI smoke requires Free Groq as the primary real provider', async () => {
   const workflow = await read('.github/workflows/production-ai-smoke.yml');
   assert.match(workflow, /const aiStatus = String\(consulted\.data\?\.aiStatus \|\| 'unknown'\)/);
+  assert.match(workflow, /const aiProvider = String\(consulted\.data\?\.aiProvider \|\| 'unknown'\)/);
   assert.match(workflow, /if \(aiStatus !== 'ok'\)/);
-  assert.match(workflow, /Real AI is degraded/);
+  assert.match(workflow, /if \(aiProvider !== 'free:groq'\)/);
 });
