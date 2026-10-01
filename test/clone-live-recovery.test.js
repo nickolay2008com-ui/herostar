@@ -6,7 +6,7 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 }
 
-test('Clone не запускает второй внешний retry поверх Gemini bridge deadline', async () => {
+test('Clone не запускает OpenAI retry поверх собственной цепочки провайдеров', async () => {
   const ai = await import('../src/ai.js');
   const primary = { model: 'gpt-5.6-sol', effort: 'medium' };
   const dialog = { model: 'gpt-5.6-terra', effort: 'low' };
@@ -14,16 +14,20 @@ test('Clone не запускает второй внешний retry повер
   assert.equal(ai.shouldRetryWithDialog({ product: 'herostar', mode: 'deep', primary, dialog }), true);
 });
 
-test('OpenAI SDK не перезапускает весь Gemini bridge для Clone', async () => {
+test('Clone использует отдельный provider router вместо OpenAI SDK bridge', async () => {
   const ai = await read('src/ai.js');
-  assert.match(ai, /maxRetries:\s*product === 'clone' \? 0 : 2/);
+  assert.match(ai, /generateCloneAi/);
+  assert.match(ai, /if \(product === 'clone'\)/);
+  assert.doesNotMatch(ai, /maxRetries:\s*product === 'clone'/);
 });
 
-test('после отказа Gemini Clone возвращает локальный ответ по факторам карты', async () => {
+test('после отказа Free и Gemini Clone возвращает unavailable, а не шаблонный ответ', async () => {
   const ai = await read('src/ai.js');
-  assert.match(ai, /localCloneFallback\(publicFactors\)/);
-  assert.match(ai, /status: 'fallback'/);
-  assert.match(ai, /не стал бы принимать окончательное решение вслепую/);
+  const server = await read('server.js');
+  assert.doesNotMatch(ai, /localCloneFallback/);
+  assert.match(ai, /cloneAi\.status !== 'ok'/);
+  assert.match(ai, /status: 'unavailable'/);
+  assert.match(server, /CLONE_AI_UNAVAILABLE/);
 });
 
 test('ошибка Live даёт повторить сохранённый вопрос одним нажатием', async () => {
