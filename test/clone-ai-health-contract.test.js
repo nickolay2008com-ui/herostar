@@ -5,7 +5,7 @@ import {
   PROVIDER_HARD_COOLDOWN_MS,
   PROVIDER_TRANSIENT_COOLDOWN_MS,
   providerFailureCooldownMs,
-} from '../src/gemini-openai-bridge.js';
+} from '../src/gemini-clone.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -34,7 +34,7 @@ test('temporary provider failures use a short cooldown and unrelated errors do n
 });
 
 test('Live bridge skips providers that are already cooling down before spending another deadline', async () => {
-  const source = await read('src/gemini-openai-bridge.js');
+  const source = await read('src/gemini-clone.js');
   assert.match(source, /providerCooldownRemaining\('gemini', primaryModel\)/);
   assert.match(source, /providerCooldownRemaining\('gemini', GEMINI_FALLBACK_MODEL\)/);
   assert.match(source, /providerCooldownRemaining\('openai'\)/);
