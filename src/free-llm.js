@@ -216,7 +216,10 @@ export async function generateFreeLlmChat({
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: outputTokenLimit(maxOutputTokens),
+        max_completion_tokens: outputTokenLimit(maxOutputTokens),
+        ...(provider === 'groq' && /^openai\/gpt-oss-(?:20b|120b)$/.test(model)
+          ? { reasoning_effort: 'low' }
+          : {}),
         stream: false,
       }),
       redirect: 'manual',
@@ -289,6 +292,15 @@ export async function generateFreeLlmChat({
     const error = new Error(`Free LLM request failed with status ${status || 'unknown'}`);
     error.status = status || null;
     error.code = providerErrorCode(payload, 'free_llm_http_error');
+    rememberAttempt({ ok: false, provider, model, status, code: error.code });
+    markFailure();
+    throw error;
+  }
+
+  const finishReason = String(payload?.choices?.[0]?.finish_reason || '').trim().toLowerCase();
+  if (finishReason === 'length') {
+    const error = new Error('Free LLM response was truncated before completion');
+    error.code = 'free_llm_truncated_response';
     rememberAttempt({ ok: false, provider, model, status, code: error.code });
     markFailure();
     throw error;
