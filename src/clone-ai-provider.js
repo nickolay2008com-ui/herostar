@@ -3,6 +3,7 @@ import { generateGeminiClone } from './gemini-clone.js';
 
 export const CLONE_AI_DEADLINE_MS = 36_000;
 export const CLONE_FREE_LLM_BUDGET_MS = 12_000;
+export const CLONE_FREE_LLM_MAX_OUTPUT_TOKENS = 900;
 
 function remainingMs(startedAt) {
   return Math.max(0, CLONE_AI_DEADLINE_MS - (Date.now() - startedAt));
@@ -22,7 +23,7 @@ export async function generateCloneAi({
     const free = await freeLlm({
       instructions,
       input,
-      maxOutputTokens,
+      maxOutputTokens: CLONE_FREE_LLM_MAX_OUTPUT_TOKENS,
       timeoutMs: Math.min(CLONE_FREE_LLM_BUDGET_MS, remainingMs(startedAt)),
     });
     console.info(`[HeroStar AI] provider=free:${free.provider} product=clone mode=${mode} model=${free.model}`);
