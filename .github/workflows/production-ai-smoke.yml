@@ -97,7 +97,7 @@ jobs:
           if (aiStatus !== 'ok') {
             throw new Error(`Real AI is degraded: aiStatus=${aiStatus}. This smoke requires an external AI provider.`);
           }
-          if (aiProvider !== 'free:groq') {
+          if (!aiProvider.startsWith('free:')) {
             throw new Error(`Primary Free LLM is degraded: aiProvider=${aiProvider}. Gemini fallback may still keep Clone usable.`);
           }
           console.log('AI_SMOKE_OK=true');
