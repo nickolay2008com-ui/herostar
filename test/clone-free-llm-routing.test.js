@@ -24,24 +24,27 @@ test('Free LLM is primary and Gemini is not called when Free succeeds', async ()
   assert.equal(geminiCalls, 0);
 });
 
-test('Gemini is used only after Free LLM fails', async () => {
-  let geminiCalls = 0;
+test('Free keeps Olli 900-token reservation while Gemini keeps the HeroStar output budget', async () => {
+  let freeMaxOutputTokens = null;
+  let geminiMaxOutputTokens = null;
   const result = await generateCloneAi({
     instructions: 'System',
     input: [{ role: 'user', content: 'Hello' }],
-    maxOutputTokens: 900,
-    freeLlm: async () => {
+    maxOutputTokens: 1800,
+    freeLlm: async ({ maxOutputTokens }) => {
+      freeMaxOutputTokens = maxOutputTokens;
       throw Object.assign(new Error('free down'), { code: 'free_down' });
     },
-    gemini: async () => {
-      geminiCalls += 1;
+    gemini: async ({ maxOutputTokens }) => {
+      geminiMaxOutputTokens = maxOutputTokens;
       return { text: 'gemini answer', model: 'gemini-3.7-flash' };
     },
   });
 
+  assert.equal(freeMaxOutputTokens, 900);
+  assert.equal(geminiMaxOutputTokens, 1800);
   assert.equal(result.text, 'gemini answer');
   assert.equal(result.provider, 'gemini');
-  assert.equal(geminiCalls, 1);
 });
 
 test('Free and Gemini failure returns unavailable and never needs OpenAI', async () => {
