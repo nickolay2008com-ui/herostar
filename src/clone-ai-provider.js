@@ -9,6 +9,51 @@ function remainingMs(startedAt) {
   return Math.max(0, CLONE_AI_DEADLINE_MS - (Date.now() - startedAt));
 }
 
+function compactFreeInstructions(instructions) {
+  return String(instructions || '').replace(
+    /Полная chart передана как фон для понимания положений и связей\./,
+    'Для Free LLM переданы только выбранные selectedFactors и краткий контекст карты; обосновывай ответ ими и не добавляй случайные факторы.',
+  );
+}
+
+function compactFreeInput(input = []) {
+  return (Array.isArray(input) ? input : []).map((item) => {
+    if (item?.role !== 'user' || typeof item?.content !== 'string') return item;
+
+    let payload = null;
+    try {
+      payload = JSON.parse(item.content);
+    } catch {
+      return item;
+    }
+    if (payload?.product !== 'clone') return item;
+
+    const profile = payload.consultationProfile || null;
+    const chart = payload.chart || null;
+    return {
+      ...item,
+      content: JSON.stringify({
+        mode: payload.mode || 'dialog',
+        product: 'clone',
+        consultationProfile: profile ? {
+          id: profile.id || null,
+          promptVersion: profile.promptVersion || null,
+          factorBudget: profile.factorBudget || null,
+        } : null,
+        chartContext: chart ? {
+          system: chart.system || null,
+          scope: chart.scope || null,
+          unknownTime: Boolean(chart.birth?.unknownTime),
+        } : null,
+        selectedFactors: Array.isArray(payload.selectedFactors) ? payload.selectedFactors : [],
+        history: Array.isArray(payload.history) ? payload.history : [],
+        question: payload.question || '',
+        externalContext: payload.externalContext || null,
+      }),
+    };
+  });
+}
+
 export async function generateCloneAi({
   instructions = '',
   input = [],
@@ -21,8 +66,8 @@ export async function generateCloneAi({
 
   try {
     const free = await freeLlm({
-      instructions,
-      input,
+      instructions: compactFreeInstructions(instructions),
+      input: compactFreeInput(input),
       maxOutputTokens: CLONE_FREE_LLM_MAX_OUTPUT_TOKENS,
       timeoutMs: Math.min(CLONE_FREE_LLM_BUDGET_MS, remainingMs(startedAt)),
     });
