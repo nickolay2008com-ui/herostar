@@ -1,12 +1,17 @@
-import { generateFreeLlmChat } from './free-llm.js';
+import { freeLlmProvider, generateFreeLlmChat } from './free-llm.js';
 import { generateGeminiClone } from './gemini-clone.js';
 
 export const CLONE_AI_DEADLINE_MS = 36_000;
 export const CLONE_FREE_LLM_BUDGET_MS = 12_000;
+export const CLONE_FREE_LLM_NVIDIA_BUDGET_MS = 20_000;
 export const CLONE_FREE_LLM_MAX_OUTPUT_TOKENS = 900;
 
 function remainingMs(startedAt) {
   return Math.max(0, CLONE_AI_DEADLINE_MS - (Date.now() - startedAt));
+}
+
+export function cloneFreeLlmBudgetMs(provider = freeLlmProvider()) {
+  return provider === 'nvidia' ? CLONE_FREE_LLM_NVIDIA_BUDGET_MS : CLONE_FREE_LLM_BUDGET_MS;
 }
 
 const FREE_ANSWER_STYLE = `
@@ -70,6 +75,7 @@ export async function generateCloneAi({
   input = [],
   maxOutputTokens = 1000,
   mode = 'dialog',
+  freeProvider = freeLlmProvider(),
   freeLlm = generateFreeLlmChat,
   gemini = generateGeminiClone,
 } = {}) {
@@ -80,7 +86,7 @@ export async function generateCloneAi({
       instructions: compactFreeInstructions(instructions),
       input: compactFreeInput(input),
       maxOutputTokens: CLONE_FREE_LLM_MAX_OUTPUT_TOKENS,
-      timeoutMs: Math.min(CLONE_FREE_LLM_BUDGET_MS, remainingMs(startedAt)),
+      timeoutMs: Math.min(cloneFreeLlmBudgetMs(freeProvider), remainingMs(startedAt)),
     });
     console.info(`[HeroStar AI] provider=free:${free.provider} product=clone mode=${mode} model=${free.model}`);
     return {
