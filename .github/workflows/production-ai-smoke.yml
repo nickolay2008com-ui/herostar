@@ -5,9 +5,14 @@ on:
   schedule:
     - cron: '17 * * * *'
   push:
+    branches:
+      - main
     paths:
       - '.github/workflows/production-ai-smoke.yml'
-      - 'src/gemini-openai-bridge.js'
+      - 'src/ai.js'
+      - 'src/clone-ai-provider.js'
+      - 'src/free-llm.js'
+      - 'src/gemini-clone.js'
 
 permissions:
   contents: read
