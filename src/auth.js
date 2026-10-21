@@ -93,7 +93,13 @@ function allowMetrikaDocumentEmbedding(req, res) {
     ]);
     nextPolicy = mergeCspDirective(nextPolicy, 'frame-src', ['blob:', ...METRIKA_GENERAL_SOURCES]);
     nextPolicy = mergeCspDirective(nextPolicy, 'child-src', ['blob:', ...METRIKA_GENERAL_SOURCES]);
-    nextPolicy = mergeCspDirective(nextPolicy, 'frame-ancestors', METRIKA_FRAME_ANCESTORS);
+    const frameAncestors = [...METRIKA_FRAME_ANCESTORS];
+    // The public Clone Live entry may run inside the owner's portfolio.
+    // Keep account/admin pages and all other origins outside this exception.
+    if (path === '/clone/live' || path === '/clone/live/' || path === '/clone/live/index.html') {
+      frameAncestors.push('https://evo.allyai.ru');
+    }
+    nextPolicy = mergeCspDirective(nextPolicy, 'frame-ancestors', frameAncestors);
     res.setHeader('Content-Security-Policy', nextPolicy);
   }
 
