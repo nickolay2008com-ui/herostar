@@ -9,6 +9,16 @@
   const TELEGRAM_LINK_STORAGE_KEY = 'herostarTelegramLinkReturn';
   const CHART_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const NEAR_BOTTOM_THRESHOLD = 96;
+  const isEmbedded = window.self !== window.top;
+
+  function appendExternalLink(container, href, label) {
+    const link = document.createElement('a');
+    link.href = href;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = label;
+    container.append(document.createTextNode(' '), link);
+  }
 
   function resizeComposer() {
     if (!question) return;
@@ -124,7 +134,15 @@
           { chartToken: auth.chartToken },
         );
         if (telegramWindow) telegramWindow.location.href = link.telegramUrl;
-        else location.href = link.telegramUrl;
+        else if (!isEmbedded) location.href = link.telegramUrl;
+        if (isEmbedded) {
+          // SameSite sessions belong to the top-level app. Let the bot's return
+          // link finish login there; polling here would consume the login token
+          // without a usable session cookie in this cross-site frame.
+          status.textContent = 'В Telegram нажмите «Начать», затем «Вернуться к Звёздному клону». Разговор продолжится в отдельном окне.';
+          appendExternalLink(status, link.telegramUrl, 'Открыть Telegram');
+          return;
+        }
         status.textContent = 'В Telegram нажмите «Начать». Эта страница продолжит вход автоматически.';
         await finishTelegramLink(link.token, status, { reload: !slot.closest('.message') });
       } catch (error) {
@@ -152,6 +170,13 @@
     status.className = 'telegram-return-status';
     status.textContent = 'Завершаем вход через Telegram…';
     document.body.append(status);
+    if (isEmbedded) {
+      status.textContent = 'Для завершения входа откройте Клона в отдельном окне.';
+      const returnUrl = new URL(location.href);
+      returnUrl.searchParams.set(TELEGRAM_LINK_PARAM, token);
+      appendExternalLink(status, returnUrl.href, 'Открыть Клона');
+      return;
+    }
     try {
       await finishTelegramLink(token, status, { reload: true });
     } catch (error) {
