@@ -84,3 +84,38 @@ test('публичная цепочка клона открывается на �
     code: 'CLONE_AI_UNAVAILABLE',
   });
 });
+
+test('выбранный язык проходит от API до ответа без сброса счётчика', { timeout: 40000 }, async (t) => {
+  const port = 20000 + (process.pid % 1000);
+  const base = `http://127.0.0.1:${port}`;
+  const child = spawn(process.execPath, ['server.js'], {
+    cwd: new URL('..', import.meta.url),
+    env: {
+      ...process.env, PORT: String(port), NODE_ENV: 'test', DATABASE_URL: '',
+      CLONE_LOCAL_TEST_ANSWER: 'true', DEMO_MODE: 'true', OPENAI_API_KEY: '',
+      TELEGRAM_BOT_TOKEN: '', YOOKASSA_SHOP_ID: '', YOOKASSA_SECRET_KEY: '',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  t.after(() => child.kill('SIGTERM'));
+  await waitFor(`${base}/health`);
+  const created = await fetch(`${base}/api/charts`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ demo: true, product: 'clone' }),
+  });
+  assert.equal(created.status, 201);
+  const { id, accessToken } = await created.json();
+  for (const [index, [language, expected]] of [['en', /The Clone would start/], ['it', /Il Clone partirebbe/]].entries()) {
+    const response = await fetch(`${base}/api/consult`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-chart-token': accessToken },
+      body: JSON.stringify({ chartId: id, product: 'clone', language, question: 'Come scelgo un progetto?' }),
+    });
+    assert.equal(response.status, 200);
+    const answer = await response.json();
+    assert.match(answer.answer, expected);
+    assert.equal(answer.cloneUsage?.used, index + 1);
+  }
+  const restored = await fetch(`${base}/api/charts/${id}`, { headers: { 'x-chart-token': accessToken } });
+  assert.equal(restored.status, 200);
+});

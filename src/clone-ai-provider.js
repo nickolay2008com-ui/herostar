@@ -19,12 +19,15 @@ const FREE_ANSWER_STYLE = `
 — не повторяй доказательства карты: они показываются интерфейсом отдельно в «Почему именно так».
 `;
 
-function compactFreeInstructions(instructions) {
+function compactFreeInstructions(instructions, language = 'ru') {
   const compact = String(instructions || '').replace(
     /Полная chart передана как фон для понимания положений и связей\./,
     'Для Free LLM переданы только выбранные selectedFactors и краткий контекст карты; обосновывай ответ ими и не добавляй случайные факторы.',
   );
-  return `${compact.trim()}\n\n${FREE_ANSWER_STYLE.trim()}`;
+  const answerStyle = language === 'ru' ? FREE_ANSWER_STYLE : FREE_ANSWER_STYLE
+    .replace('«Что проверить первым:»', language === 'it' ? '«Cosa verificare per primo:»' : '«What to check first:»')
+    .replace('«Почему именно так»', language === 'it' ? '«Perché proprio così»' : '«Why this answer»');
+  return `${compact.trim()}\n\n${answerStyle.trim()}`;
 }
 
 function compactFreeInput(input = []) {
@@ -46,6 +49,7 @@ function compactFreeInput(input = []) {
       content: JSON.stringify({
         mode: payload.mode || 'dialog',
         product: 'clone',
+        language: payload.language || 'ru',
         consultationProfile: profile ? {
           id: profile.id || null,
           promptVersion: profile.promptVersion || null,
@@ -70,6 +74,7 @@ export async function generateCloneAi({
   input = [],
   maxOutputTokens = 1000,
   mode = 'dialog',
+  language = 'ru',
   freeLlm = generateFreeLlmChat,
   gemini = generateGeminiClone,
 } = {}) {
@@ -77,7 +82,7 @@ export async function generateCloneAi({
 
   try {
     const free = await freeLlm({
-      instructions: compactFreeInstructions(instructions),
+      instructions: compactFreeInstructions(instructions, language),
       input: compactFreeInput(input),
       maxOutputTokens: CLONE_FREE_LLM_MAX_OUTPUT_TOKENS,
       timeoutMs: Math.min(CLONE_FREE_LLM_BUDGET_MS, remainingMs(startedAt)),

@@ -77,7 +77,7 @@ test('desktop делает поле вопроса главным действи
     read('public/clone/live/live.css'),
   ]);
 
-  assert.match(html, /live\.css\?v=20260826-desktop1/);
+  assert.match(html, /live\.css\?v=20261023-i18n1/);
   assert.match(styles, /@media\s*\(min-width:901px\)[\s\S]*?\.live-hero\s*\{\s*min-height:\s*600px;\s*\}/);
   assert.match(styles, /@media\s*\(min-width:901px\)[\s\S]*?\.live-primary\s*\{\s*display:\s*none;\s*\}/);
   assert.match(styles, /@media\s*\(min-width:901px\)[\s\S]*?\.live-benefits\s*\{\s*display:\s*none;\s*\}/);

@@ -58,8 +58,8 @@
       const profileMode = view === 'profile';
       const strong = title.querySelector('strong');
       const small = title.querySelector('small');
-      if (strong) strong.textContent = profileMode ? 'Моя карта' : 'Звёздный клон';
-      if (small) small.textContent = profileMode ? 'факторы и паспорт клона' : 'по вашей натальной карте';
+      if (strong) strong.textContent = window.CloneLocale?.t(profileMode ? 'Моя карта' : 'Звёздный клон') || (profileMode ? 'Моя карта' : 'Звёздный клон');
+      if (small) small.textContent = window.CloneLocale?.t(profileMode ? 'факторы и паспорт клона' : 'по вашей натальной карте') || (profileMode ? 'факторы и паспорт клона' : 'по вашей натальной карте');
     }
 
     function syncNav(view) {
@@ -111,7 +111,7 @@
         if (!node.classList.contains('clone')) return false;
         if (!nodes.slice(0, index).some((previous) => previous.classList.contains('user'))) return false;
         const text = String(node.textContent || '').trim();
-        return text && !/Клон готовит ответ|сопоставляю|размышляет/i.test(text);
+        return text && !/Клон готовит ответ|сопоставляю|размышляет|preparing an answer|preparando una risposta/i.test(text);
       });
     }
 
@@ -142,13 +142,9 @@
       if (!Array.isArray(factors) || !factors.length) return null;
       const scope = parseEvidenceDataset(answer?.dataset.answerFactorScope, null);
       return {
-        note: String(scope?.note || '').trim(),
+        note: window.CloneLocale?.t(String(scope?.note || '').trim()) || String(scope?.note || '').trim(),
         factors: factors
-          .map((factor) => ({
-            title: String(factor?.title || '').trim(),
-            position: String(factor?.position || '').trim(),
-            role: String(factor?.role || '').trim(),
-          }))
+          .map((factor) => window.CloneLocale?.factor(factor) || factor)
           .filter((factor) => factor.title && factor.role),
       };
     }
@@ -716,6 +712,11 @@
         event.preventDefault();
         closeSupportModal();
       }
+    });
+
+    document.addEventListener('clone:language-change', () => {
+      syncAppTitle(currentView);
+      syncAnswerEvidence();
     });
 
     syncDialogState();

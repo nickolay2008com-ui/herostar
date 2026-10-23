@@ -18,8 +18,8 @@ test('обновлённый защитный слой не остаётся в 
     read('public/clone/live/index.html'),
   ]);
 
-  assert.match(cloneHtml, /\/clone-ui-gears\.js\?v=20260827-evidence1/);
-  assert.match(cloneIndexHtml, /\/clone-ui-gears\.js\?v=20260827-evidence1/);
-  assert.match(liveHtml, /\/clone-ui-gears\.js\?v=20260827-evidence1/);
+  assert.match(cloneHtml, /\/clone-ui-gears\.js\?v=20261023-i18n2/);
+  assert.match(cloneIndexHtml, /\/clone-ui-gears\.js\?v=20261023-i18n2/);
+  assert.match(liveHtml, /\/clone-ui-gears\.js\?v=20261023-i18n2/);
   assert.doesNotMatch(liveHtml, /\/clone-ui-gears\.js\?v=20260729-routes1/);
 });

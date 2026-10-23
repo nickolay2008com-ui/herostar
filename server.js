@@ -592,7 +592,7 @@ function webSearchFailureStatus(error) {
   return 'failed';
 }
 
-function answerForWebSearchOutcome(webSearch) {
+function answerForWebSearchOutcome(webSearch, language = 'ru') {
   const messages = {
     blocked: webSearch?.reason === 'high_stakes_search'
       ? 'Я не выполняю медицинский, юридический или финансовый поиск как персональную рекомендацию. Для такого решения лучше опираться на профильного специалиста и официальные источники.'
@@ -604,7 +604,31 @@ function answerForWebSearchOutcome(webSearch) {
     timeout: 'Источники не успели подтвердиться. Я не буду подменять результат поиска предположением.',
     failed: 'Поиск не завершился, поэтому я не буду утверждать, что нашёл актуальные данные.',
   };
-  return messages[webSearch?.status] || messages.failed;
+  const localized = {
+    en: {
+      blocked: webSearch?.reason === 'high_stakes_search'
+        ? 'I cannot use medical, legal or financial search as a personal recommendation. Consult a qualified specialist and official sources.'
+        : 'I cannot search for information that could violate privacy or enable unsafe actions.',
+      quota_exhausted: 'I will not guess about current information. You can continue the conversation and search again after the limit resets.',
+      temporarily_unavailable: 'I cannot reliably check web sources right now, so I will not invent current information.',
+      unavailable: 'Web search is currently disabled. I will not present unverified information as a search result.',
+      empty: 'No reliably verified results were found. I will not invent options or sources.',
+      timeout: 'The sources could not be verified in time. I will not replace the search result with guesses.',
+      failed: 'The search did not finish, so I cannot claim to have found current information.',
+    },
+    it: {
+      blocked: webSearch?.reason === 'high_stakes_search'
+        ? 'Non posso usare la ricerca medica, legale o finanziaria come raccomandazione personale. Consulta uno specialista e fonti ufficiali.'
+        : 'Non posso cercare informazioni che potrebbero violare la privacy o favorire azioni rischiose.',
+      quota_exhausted: 'Non sostituirò le informazioni aggiornate con ipotesi. Puoi continuare la conversazione e cercare di nuovo dopo il ripristino del limite.',
+      temporarily_unavailable: 'Al momento non posso verificare fonti online in modo affidabile, quindi non inventerò informazioni aggiornate.',
+      unavailable: 'La ricerca web non è disponibile. Non presenterò informazioni non verificate come risultati di ricerca.',
+      empty: 'Non sono stati trovati risultati verificabili. Non inventerò opzioni o fonti.',
+      timeout: 'Non è stato possibile verificare le fonti in tempo. Non sostituirò il risultato con ipotesi.',
+      failed: 'La ricerca non è terminata, quindi non posso affermare di aver trovato informazioni aggiornate.',
+    },
+  };
+  return (localized[language] || messages)[webSearch?.status] || (localized[language] || messages).failed;
 }
 
 app.post('/api/consult', consultLimiter, async (req, res, next) => {
@@ -614,6 +638,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
 
     const requestedProduct = String(req.body.product || '').trim().toLowerCase();
     const product = req.cloneReservationId || requestedProduct === 'clone' ? 'clone' : 'herostar';
+    const language = product === 'clone' && ['en', 'it'].includes(req.body.language) ? req.body.language : 'ru';
     const searchRequested = product === 'clone' && explicitWebSearchIntent(question);
     const searchPolicy = searchRequested ? classifySearchPolicy(question) : null;
     if (!req.user && product !== 'clone') {
@@ -643,7 +668,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
         reason: searchPolicy.reason || 'unsafe_request',
       };
       return res.json({
-        answer: answerForWebSearchOutcome(blockedSearch),
+        answer: answerForWebSearchOutcome(blockedSearch, language),
         webSearch: publicWebSearchPayload(blockedSearch),
         cloneUsage: null,
       });
@@ -726,6 +751,7 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
               searchRequest,
               policy,
               maxSources,
+              language,
               config: searchConfig,
             });
             await updateWebSearchUsage(reservationId, 'completed');
@@ -771,13 +797,14 @@ app.post('/api/consult', consultLimiter, async (req, res, next) => {
     }
 
     const consultation = searchRequested && webSearch.status !== 'completed'
-      ? { answer: answerForWebSearchOutcome(webSearch), factors: [], factorScope: null }
+      ? { answer: answerForWebSearchOutcome(webSearch, language), factors: [], factorScope: null }
       : await answerConsultationWithFactors({
           chart: record.chartData,
           portrait: record.portraitData,
           question,
           history,
           product,
+          language,
           premium,
           externalContext,
         });

@@ -20,10 +20,11 @@
   <link rel="stylesheet" href="/clone-living-fixes.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone-web-search.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone/live/live-assets.css?v=20260726-auth2">
-  <link rel="stylesheet" href="/clone/live/live.css?v=20260826-desktop1">
+  <link rel="stylesheet" href="/clone/live/live.css?v=20261023-i18n1">
   <link rel="stylesheet" href="/clone/live/live-mobile-hero.css?v=20260826-chat2">
   <link rel="stylesheet" href="/clone/live/live-detail.css?v=20260726-auth2">
   <link rel="stylesheet" href="/clone/live/live-visual-polish.css?v=20260726-auth2">
+  <script src="/clone/live/locale.js?v=20261023-i18n1" defer></script>
 </head>
 <body class="live-product">
   <noscript><div><img src="https://mc.yandex.ru/watch/110937602" style="position:absolute;left:-9999px" alt=""></div></noscript>
@@ -36,7 +37,7 @@
 
   <header class="topbar live-topbar">
     <a class="brand" href="/"><span>✦</span> HeroStar</a>
-    <div class="product"><a class="live-home-link" id="liveHomeLink" href="/clone/live/" hidden><span aria-hidden="true">←</span> На главную</a><span id="productLabel">Звёздный клон</span><button class="premium-entry hidden" id="openPremiumDiscovery" type="button"><span aria-hidden="true">✦</span> Полный режим</button></div>
+    <div class="product"><a class="live-home-link" id="liveHomeLink" href="/clone/live/" hidden><span aria-hidden="true">←</span> На главную</a><span id="productLabel">Звёздный клон</span><button class="premium-entry hidden" id="openPremiumDiscovery" type="button"><span aria-hidden="true">✦</span> Полный режим</button><label class="clone-language-label"><span class="sr-only">Язык / Language / Lingua</span><select class="clone-language" aria-label="Язык / Language / Lingua"><option value="ru">RU</option><option value="en">EN</option><option value="it">IT</option></select></label></div>
   </header>
 
   <main>
@@ -187,7 +188,7 @@
           <div class="conversation-head">
             <a class="app-home-link" href="/clone/live/" aria-label="На главную" title="На главную"><span aria-hidden="true">←</span></a>
             <div class="conversation-intro" id="conversationIntro"><p class="eyebrow">Живая модель активна</p><h2>Что нужно решить?</h2><div class="allowance" id="questionAllowance">3 ответа без регистрации</div></div>
-            <button class="ghost" id="newSituation" type="button" aria-label="Начать новую ситуацию" title="Новый диалог">＋ Новая</button>
+            <label class="clone-language-label chat-language"><span class="sr-only">Язык / Language / Lingua</span><select class="clone-language" aria-label="Язык / Language / Lingua"><option value="ru">RU</option><option value="en">EN</option><option value="it">IT</option></select></label><button class="ghost" id="newSituation" type="button" aria-label="Начать новую ситуацию" title="Новый диалог">＋ Новая</button>
           </div>
           <div class="conversation">
             <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text"><article class="message clone" data-conversation-onboarding><span class="mini-avatar">✦</span><div><b>Звёздный клон</b><p>Расскажите, что происходит и что для вас важно. Клон предложит возможный ход и объяснит его через вашу карту. Это персональная подсказка, которая помогает взглянуть на решение с другой стороны.</p></div></article></div>
@@ -237,11 +238,11 @@
   </div>
 
   <div class="toast" id="cloneToast"></div>
-  <script src="/clone-ui-gears.js?v=20260827-evidence1"></script>
+  <script src="/clone-ui-gears.js?v=20261023-i18n2"></script>
   <script src="/clone-living.js?v=20261023-frame-auth" defer></script>
   <script src="/clone-answer-presentation.js?v=20260827-evidence1" defer></script>
-  <script src="/clone.js?v=20260914-recovery1" defer></script>
-  <script src="/clone/live/live-stats.js?v=20260728-factors1" defer></script>
+  <script src="/clone.js?v=20261023-i18n1" defer></script>
+  <script src="/clone/live/live-stats.js?v=20261023-i18n1" defer></script>
   <script src="/clone/live/live-metrics.js?v=20260729-insights1" defer></script>
   <script src="/clone/live/live.js?v=20260729-routes1" defer></script>
 </body>
