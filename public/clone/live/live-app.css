@@ -57,7 +57,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
   position:relative;
   z-index:20;
   display:grid;
-  grid-template-columns:44px minmax(0,1fr) 44px;
+  grid-template-columns:44px minmax(0,1fr) 55px 44px;
   align-items:center;
   gap:8px;
   width:min(780px,100%);
@@ -72,6 +72,8 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
   box-shadow:0 14px 42px rgba(0,0,0,.22);
   backdrop-filter:blur(20px) saturate(125%);
 }
+.live-product.live-chat-page.live-app-ready .chat-language { position:static; display:inline-flex; }
+.live-product.live-chat-page.live-app-ready #dialogView .conversation-head > .conversation-intro { padding-right:0; }
 
 .live-product.live-chat-page.live-app-ready #dialogView > .conversation-head .conversation-intro { display:grid; min-width:0; gap:2px; }
 .live-product.live-chat-page.live-app-ready #dialogView > .conversation-head .eyebrow { display:none; }
@@ -381,7 +383,7 @@ body.live-product.live-chat-page.live-app-ready:has(#dialogView:not(.hidden)) .w
 }
 
 @media (max-width:420px) {
-  .live-product.live-chat-page.live-app-ready #dialogView > .conversation-head { grid-template-columns:42px minmax(0,1fr) 42px;gap:5px; }
+  .live-product.live-chat-page.live-app-ready #dialogView > .conversation-head { grid-template-columns:42px minmax(0,1fr) 55px 42px;gap:5px; }
   .live-product.live-chat-page.live-app-ready #dialogView > .conversation-head h2,
   .live-product.live-chat-page.live-app-ready .app-chat-title strong { font-size:14px; }
   .live-product.live-chat-page.live-app-ready #dialogView .message.user { padding-left:26px; }

@@ -37,5 +37,5 @@ test('ошибка Live даёт повторить сохранённый во�
   assert.match(client, /Повторить ответ/);
   assert.match(client, /form\.requestSubmit\(\)/);
   assert.match(client, /clone_answer_retry_clicked/);
-  assert.match(live, /clone\.js\?v=20260914-recovery1/);
+  assert.match(live, /clone\.js\?v=20261023-i18n1/);
 });

@@ -18,7 +18,7 @@ test('поиск встроен в единый consult contract и запуск
   assert.match(server, /webSearch: publicWebSearchPayload\(webSearch\)/);
   assert.match(server, /searchRequested && !req\.user/);
   assert.match(server, /answer:\s*null/);
-  assert.match(server, /answerForWebSearchOutcome\(webSearch\)/);
+  assert.match(server, /answerForWebSearchOutcome\(webSearch, language\)/);
   assert.match(auth, /if \(explicitWebSearchIntent\(req\.body\?\.question\)\) return/);
   assert.match(ai, /externalContext/);
   assert.match(ai, /недоверенным источником фактов/);

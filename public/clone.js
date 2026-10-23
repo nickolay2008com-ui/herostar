@@ -27,6 +27,7 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const ui = (value) => window.CloneLocale?.t(value) || value;
 
 function isLiveHomePage() {
   return /^\/clone\/live\/?$/.test(location.pathname);
@@ -485,11 +486,11 @@ function accessLabel() {
   if (!access?.cloneAccessActive) return null;
   const until = access.cloneAccessUntil ? new Date(access.cloneAccessUntil) : null;
   const date = until && !Number.isNaN(until.getTime())
-    ? until.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    ? until.toLocaleString({ ru: 'ru-RU', en: 'en-GB', it: 'it-IT' }[window.CloneLocale?.language] || 'ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     : null;
-  if (access.clonePlan === 'alignment') return date ? `Сонастройка активна до ${date}` : 'Сонастройка активна';
-  if (access.clonePlan === 'day') return date ? `Глубокий режим открыт до ${date}` : 'День со Звёздным клоном открыт';
-  return date ? `Глубокий режим открыт до ${date}` : 'Глубокий режим открыт';
+  if (access.clonePlan === 'alignment') return date ? `${ui('Сонастройка активна')} · ${date}` : ui('Сонастройка активна');
+  if (access.clonePlan === 'day') return date ? `${ui('День со Звёздным клоном открыт')} · ${date}` : ui('День со Звёздным клоном открыт');
+  return date ? `${ui('Глубокий режим открыт')} · ${date}` : ui('Глубокий режим открыт');
 }
 
 function renderAllowance() {
@@ -510,8 +511,10 @@ function renderAllowance() {
   element.classList.remove('unlimited');
   const remaining = Math.max(0, FREE_PREAUTH_QUESTIONS - state.questionCount);
   element.textContent = remaining
-    ? `${remaining} ${remaining === 1 ? 'ответ' : 'ответа'} до сохранения в Telegram`
-    : 'Подключите Telegram, чтобы продолжить без лимита';
+    ? window.CloneLocale?.language === 'en' ? `${remaining} answer${remaining === 1 ? '' : 's'} until you save in Telegram`
+      : window.CloneLocale?.language === 'it' ? `${remaining} rispost${remaining === 1 ? 'a' : 'e'} prima di salvare su Telegram`
+        : `${remaining} ${remaining === 1 ? 'ответ' : 'ответа'} до сохранения в Telegram`
+    : ui('Подключите Telegram, чтобы продолжить без лимита');
 }
 
 function syncConversationStarted() {
@@ -839,13 +842,16 @@ function renderAnswerFactors(factors = [], scope = null) {
   }
   empty.classList.add('hidden');
   list.classList.remove('hidden');
-  const scopeNote = scope?.note ? `<p class="factor-scope-note">${escapeHtml(scope.note)}</p>` : '';
-  list.innerHTML = `${scopeNote}${items.map((factor) => `
+  const scopeNote = scope?.note ? `<p class="factor-scope-note">${escapeHtml(ui(scope.note))}</p>` : '';
+  list.innerHTML = `${scopeNote}${items.map((item) => {
+    const factor = window.CloneLocale?.factor(item) || item;
+    return `
     <div class="factor" data-factor-id="${escapeHtml(factor.id || factor.key || '')}">
       <strong>${escapeHtml(factor.title)}</strong>
       ${factor.position ? `<small>${escapeHtml(factor.position)}</small>` : ''}
       <p>${escapeHtml(factor.role)}</p>
-    </div>`).join('')}`;
+    </div>`;
+  }).join('')}`;
 }
 
 function renderPassport(passport) {
@@ -951,7 +957,7 @@ async function askClone(question, pending, userElement) {
   try {
     const data = await json('/api/consult', {
       method: 'POST',
-      body: JSON.stringify({ chartId: state.chartId, question, product: 'clone' }),
+      body: JSON.stringify({ chartId: state.chartId, question, product: 'clone', language: window.CloneLocale?.language || 'ru' }),
     });
     if (data.webSearch?.status === 'telegram_required') {
       pending.querySelector('p').textContent = 'Подключите Telegram — после входа Клон сам продолжит этот поиск.';
@@ -1417,6 +1423,17 @@ $('#newSituation').addEventListener('click', () => {
 });
 
 $('#question').addEventListener('input', syncComposerSubmitState);
+
+document.addEventListener('clone:language-change', () => {
+  renderAllowance();
+  syncComposerSubmitState();
+  const latest = [...$('#messages').querySelectorAll('.message.clone')].reverse().find((item) => item.dataset.answerFactors);
+  if (latest) {
+    const factors = JSON.parse(latest.dataset.answerFactors);
+    const scope = latest.dataset.answerFactorScope ? JSON.parse(latest.dataset.answerFactorScope) : null;
+    renderAnswerFactors(factors, scope);
+  }
+});
 
 $('#questionForm').addEventListener('submit', async (event) => {
   event.preventDefault();

@@ -54,6 +54,16 @@
 }
 
 .live-product .brand span { transition: transform .28s ease, box-shadow .28s ease; }
+.live-product .clone-language-label { display:inline-flex; align-items:center; flex:none; }
+.live-product .clone-language { min-width:55px; height:38px; padding:0 6px; border:1px solid rgba(255,255,255,.2); border-radius:10px; background:#151625; color:#f5f2ff; font:600 12px/1 inherit; cursor:pointer; }
+.live-product .clone-language:focus-visible { outline:2px solid #c4b0ff; outline-offset:2px; }
+.live-product .chat-language { position:absolute; top:11px; right:104px; display:inline-flex; z-index:5; }
+.live-product #dialogView .conversation-head { position:relative; }
+.live-product #dialogView .conversation-head > .conversation-intro { min-width:0; padding-right:70px; }
+@media (max-width:600px) {
+  .live-product .chat-language { right:96px; }
+  .live-product #dialogView .conversation-head > .conversation-intro { padding-right:72px; }
+}
 .live-product .brand:hover span { transform: rotate(12deg) scale(1.04); box-shadow: 0 0 24px rgba(242,217,148,.2), inset 0 0 0 1px rgba(255,255,255,.1); }
 
 .live-home-link {

@@ -1,16 +1,16 @@
 const HOUSE_RULES = [
-  { house: 7, words: ['отношен', 'партн', 'любов', 'муж', 'жен', 'девуш', 'парен', 'супруг', 'свидан', 'роман', 'близост', 'договор', 'контакт', 'расстав'], planets: ['venus', 'moon'] },
-  { house: 2, words: ['деньг', 'доход', 'зарплат', 'оплат', 'цена', 'бюджет', 'заработ', 'ресурс'], planets: ['venus', 'saturn'] },
-  { house: 2, words: ['кухн', 'еда', 'питан', 'блюд', 'вкус', 'ресторан', 'готовк', 'напит'], planets: ['venus', 'moon'] },
-  { house: 8, words: ['долг', 'кредит', 'инвест', 'доля', 'общие деньги', 'риск', 'зависим', 'наслед'], planets: ['pluto', 'saturn'] },
-  { house: 10, words: ['карьер', 'статус', 'должност', 'руковод', 'повышен', 'репутац', 'призван'], planets: ['sun', 'saturn'] },
-  { house: 6, words: ['работ', 'задач', 'режим', 'навык', 'сотрудник', 'устал', 'эффектив'], planets: ['mercury', 'saturn'] },
-  { house: 4, words: ['дом', 'семь', 'родител', 'переезд', 'квартир', 'жиль', 'город', 'стран'], planets: ['moon', 'saturn'] },
-  { house: 5, words: ['проект', 'иде', 'твор', 'запуск', 'продукт', 'автор', 'удовольств'], planets: ['sun', 'venus'] },
-  { house: 3, words: ['сказать', 'ответить', 'написать', 'разговор', 'переговор', 'сообщен', 'обуч', 'документ'], planets: ['mercury', 'mars'] },
-  { house: 9, words: ['учёб', 'образован', 'путешеств', 'смысл', 'мировоззрен', 'за границ'], planets: ['jupiter', 'mercury'] },
-  { house: 11, words: ['сообще', 'аудитор', 'будущ', 'масштаб', 'друз', 'команд', 'сеть'], planets: ['jupiter', 'uranus'] },
-  { house: 1, words: ['внешн', 'образ', 'стиль', 'одежд', 'тело', 'самочувств', 'имидж', 'впечатлен'], planets: ['venus', 'mars'] },
+  { house: 7, words: ['отношен', 'партн', 'любов', 'муж', 'жен', 'девуш', 'парен', 'супруг', 'свидан', 'роман', 'близост', 'договор', 'контакт', 'расстав', 'relationship', 'partner', 'dating', 'marriage', 'relazion', 'amore', 'coppia', 'matrimonio'], planets: ['venus', 'moon'] },
+  { house: 2, words: ['деньг', 'доход', 'зарплат', 'оплат', 'цена', 'бюджет', 'заработ', 'ресурс', 'money', 'income', 'salary', 'budget', 'earnings', 'denaro', 'reddito', 'stipendio', 'guadagn'], planets: ['venus', 'saturn'] },
+  { house: 2, words: ['кухн', 'еда', 'питан', 'блюд', 'вкус', 'ресторан', 'готовк', 'напит', 'food', 'restaurant', 'cooking', 'cibo', 'ristorante', 'cucina'], planets: ['venus', 'moon'] },
+  { house: 8, words: ['долг', 'кредит', 'инвест', 'доля', 'общие деньги', 'риск', 'зависим', 'наслед', 'debt', 'credit', 'invest', 'inheritance', 'debito', 'credito', 'investiment', 'eredità'], planets: ['pluto', 'saturn'] },
+  { house: 10, words: ['карьер', 'статус', 'должност', 'руковод', 'повышен', 'репутац', 'призван', 'career', 'promotion', 'reputation', 'carriera', 'promozione', 'reputazione'], planets: ['sun', 'saturn'] },
+  { house: 6, words: ['работ', 'задач', 'режим', 'навык', 'сотрудник', 'устал', 'эффектив', 'work', 'job', 'task', 'skill', 'lavoro', 'impiego', 'compito', 'abilità'], planets: ['mercury', 'saturn'] },
+  { house: 4, words: ['дом', 'семь', 'родител', 'переезд', 'квартир', 'жиль', 'город', 'стран', 'family', 'housing', 'apartment', 'parents', 'famiglia', 'casa', 'trasloco', 'genitori'], planets: ['moon', 'saturn'] },
+  { house: 5, words: ['проект', 'иде', 'твор', 'запуск', 'продукт', 'автор', 'удовольств', 'project', 'creative', 'launch', 'progetto', 'creatività', 'lanciare'], planets: ['sun', 'venus'] },
+  { house: 3, words: ['сказать', 'ответить', 'написать', 'разговор', 'переговор', 'сообщен', 'обуч', 'документ', 'write', 'message', 'conversation', 'negotiate', 'scrivere', 'messaggio', 'conversazione', 'negoziare'], planets: ['mercury', 'mars'] },
+  { house: 9, words: ['учёб', 'образован', 'путешеств', 'смысл', 'мировоззрен', 'за границ', 'study', 'education', 'travel', 'studiare', 'viaggio', 'istruzione'], planets: ['jupiter', 'mercury'] },
+  { house: 11, words: ['сообще', 'аудитор', 'будущ', 'масштаб', 'друз', 'команд', 'сеть', 'community', 'friends', 'team', 'audience', 'comunità', 'amici', 'squadra'], planets: ['jupiter', 'uranus'] },
+  { house: 1, words: ['внешн', 'образ', 'стиль', 'одежд', 'тело', 'самочувств', 'имидж', 'впечатлен', 'appearance', 'style', 'body', 'health', 'aspetto', 'stile', 'corpo', 'salute'], planets: ['venus', 'mars'] },
 ];
 
 const SIGN_RULERS = Object.freeze({

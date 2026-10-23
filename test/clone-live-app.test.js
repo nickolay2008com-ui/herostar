@@ -13,15 +13,15 @@ test('Live route загружает отдельный App-shell без втор
   ]);
 
   assert.match(gears, /const liveInterface = location\.pathname\.startsWith\('\/clone\/live'\)/);
-  assert.match(gears, /live-app\.css\?v=20260914-a11y1/);
-  assert.match(gears, /live-app\.js\?v=20260827-app4/);
+  assert.match(gears, /live-app\.css\?v=20261023-i18n1/);
+  assert.match(gears, /live-app\.js\?v=20261023-i18n1/);
   assert.ok(app.includes("const CHAT_PATH = /^\\/clone\\/live\\/chat\\/?$/;"));
   assert.match(app, /function setAppView\(view/);
   assert.match(app, /conversation\.classList\.toggle\('hidden', profileMode\)/);
   assert.match(app, /logicPanel\.classList\.toggle\('hidden', !profileMode\)/);
   assert.equal((html.match(/id="questionForm"/g) || []).length, 1);
   assert.equal((html.match(/id="messages"/g) || []).length, 1);
-  assert.ok(html.indexOf('/clone-answer-presentation.js?v=20260827-evidence1') < html.indexOf('/clone.js?v=20260914-recovery1'));
+  assert.ok(html.indexOf('/clone-answer-presentation.js?v=20260827-evidence1') < html.indexOf('/clone.js?v=20261023-i18n1'));
   assert.doesNotMatch(app, /createElement\('form'\)|createElement\("form"\)/);
   assert.ok(styles.length > 0);
 });
@@ -32,7 +32,7 @@ test('Live HTML меняет immutable cache-key загрузчика App при
     read('bootstrap.js'),
   ]);
   assert.match(bootstrap, /max-age=31536000, immutable/);
-  assert.match(html, /clone-ui-gears\.js\?v=20260827-evidence1/);
+  assert.match(html, /clone-ui-gears\.js\?v=20261023-i18n1/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260729-routes1/);
 });
 

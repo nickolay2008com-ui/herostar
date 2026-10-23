@@ -1,13 +1,13 @@
 const MAX_SEARCH_QUERY_LENGTH = 800;
 
 const UNAMBIGUOUS_WEB_COMMAND =
-  /(?:^|[^a-z\u0430-\u044f\u0451])(?:погугл(?:и|ите)|(?:search|look\s+up)\s+(?:online|the\s+web)|google)(?![a-z\u0430-\u044f\u0451])/i;
+  /(?:^|[^a-z\u0430-\u044f\u0451])(?:погугл(?:и|ите)|(?:search|look\s+up)\s+(?:online|the\s+web)|google|cerca\s+(?:online|sul\s+web)|cerca\s+su\s+internet)(?![a-z\u0430-\u044f\u0451])/i;
 const SEARCH_COMMAND =
-  /(?:^|[^a-z\u0430-\u044f\u0451])(?:найд(?:и|ите)|поищ(?:и|ите)|отыщ(?:и|ите)|проверь(?:те)?|сравни(?:те)?|подбер(?:и|ите)|покаж(?:и|ите)|посмотр(?:и|ите)|search\s+for|check|compare|select|show|look\s+up)(?![a-z\u0430-\u044f\u0451])/i;
+  /(?:^|[^a-z\u0430-\u044f\u0451])(?:найд(?:и|ите)|поищ(?:и|ите)|отыщ(?:и|ите)|проверь(?:те)?|сравни(?:те)?|подбер(?:и|ите)|покаж(?:и|ите)|посмотр(?:и|ите)|search\s+for|check|compare|select|show|look\s+up|cerca|cercami|trova|verifica|confronta)(?![a-z\u0430-\u044f\u0451])/i;
 const CONTEXTUAL_SEARCH_COMMAND =
-  /(?:^|[^a-z\u0430-\u044f\u0451])(?:проверь(?:те)?|сравни(?:те)?|подбер(?:и|ите)|покаж(?:и|ите)|посмотр(?:и|ите)|check|compare|select|show|look\s+up)(?![a-z\u0430-\u044f\u0451])/i;
+  /(?:^|[^a-z\u0430-\u044f\u0451])(?:проверь(?:те)?|сравни(?:те)?|подбер(?:и|ите)|покаж(?:и|ите)|посмотр(?:и|ите)|check|compare|select|show|look\s+up|verifica|confronta|trova)(?![a-z\u0430-\u044f\u0451])/i;
 const NEGATED_SEARCH =
-  /(?:не\s+(?:(?:надо|нужно|стоит)\s+)?(?:искать|ищи|ищите|гуглить|гугли|гуглите|проверять|проверь|сравнивать|сравни|подбирать|подбери|показывать|покажи)(?![a-z\u0430-\u044f\u0451])|без\s+(?:веб-?|интернет-?)?поиска(?![a-z\u0430-\u044f\u0451]))/i;
+  /(?:не\s+(?:(?:надо|нужно|стоит)\s+)?(?:искать|ищи|ищите|гуглить|гугли|гуглите|проверять|проверь|сравнивать|сравни|подбирать|подбери|показывать|покажи)(?![a-z\u0430-\u044f\u0451])|без\s+(?:веб-?|интернет-?)?поиска(?![a-z\u0430-\u044f\u0451])|non\s+(?:cercare|cercare\s+online|fare\s+ricerche)(?![a-z])|senza\s+(?:ricerca|cercare)\s+(?:online|sul\s+web))/i;
 
 const HOSTNAME_PATTERN =
   /(?:https?:\/\/)?(?:www\.)?((?:[a-z0-9\u0430-\u044f\u0451](?:[a-z0-9\u0430-\u044f\u0451-]{0,61}[a-z0-9\u0430-\u044f\u0451])?\.)+(?:[a-z\u0430-\u044f\u0451]{2,63}))(?:[/:?#]|\b)/giu;
@@ -37,27 +37,27 @@ const CATEGORY_PATTERNS = [
   {
     category: 'medical',
     pattern:
-      /(?:(?:врач|доктор|клиник|болезн|диагноз|симптом|лечени|лекарств|препарат|дозиров|анализ|здоровь|беременн|принимать|ибупрофен|парацетамол|антибиотик|вич|спид|онколог|жар|пульс|medical|doctor|clinic|diagnos|symptom|medicine|treatment|pregnan|ibuprofen|hiv|fever|pulse)[a-zа-яё]*|сбить[\s\S]{0,30}температур|температур[a-zа-яё]*[\s\S]{0,30}(?:реб[её]н|малыш)|(?:давлени|пульс)[a-zа-яё]*\s*(?:1[4-9]\d|2\d{2}))/i,
+      /(?:(?:врач|доктор|клиник|болезн|диагноз|симптом|лечени|лекарств|препарат|дозиров|анализ|здоровь|беременн|принимать|ибупрофен|парацетамол|антибиотик|вич|спид|онколог|жар|пульс|medical|doctor|clinic|diagnos|symptom|medicine|treatment|pregnan|ibuprofen|hiv|fever|pulse|medic|dottor|clinica|diagnos|sintom|farmac|trattament|gravidanz|salute)[a-zа-яё]*|сбить[\s\S]{0,30}температур|температур[a-zа-яё]*[\s\S]{0,30}(?:реб[её]н|малыш)|(?:давлени|пульс)[a-zа-яё]*\s*(?:1[4-9]\d|2\d{2}))/i,
   },
   {
     category: 'legal',
     pattern:
-      /(?:закон|юрист|адвокат|суд|договор|право|лицензи|регуляц|алимент|штраф|иск|уволить|увольн|работодатель|зарплат|не\s+выходить\s+на\s+работ|трудов[a-zа-яё]*\s+договор|legal|lawyer|attorney|court|contract|regulation|alimony|salary|fire\s+an?\s+employee)[a-zа-яё]*/i,
+      /(?:закон|юрист|адвокат|суд|договор|право|лицензи|регуляц|алимент|штраф|иск|уволить|увольн|работодатель|зарплат|не\s+выходить\s+на\s+работ|трудов[a-zа-яё]*\s+договор|legal|lawyer|attorney|court|contract|regulation|alimony|salary|fire\s+an?\s+employee|legge|avvocat|tribunal|contratt|licenz|multa|diritto)[a-zа-яё]*/i,
   },
   {
     category: 'financial',
     pattern:
-      /(?:инвестиц|акци|облигац|кредит|ипотек|банк|страхов|курс(?:ы)? валют|налог|крипт|финанс|вложить|сбережени|доходност|доллар|евро|валют|деньг|процент|рассроч|вклад|investment|stock|bond|loan|mortgage|bank|insurance|crypto|financial|savings|currency|installment|interest)[a-zа-яё]*/i,
+      /(?:инвестиц|акци|облигац|кредит|ипотек|банк|страхов|курс(?:ы)? валют|налог|крипт|финанс|вложить|сбережени|доходност|доллар|евро|валют|деньг|процент|рассроч|вклад|investment|stock|bond|loan|mortgage|bank|insurance|crypto|financial|savings|currency|installment|interest|investiment|borsa|prestito|mutuo|banca|assicurazion|finanziari|risparmi|valuta|interess)[a-zа-яё]*/i,
   },
   {
     category: 'commerce',
     pattern:
-      /(?:цен[аеуы]|стоимост|купить|заказать|наличи|доставк|товар|магазин|маркетплейс|price|buy|order|availability|delivery|product|shop|store)\w*/i,
+      /(?:цен[аеуы]|стоимост|купить|заказать|наличи|доставк|товар|магазин|маркетплейс|price|buy|order|availability|delivery|product|shop|store|prezzo|comprare|disponibilit|consegna|prodotto|negozio)\w*/i,
   },
   {
     category: 'travel',
     pattern:
-      /(?:путешеств|поездк|отел|гостиниц|авиабилет|рейс|виза|маршрут|достопримечательност|travel|trip|tour|hotel|flight|visa|route)[a-zа-яё]*/i,
+      /(?:путешеств|поездк|отел|гостиниц|авиабилет|рейс|виза|маршрут|достопримечательност|travel|trip|tour|hotel|flight|visa|route|viaggio|albergo|volo|itinerario)[a-zа-яё]*/i,
   },
   {
     category: 'technical',
@@ -117,7 +117,7 @@ function hasExternalSignal(question) {
   if (explicitHostnames(text).length > 0) return true;
   if (MARKETPLACES.some(({ pattern }) => pattern.test(text))) return true;
 
-  return /(?:(?:интернет|веб|сеть|онлайн|гугл|сайт|маркетплейс|ссылк|источник|ваканси|афиш|расписани|билет|отел|гостиниц|выставк|концерт|товар|новост|погод|кафе|ресторан|магазин|музей|театр|сервис|кед|обув|одежд|пальто|куртк)[a-zа-яё]*|(?:актуальн|свеж|последн|реальн)[a-zа-яё]*[\s\S]{0,25}(?:данн|информац|цен|новост|ссылк|ваканси|расписани)[a-zа-яё]*|(?:сегодня|сейчас)[\s\S]{0,45}(?:цен|наличи|расписани|курс|данн|информац|новост|ваканси|событи)[a-zа-яё]*|(?:цен[аеуы]|стоимост|наличи|где\s+купить|купить|заказать)(?![a-z\u0430-\u044f\u0451])|\b(?:internet|web|online|website|marketplace|link|source|current|latest|today|price|availability|job|vacancy|schedule|ticket|hotel|product|news|weather|cafe|restaurant|store|museum|service|shoes|clothes|where\s+to\s+buy)\b)/i.test(
+  return /(?:(?:интернет|веб|сеть|онлайн|гугл|сайт|маркетплейс|ссылк|источник|ваканси|афиш|расписани|билет|отел|гостиниц|выставк|концерт|товар|новост|погод|кафе|ресторан|магазин|музей|театр|сервис|кед|обув|одежд|пальто|куртк)[a-zа-яё]*|(?:актуальн|свеж|последн|реальн)[a-zа-яё]*[\s\S]{0,25}(?:данн|информац|цен|новост|ссылк|ваканси|расписани)[a-zа-яё]*|(?:сегодня|сейчас)[\s\S]{0,45}(?:цен|наличи|расписани|курс|данн|информац|новост|ваканси|событи)[a-zа-яё]*|(?:цен[аеуы]|стоимост|наличи|где\s+купить|купить|заказать)(?![a-z\u0430-\u044f\u0451])|\b(?:internet|web|online|website|marketplace|link|source|current|latest|today|price|availability|job|vacancy|schedule|ticket|hotel|product|news|weather|cafe|restaurant|store|museum|service|shoes|clothes|where\s+to\s+buy|sito|fonte|attuale|oggi|prezzo|disponibilit[aà]|lavoro|orario|biglietto|albergo|notizie|meteo|ristorante|negozio)\b)/i.test(
     text,
   );
 }

@@ -107,8 +107,12 @@ function localConsultation(portrait, question) {
   return `По этой теме я бы начал с раздела «${related.title}». ${related.key} ${related.action} Дальше можно посмотреть, где этот ресурс раскрывается сильнее, или связать его с конкретной ситуацией.`;
 }
 
-function localCloneTestAnswer() {
-  return 'Клон начал бы с сути вопроса и выбрал конкретный проверяемый шаг.';
+function localCloneTestAnswer(language = 'ru') {
+  return {
+    ru: 'Клон начал бы с сути вопроса и выбрал конкретный проверяемый шаг.',
+    en: 'The Clone would start with the heart of the question and choose one concrete step to test.',
+    it: 'Il Clone partirebbe dal punto centrale della domanda e sceglierebbe un passo concreto da verificare.',
+  }[language] || 'Клон начал бы с сути вопроса и выбрал конкретный проверяемый шаг.';
 }
 
 function cloneProfilePolicy(profile, premium) {
@@ -121,7 +125,7 @@ function withNaturalLanguageFooter(prompt) {
   return `${String(prompt || '').trim()}\n\n${NATURAL_LANGUAGE_FOOTER}`;
 }
 
-export function consultationSystemPrompt(mode, product = 'herostar', premium = false, hasExternalContext = false) {
+export function consultationSystemPrompt(mode, product = 'herostar', premium = false, hasExternalContext = false, language = 'ru') {
   const profile = resolveConsultationProfile({ product, premium });
   const isClone = product === 'clone';
   const chartSelectionRule = isClone
@@ -139,6 +143,7 @@ export function consultationSystemPrompt(mode, product = 'herostar', premium = f
     : '';
 
   const shared = [
+    isClone && language !== 'ru' ? `Отвечай целиком на ${language === 'it' ? 'итальянском' : 'английском'} языке. Это явно выбранный язык интерфейса. Не переключайся на русский из-за русскоязычных данных карты, истории или служебных инструкций. Сохраняй имена и точные данные без искажения.` : '',
     externalContextPolicy,
     chartSelectionRule,
     cloneGroundingPolicy,
@@ -202,16 +207,18 @@ function buildConsultationProviderInput({
   question,
   externalContext = null,
   factors = [],
+  language = 'ru',
 }) {
   const profile = resolveConsultationProfile({ product, premium });
   const preparedQuestion = prepareConsultationQuestion(profile, question);
   return {
-    instructions: consultationSystemPrompt(mode, product, premium, Boolean(externalContext)),
+    instructions: consultationSystemPrompt(mode, product, premium, Boolean(externalContext), language),
     input: [{
       role: 'user',
       content: JSON.stringify({
         mode,
         product,
+        language,
         consultationProfile: profile ? {
           id: profile.id,
           promptVersion: profile.promptVersion,
@@ -244,6 +251,7 @@ async function requestConsultation(client, {
   question,
   externalContext = null,
   factors = [],
+  language = 'ru',
 }) {
   const providerInput = buildConsultationProviderInput({
     mode,
@@ -255,6 +263,7 @@ async function requestConsultation(client, {
     question,
     externalContext,
     factors,
+    language,
   });
   const response = await client.responses.create({
     model,
@@ -278,6 +287,7 @@ async function runConsultation({
   question,
   history = [],
   product = 'herostar',
+  language = 'ru',
   premium = false,
   externalContext = null,
 }) {
@@ -302,7 +312,7 @@ async function runConsultation({
   if (product === 'clone') {
     if (process.env.CLONE_LOCAL_TEST_ANSWER === 'true') {
       return {
-        answer: localCloneTestAnswer(),
+        answer: localCloneTestAnswer(language),
         factors: publicFactors,
         factorScope: selected.scope,
         provider: 'local-test',
@@ -320,11 +330,13 @@ async function runConsultation({
       question,
       externalContext,
       factors: selected.factors,
+      language,
     });
     const cloneAi = await generateCloneAi({
       ...providerInput,
       maxOutputTokens: primary.maxOutputTokens,
       mode,
+      language,
     });
     if (cloneAi.status !== 'ok' || !cloneAi.text) return unavailableCloneAnswer();
 

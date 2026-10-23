@@ -120,19 +120,26 @@
   const target = document.querySelector('#liveRealStats');
   if (!target) return;
 
-  const formatCount = (value) => new Intl.NumberFormat('ru-RU').format(Math.max(0, Number(value || 0)));
+  let currentStats = null;
+  function renderStats(stats) {
+    const language = window.CloneLocale?.language || 'ru';
+    const formatCount = (value) => new Intl.NumberFormat({ ru: 'ru-RU', en: 'en-US', it: 'it-IT' }[language]).format(Math.max(0, Number(value || 0)));
+    const total = Math.max(0, Number(stats.totalCharts || 0));
+    const recent = Math.max(0, Number(stats.charts7d || 0));
+    if (!total && !recent) return;
+    const parts = [];
+    if (total) parts.push(language === 'en' ? `${formatCount(total)} charts created` : language === 'it' ? `${formatCount(total)} carte create` : `создано ${formatCount(total)} карт`);
+    if (recent) parts.push(language === 'en' ? `${formatCount(recent)} in the last 7 days` : language === 'it' ? `${formatCount(recent)} negli ultimi 7 giorni` : `${formatCount(recent)} за последние 7 дней`);
+    target.textContent = `${{ ru: 'Реальные данные HeroStar', en: 'Real HeroStar data', it: 'Dati reali di HeroStar' }[language]}: ${parts.join(' · ')}`;
+    target.classList.remove('hidden');
+  }
+  document.addEventListener('clone:language-change', () => { if (currentStats) renderStats(currentStats); });
 
   fetch('/api/public/stats', { headers: { Accept: 'application/json' } })
     .then((response) => response.ok ? response.json() : Promise.reject(new Error('stats unavailable')))
     .then((stats) => {
-      const total = Math.max(0, Number(stats.totalCharts || 0));
-      const recent = Math.max(0, Number(stats.charts7d || 0));
-      if (!total && !recent) return;
-      const parts = [];
-      if (total) parts.push(`создано ${formatCount(total)} карт`);
-      if (recent) parts.push(`${formatCount(recent)} за последние 7 дней`);
-      target.textContent = `Реальные данные HeroStar: ${parts.join(' · ')}`;
-      target.classList.remove('hidden');
+      currentStats = stats;
+      renderStats(stats);
     })
     .catch(() => {
       // Недоступная статистика не заменяется выдуманной цифрой.
