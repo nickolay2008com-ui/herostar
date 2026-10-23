@@ -94,9 +94,10 @@ function allowMetrikaDocumentEmbedding(req, res) {
     nextPolicy = mergeCspDirective(nextPolicy, 'frame-src', ['blob:', ...METRIKA_GENERAL_SOURCES]);
     nextPolicy = mergeCspDirective(nextPolicy, 'child-src', ['blob:', ...METRIKA_GENERAL_SOURCES]);
     const frameAncestors = [...METRIKA_FRAME_ANCESTORS];
-    // The public Clone Live entry may run inside the owner's portfolio.
+    // Clone Live's landing and chat/creation document run inside the owner's portfolio.
     // Keep account/admin pages and all other origins outside this exception.
-    if (path === '/clone/live' || path === '/clone/live/' || path === '/clone/live/index.html') {
+    if (path === '/clone/live' || path === '/clone/live/' || path === '/clone/live/index.html'
+      || path === '/clone/live/chat' || path === '/clone/live/chat/') {
       frameAncestors.push('https://evo.allyai.ru');
     }
     nextPolicy = mergeCspDirective(nextPolicy, 'frame-ancestors', frameAncestors);
