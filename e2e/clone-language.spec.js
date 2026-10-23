@@ -11,7 +11,7 @@ test('RU, EN and IT switch on both routes and persist across navigation', async 
   await page.goto('/clone/live/chat');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#birthForm button[type="submit"]')).toHaveText('Create my Clone');
-  const chatLanguage = page.locator('.conversation-head .clone-language');
+  const chatLanguage = page.locator('.live-topbar .clone-language');
   await expect(chatLanguage).toBeVisible();
   await chatLanguage.selectOption('it');
   await expect(page.locator('html')).toHaveAttribute('lang', 'it');

@@ -59,7 +59,7 @@
       const strong = title.querySelector('strong');
       const small = title.querySelector('small');
       if (strong) strong.textContent = window.CloneLocale?.t(profileMode ? 'Моя карта' : 'Звёздный клон') || (profileMode ? 'Моя карта' : 'Звёздный клон');
-      if (small) small.textContent = window.CloneLocale?.t(profileMode ? 'факторы и паспорт клона' : 'по натальной карте') || (profileMode ? 'факторы и паспорт клона' : 'по натальной карте');
+      if (small) small.textContent = window.CloneLocale?.t(profileMode ? 'факторы и паспорт клона' : 'по вашей натальной карте') || (profileMode ? 'факторы и паспорт клона' : 'по вашей натальной карте');
     }
 
     function syncNav(view) {

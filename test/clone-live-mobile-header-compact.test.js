@@ -19,7 +19,7 @@ test('Live mobile App-shell оставляет одну шапку без уме
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*?\.workspace:not\(\.hidden\)\s*\{[^}]*padding:\s*0 0/s);
 
   assert.match(loader, /live-app\.css\?v=20261023-i18n1/);
-  assert.match(loader, /live-app\.js\?v=20261023-i18n1/);
-  assert.match(html, /clone-ui-gears\.js\?v=20261023-i18n1/);
+  assert.match(loader, /live-app\.js\?v=20261023-i18n2/);
+  assert.match(html, /clone-ui-gears\.js\?v=20261023-i18n2/);
   assert.doesNotMatch(html, /clone-ui-gears\.js\?v=20260827-polish3/);
 });

@@ -23,7 +23,7 @@
     document.head.append(appStyle);
 
     const appScript = document.createElement('script');
-    appScript.src = '/clone/live/live-app.js?v=20261023-i18n1';
+    appScript.src = '/clone/live/live-app.js?v=20261023-i18n2';
     appScript.async = false;
     document.head.append(appScript);
   }
